@@ -10,6 +10,8 @@ const PORT = Number(process.env.PORT || 3000);
 const XAI_MODEL = process.env.XAI_MODEL || "grok-voice-think-fast-1.0";
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
+const SERVER_VERSION = "2026-05-09-cors-origin-normalization";
+const SERVER_STARTED_AT = new Date().toISOString();
 
 const app = express();
 app.set("trust proxy", true);
@@ -251,6 +253,8 @@ function getSessionFromRequest(req) {
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
+    serverVersion: SERVER_VERSION,
+    startedAt: SERVER_STARTED_AT,
     publicHost: getPublicHost(),
     cors: {
       allowAllOrigins,
@@ -592,6 +596,7 @@ setInterval(() => {
 server.listen(PORT, () => {
   const missing = requiredEnv.filter((key) => !process.env[key]);
   log("info", "VoiceCall AI server listening", {
+    serverVersion: SERVER_VERSION,
     port: PORT,
     publicHost: getPublicHost() || null,
     health: `http://localhost:${PORT}/health`,

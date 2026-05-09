@@ -246,6 +246,45 @@ The response headers must include:
 Access-Control-Allow-Origin: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
 ```
 
+### 6. Update and restart the NSSM service
+
+If the server is already installed as the `VoiceCallAI` Windows service, pull the latest GitHub code and restart it with:
+
+```powershell
+cd C:\Projects\voicecall-ai
+powershell -ExecutionPolicy Bypass -File .\scripts\update-voicecall-service.ps1
+```
+
+The script runs `git pull --ff-only`, installs dependencies, checks `server.js`, restarts NSSM, and verifies both local and public `/health` with the IC frontend `Origin` header.
+
+Manual NSSM restart commands:
+
+```powershell
+cd C:\Projects\voicecall-ai
+git pull --ff-only origin main
+pnpm install --prefer-offline
+node --check .\src\server\server.js
+C:\Tools\nssm\nssm.exe set VoiceCallAI AppDirectory C:\Projects\voicecall-ai\src\server
+C:\Tools\nssm\nssm.exe set VoiceCallAI AppParameters server.js
+C:\Tools\nssm\nssm.exe restart VoiceCallAI
+C:\Tools\nssm\nssm.exe status VoiceCallAI
+```
+
+Then verify:
+
+```powershell
+Invoke-WebRequest `
+  -Uri https://voicecall.richardhery.com/health `
+  -Headers @{ Origin = "https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io" } `
+  -UseBasicParsing
+```
+
+The JSON should include:
+
+```text
+serverVersion: 2026-05-09-cors-origin-normalization
+```
+
 ## Configure the Frontend
 
 For local server testing, deploy/create both local canisters first, then run:
