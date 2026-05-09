@@ -1,0 +1,786 @@
+import { AppLayout } from "@/components/AppLayout";
+import { CallStatusBadge } from "@/components/CallStatusBadge";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useDeletePreset,
+  useDuplicatePreset,
+  useListMyCalls,
+  useListMyPresets,
+} from "@/hooks/use-backend";
+import type { XaiCallStatus } from "@/hooks/use-xai-voice";
+import { useXaiVoice } from "@/hooks/use-xai-voice";
+import type { CallPreset } from "@/types";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Copy,
+  Loader2,
+  Mic,
+  MicOff,
+  Phone,
+  PhoneOff,
+  Plus,
+  RefreshCw,
+  Settings2,
+  Trash2,
+  Zap,
+} from "lucide-react";
+import { motion } from "motion/react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+function formatDuration(secs: number): string {
+  const m = Math.floor(secs / 60)
+    .toString()
+    .padStart(2, "0");
+  const s = (secs % 60).toString().padStart(2, "0");
+  return `${m}:${s}`;
+}
+
+function formatCallDuration(start: bigint, end?: bigint): string {
+  if (!end) return "—";
+  const secs = Number((end - start) / 1_000_000_000n);
+  return formatDuration(secs);
+}
+
+function validateE164(phone: string): boolean {
+  return /^\+[1-9]\d{1,14}$/.test(phone.replace(/\s/g, ""));
+}
+
+const STATUS_COLORS: Record<XaiCallStatus, string> = {
+  idle: "text-muted-foreground",
+  initiating: "text-yellow-400",
+  connecting: "text-blue-400",
+  in_call: "text-primary",
+  completed: "text-green-400",
+  error: "text-destructive",
+};
+
+const STATUS_LABELS: Record<XaiCallStatus, string> = {
+  idle: "Idle",
+  initiating: "Initiating...",
+  connecting: "Connecting...",
+  in_call: "Live",
+  completed: "Completed",
+  error: "Error",
+};
+
+function AudioWaveform({
+  levels,
+  active,
+}: { levels: number[]; active: boolean }) {
+  return (
+    <div className="flex items-center gap-0.5 h-8">
+      {Array.from({ length: levels.length }, (_, i) => (
+        <motion.div
+          key={`waveform-bar-${levels.length}-${i}`}
+          className="w-1 rounded-full bg-primary"
+          animate={{
+            height: active ? `${Math.max(4, levels[i] * 32)}px` : "4px",
+            opacity: active ? 0.7 + levels[i] * 0.3 : 0.3,
+          }}
+          transition={{
+            duration: 0.1,
+            ease: "easeOut",
+            delay: i * 0.01,
+          }}
+          style={{ minHeight: "4px" }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function StatCard({
+  icon,
+  label,
+  value,
+  color,
+  loading,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  color?: string;
+  loading?: boolean;
+}) {
+  return (
+    <Card className="bg-card border-border">
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              {label}
+            </p>
+            {loading ? (
+              <Skeleton className="h-7 w-16 mt-1" />
+            ) : (
+              <p
+                className={`text-2xl font-bold mt-0.5 ${color ?? "text-foreground"}`}
+              >
+                {value}
+              </p>
+            )}
+          </div>
+          <div className="p-2.5 rounded-xl bg-muted/50">{icon}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ActiveCallPanel({
+  voice,
+}: {
+  voice: ReturnType<typeof useXaiVoice>;
+}) {
+  const {
+    status,
+    recipient,
+    presetName,
+    durationSecs,
+    isMuted,
+    errorMessage,
+    audioLevels,
+    endCall,
+    toggleMute,
+  } = voice;
+  const isActive =
+    status === "in_call" || status === "connecting" || status === "initiating";
+
+  if (status === "idle") return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      transition={{ duration: 0.3 }}
+    >
+      <Card
+        className="border-primary/40 bg-card relative overflow-hidden"
+        data-ocid="dashboard.active_call.card"
+      >
+        {/* Animated top border */}
+        {isActive && (
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent animate-pulse" />
+        )}
+        <CardContent className="pt-5 pb-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            {/* Status indicator */}
+            <div className="flex items-center gap-2.5">
+              <div
+                className={`relative flex items-center justify-center w-9 h-9 rounded-full ${
+                  status === "in_call"
+                    ? "bg-primary/20"
+                    : status === "error"
+                      ? "bg-destructive/20"
+                      : status === "completed"
+                        ? "bg-green-500/20"
+                        : "bg-muted/50"
+                }`}
+              >
+                {(status === "initiating" || status === "connecting") && (
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                )}
+                {status === "in_call" && (
+                  <>
+                    <Phone className="w-4 h-4 text-primary" />
+                    <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
+                  </>
+                )}
+                {status === "completed" && (
+                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                )}
+                {status === "error" && (
+                  <AlertTriangle className="w-4 h-4 text-destructive" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`text-sm font-semibold ${STATUS_COLORS[status]}`}
+                  >
+                    {STATUS_LABELS[status]}
+                  </span>
+                  {status === "in_call" && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs h-4 px-1 border-primary/40 text-primary font-mono"
+                    >
+                      {formatDuration(durationSecs)}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground font-mono">
+                  {recipient}
+                </p>
+              </div>
+            </div>
+
+            {/* Preset name */}
+            <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Zap className="w-3 h-3" />
+              <span className="truncate max-w-[140px]">{presetName}</span>
+            </div>
+
+            {/* Waveform */}
+            {status === "in_call" && (
+              <div className="flex-1 min-w-0 flex justify-center">
+                <AudioWaveform levels={audioLevels} active={!isMuted} />
+              </div>
+            )}
+
+            {/* Error message */}
+            {status === "error" && errorMessage && (
+              <p className="text-xs text-destructive flex-1">{errorMessage}</p>
+            )}
+
+            {/* Controls */}
+            <div className="flex items-center gap-2 ml-auto shrink-0">
+              {status === "in_call" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleMute}
+                  data-ocid="dashboard.active_call.mute_button"
+                  className={`gap-1.5 h-8 text-xs ${
+                    isMuted
+                      ? "border-destructive/50 text-destructive"
+                      : "border-border"
+                  }`}
+                >
+                  {isMuted ? (
+                    <MicOff className="w-3.5 h-3.5" />
+                  ) : (
+                    <Mic className="w-3.5 h-3.5" />
+                  )}
+                  {isMuted ? "Unmute" : "Mute"}
+                </Button>
+              )}
+              {isActive && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={endCall}
+                  data-ocid="dashboard.active_call.end_button"
+                  className="gap-1.5 h-8 text-xs"
+                >
+                  <PhoneOff className="w-3.5 h-3.5" />
+                  End Call
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+export default function DashboardPage() {
+  const navigate = useNavigate();
+  const [recipient, setRecipient] = useState("");
+  const [recipientError, setRecipientError] = useState("");
+  const [selectedPresetId, setSelectedPresetId] = useState<string>("");
+  const [deletePresetId, setDeletePresetId] = useState<bigint | null>(null);
+
+  const { data: presets, isLoading: presetsLoading } = useListMyPresets();
+  const {
+    data: calls,
+    isLoading: callsLoading,
+    refetch: refetchCalls,
+  } = useListMyCalls();
+  const deletePreset = useDeletePreset();
+  const duplicatePreset = useDuplicatePreset();
+  const voice = useXaiVoice();
+
+  const recentCalls = (calls ?? []).slice(0, 5);
+  const totalCalls = (calls ?? []).length;
+  const callsToday = (calls ?? []).filter((c) => {
+    const d = new Date(Number(c.startTime / 1_000_000n));
+    const now = new Date();
+    return (
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
+  }).length;
+  const activePresets = (presets ?? []).length;
+
+  const selectedPreset =
+    (presets ?? []).find((p) => p.id.toString() === selectedPresetId) ?? null;
+
+  const isCallActive =
+    voice.status !== "idle" &&
+    voice.status !== "completed" &&
+    voice.status !== "error";
+
+  const handleRecipientBlur = () => {
+    if (recipient && !validateE164(recipient.replace(/\s/g, ""))) {
+      setRecipientError("Enter a valid E.164 number, e.g. +15551234567");
+    } else {
+      setRecipientError("");
+    }
+  };
+
+  const handleCall = async () => {
+    if (!recipient || !selectedPreset) {
+      toast.error("Enter a recipient number and select a preset");
+      return;
+    }
+    const cleaned = recipient.replace(/\s/g, "");
+    if (!validateE164(cleaned)) {
+      setRecipientError("Enter a valid E.164 number, e.g. +15551234567");
+      return;
+    }
+    setRecipientError("");
+    await voice.startCall(selectedPreset, cleaned);
+  };
+
+  return (
+    <ProtectedRoute>
+      <AppLayout>
+        <div className="p-6 space-y-5" data-ocid="dashboard.page">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-display text-2xl font-bold text-foreground">
+                Dashboard
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Configure and launch AI-powered calls
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate({ to: "/user/settings" })}
+              data-ocid="dashboard.new_preset_button"
+              className="gap-2"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              New Preset
+            </Button>
+          </div>
+
+          {/* Stat Cards */}
+          <div className="grid grid-cols-3 gap-4">
+            <StatCard
+              icon={<Phone className="w-4 h-4 text-primary" />}
+              label="Total Calls"
+              value={totalCalls}
+              loading={callsLoading}
+            />
+            <StatCard
+              icon={<Clock className="w-4 h-4 text-blue-400" />}
+              label="Calls Today"
+              value={callsToday}
+              color="text-blue-400"
+              loading={callsLoading}
+            />
+            <StatCard
+              icon={<Settings2 className="w-4 h-4 text-purple-400" />}
+              label="Active Presets"
+              value={activePresets}
+              color="text-purple-400"
+              loading={presetsLoading}
+            />
+          </div>
+
+          {/* Active Call Panel */}
+          <ActiveCallPanel voice={voice} />
+
+          {/* Main grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* Initiate Call */}
+            <Card
+              className="lg:col-span-1 bg-card border-border"
+              data-ocid="dashboard.call_card"
+            >
+              <CardHeader className="pb-4">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-primary" />
+                  Make a Call
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="recipient"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Recipient Phone (E.164)
+                  </Label>
+                  <Input
+                    id="recipient"
+                    type="tel"
+                    placeholder="+1 (555) 000-0000"
+                    value={recipient}
+                    onChange={(e) => setRecipient(e.target.value)}
+                    onBlur={handleRecipientBlur}
+                    data-ocid="dashboard.recipient.input"
+                    className="font-mono text-sm"
+                    disabled={isCallActive}
+                  />
+                  {recipientError && (
+                    <p
+                      className="text-xs text-destructive"
+                      data-ocid="dashboard.recipient.field_error"
+                    >
+                      {recipientError}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">
+                    Call Preset
+                  </Label>
+                  {presetsLoading ? (
+                    <Skeleton className="h-9 w-full" />
+                  ) : (presets ?? []).length === 0 ? (
+                    <div
+                      className="text-xs text-muted-foreground py-2 px-3 rounded-lg bg-muted/40"
+                      data-ocid="dashboard.presets.empty_state"
+                    >
+                      No presets yet.{" "}
+                      <button
+                        type="button"
+                        onClick={() => navigate({ to: "/user/settings" })}
+                        className="text-primary hover:underline"
+                      >
+                        Create one
+                      </button>
+                    </div>
+                  ) : (
+                    <Select
+                      value={selectedPresetId}
+                      onValueChange={setSelectedPresetId}
+                      disabled={isCallActive}
+                    >
+                      <SelectTrigger data-ocid="dashboard.preset.select">
+                        <SelectValue placeholder="Select a preset" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(presets ?? []).map((p) => (
+                          <SelectItem
+                            key={p.id.toString()}
+                            value={p.id.toString()}
+                          >
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Selected preset preview */}
+                {selectedPreset && (
+                  <div className="rounded-lg bg-muted/30 border border-border p-3 space-y-1">
+                    <p className="text-xs font-medium text-foreground">
+                      {selectedPreset.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {selectedPreset.systemPrompt}
+                    </p>
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <Badge variant="outline" className="text-xs h-4 px-1">
+                        {selectedPreset.voice}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs h-4 px-1">
+                        {selectedPreset.sampleRate}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleCall}
+                  disabled={isCallActive || !recipient || !selectedPresetId}
+                  data-ocid="dashboard.call.submit_button"
+                  className="w-full gap-2"
+                >
+                  {voice.status === "initiating" ||
+                  voice.status === "connecting" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Phone className="w-4 h-4" />
+                  )}
+                  {voice.status === "initiating"
+                    ? "Initiating..."
+                    : voice.status === "connecting"
+                      ? "Connecting..."
+                      : "Start Call"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Presets */}
+            <Card
+              className="lg:col-span-2 bg-card border-border"
+              data-ocid="dashboard.presets_card"
+            >
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-semibold">
+                    My Presets
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate({ to: "/user/settings" })}
+                    className="gap-1.5 text-xs h-7"
+                    data-ocid="dashboard.presets.new_button"
+                  >
+                    <Plus className="w-3 h-3" />
+                    New
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {presetsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-14 w-full" />
+                    ))}
+                  </div>
+                ) : (presets ?? []).length === 0 ? (
+                  <div
+                    className="flex flex-col items-center justify-center py-10 text-center"
+                    data-ocid="dashboard.presets.grid_empty_state"
+                  >
+                    <Settings2 className="w-8 h-8 text-muted-foreground/40 mb-3" />
+                    <p className="text-sm font-medium text-muted-foreground">
+                      No presets configured
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 mt-1 mb-4">
+                      Create a preset to define voice, prompt, and call behavior
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={() => navigate({ to: "/user/settings" })}
+                      data-ocid="dashboard.presets.create_button"
+                    >
+                      Create First Preset
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {(presets ?? []).map((preset: CallPreset, idx) => {
+                      const isSelected =
+                        selectedPresetId === preset.id.toString();
+                      return (
+                        <button
+                          type="button"
+                          key={preset.id.toString()}
+                          data-ocid={`dashboard.preset.item.${idx + 1}`}
+                          onClick={() =>
+                            setSelectedPresetId(preset.id.toString())
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ")
+                              setSelectedPresetId(preset.id.toString());
+                          }}
+                          className={`flex w-full text-left items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-smooth border ${
+                            isSelected
+                              ? "bg-primary/10 border-primary/40"
+                              : "bg-muted/30 hover:bg-muted/50 border-transparent hover:border-border"
+                          }`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-medium text-foreground truncate">
+                                {preset.name}
+                              </p>
+                              {isSelected && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs h-4 px-1 border-primary/40 text-primary shrink-0"
+                                >
+                                  Selected
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {preset.voice} ·{" "}
+                              {preset.systemPrompt.substring(0, 60)}
+                              {preset.systemPrompt.length > 60 ? "..." : ""}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                duplicatePreset.mutate(preset.id);
+                              }}
+                              aria-label="Duplicate preset"
+                              data-ocid={`dashboard.preset.duplicate_button.${idx + 1}`}
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeletePresetId(preset.id);
+                              }}
+                              aria-label="Delete preset"
+                              data-ocid={`dashboard.preset.delete_button.${idx + 1}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent calls */}
+          <Card
+            className="bg-card border-border"
+            data-ocid="dashboard.calls_card"
+          >
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold">
+                  Recent Calls
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => refetchCalls()}
+                    aria-label="Refresh"
+                    data-ocid="dashboard.calls.refresh_button"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate({ to: "/user/history" })}
+                    className="text-xs h-7"
+                    data-ocid="dashboard.calls.view_all_button"
+                  >
+                    View All
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {callsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2].map((i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : recentCalls.length === 0 ? (
+                <div
+                  className="text-center py-8 text-muted-foreground text-sm"
+                  data-ocid="dashboard.calls.empty_state"
+                >
+                  No calls yet. Start your first call above.
+                </div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {recentCalls.map((call, idx) => (
+                    <div
+                      key={call.id.toString()}
+                      data-ocid={`dashboard.call.item.${idx + 1}`}
+                      className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                    >
+                      <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate font-mono">
+                          {call.recipientPhone}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(
+                            Number(call.startTime / 1_000_000n),
+                          ).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {formatCallDuration(call.startTime, call.endTime)}
+                        </span>
+                        <CallStatusBadge status={call.status} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </AppLayout>
+
+      {/* Delete preset dialog */}
+      <AlertDialog
+        open={deletePresetId !== null}
+        onOpenChange={(open) => !open && setDeletePresetId(null)}
+      >
+        <AlertDialogContent data-ocid="delete-preset.dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Preset?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-ocid="delete-preset.cancel_button">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              data-ocid="delete-preset.confirm_button"
+              onClick={() => {
+                if (deletePresetId !== null) {
+                  deletePreset.mutate(deletePresetId);
+                  setDeletePresetId(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </ProtectedRoute>
+  );
+}

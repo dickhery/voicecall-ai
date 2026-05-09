@@ -1,0 +1,23 @@
+{
+  "overview": "AI-powered phone call platform that uses xAI's Voice API and Twilio to place real outbound calls with a fully configurable AI voice agent. Users set up call personas, select voices, configure conversation behavior, and let the AI conduct conversations reactively.",
+  "features": [
+    "xAI Voice API integration with full session configurability",
+    "Twilio outbound call initiation with Media Streams bridge",
+    "Call configuration presets (voice, system prompt, VAD settings, tools)",
+    "Internet Identity authentication with first-user-becomes-admin",
+    "Admin dashboard for xAI API key and Twilio credential management",
+    "Per-user call history with transcripts",
+    "Reactive AI conversation mode (listens first, responds on speech detection)"
+  ],
+  "category": "productivity",
+  "tags": [
+    "ai",
+    "voice",
+    "phone",
+    "twilio",
+    "xai",
+    "calls",
+    "automation"
+  ],
+  "last_updated": "2026-05-09T01:41:49.148Z"
+}

@@ -1,0 +1,172 @@
+type http_request_result = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type http_header = 
+ record {
+   name: text;
+   value: text;
+ };
+type Voice = 
+ variant {
+   ara;
+   eve;
+   leo;
+   rex;
+   sal;
+ };
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type TurnDetection = 
+ record {
+   prefixPaddingMs: nat;
+   serverVad: bool;
+   silenceDurationMs: nat;
+   threshold: float64;
+ };
+type TransformationOutput = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type TransformationInput = 
+ record {
+   context: blob;
+   response: http_request_result;
+ };
+type ToolsEnabled = 
+ record {
+   functionCalling: bool;
+   webSearch: bool;
+   xSearch: bool;
+ };
+type SystemLog = 
+ record {
+   callId: opt nat;
+   level: variant {
+            error;
+            info;
+            warn;
+          };
+   message: text;
+   timestamp: int;
+ };
+type SampleRate = 
+ variant {
+   hz16000;
+   hz22050;
+   hz24000;
+   hz32000;
+   hz44100;
+   hz48000;
+   hz8000;
+ };
+type PresetId = nat;
+type InitiateCallResult = 
+ variant {
+   err: text;
+   ok: record {
+         callId: nat;
+         callSid: text;
+       };
+ };
+type InitiateCallInput = 
+ record {
+   presetId: nat;
+   recipientPhone: text;
+ };
+type EphemeralTokenResult = 
+ variant {
+   err: text;
+   ok: record {
+         token: text;
+         websocketUrl: text;
+       };
+ };
+type CallStatus = 
+ variant {
+   completed;
+   failed;
+   inProgress;
+   pending;
+ };
+type CallRecordPublic = 
+ record {
+   callSid: opt text;
+   endTime: opt int;
+   id: nat;
+   presetId: nat;
+   recipientPhone: text;
+   startTime: int;
+   status: CallStatus;
+   transcript: opt text;
+   userId: principal;
+ };
+type CallPresetInput = 
+ record {
+   audioFormat: AudioFormat;
+   name: text;
+   sampleRate: SampleRate;
+   systemPrompt: text;
+   toolsEnabled: ToolsEnabled;
+   turnDetection: TurnDetection;
+   voice: Voice;
+ };
+type CallPreset = 
+ record {
+   audioFormat: AudioFormat;
+   id: nat;
+   name: text;
+   ownerId: principal;
+   sampleRate: SampleRate;
+   systemPrompt: text;
+   toolsEnabled: ToolsEnabled;
+   turnDetection: TurnDetection;
+   voice: Voice;
+ };
+type CallId = nat;
+type AudioFormat = 
+ variant {
+   pcm;
+   pcma;
+   pcmu;
+ };
+service : {
+  _initializeAccessControl: () -> ();
+  adminGetSystemLogs: (limit: nat) -> (vec SystemLog) query;
+  adminListAllCalls: () -> (vec CallRecordPublic) query;
+  adminListUserCalls: (userId: principal) -> (vec CallRecordPublic) query;
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  createPreset: (input: CallPresetInput) -> (CallPreset);
+  deletePreset: (id: PresetId) -> (bool);
+  duplicatePreset: (id: PresetId) -> (opt CallPreset);
+  getAdminConfig: () ->
+   (record {
+      hasTwilioAuth: bool;
+      hasXaiKey: bool;
+      twilioAccountSid: text;
+      twilioFromNumber: text;
+    }) query;
+  getCallRecord: (id: CallId) -> (opt CallRecordPublic) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getEphemeralToken: (presetId: PresetId) -> (EphemeralTokenResult);
+  getPreset: (id: PresetId) -> (opt CallPreset) query;
+  initiateCall: (input: InitiateCallInput) -> (InitiateCallResult);
+  isCallerAdmin: () -> (bool) query;
+  listMyCalls: () -> (vec CallRecordPublic) query;
+  listMyPresets: () -> (vec CallPreset) query;
+  setAdminConfig: (xaiApiKey: text, twilioAccountSid: text, twilioAuthToken:
+   text, twilioFromNumber: text) -> ();
+  transform: (input: TransformationInput) -> (TransformationOutput) query;
+  twilioWebhook: (callSid: text, callStatus: text) -> (text);
+  updateCallStatus: (callId: CallId, status: CallStatus, transcript:
+   opt text) -> (bool);
+  updatePreset: (id: PresetId, input: CallPresetInput) -> (opt CallPreset);
+}

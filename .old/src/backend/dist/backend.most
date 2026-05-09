@@ -1,0 +1,97 @@
+// Version: 1.0.0
+type AdminConfig__36162014 =
+  {
+    var twilioAccountSid : Text;
+    var twilioAuthToken : Text;
+    var twilioFromNumber : Text;
+    var xaiApiKey : Text
+  };
+type AudioFormat__500525639 = {#pcm; #pcma; #pcmu};
+type CallId__642369320 = Nat;
+type CallPreset__736603966 =
+  {
+    audioFormat : AudioFormat__500525639;
+    id : Nat;
+    name : Text;
+    ownerId : Principal;
+    sampleRate : SampleRate__591095646;
+    systemPrompt : Text;
+    toolsEnabled : ToolsEnabled__811196006;
+    turnDetection : TurnDetection__119024512;
+    voice : Voice__817973016
+  };
+type CallRecord__52248411 =
+  {
+    var callSid : ?Text;
+    var endTime : ?Int;
+    id : Nat;
+    presetId : Nat;
+    recipientPhone : Text;
+    startTime : Int;
+    var status : CallStatus__25797007;
+    var transcript : ?Text;
+    userId : Principal
+  };
+type CallStatus__25797007 = {#completed; #failed; #inProgress; #pending};
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type List__415060402<T> = List__790383201<T>;
+type List__790383201<T> =
+  {
+    var blockIndex : Nat__490723111;
+    var blocks : [var [var ?T]];
+    var elementIndex : Nat__490723111
+  };
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type PresetId__8920344 = Nat;
+type SampleRate__591095646 =
+  {#hz16000; #hz22050; #hz24000; #hz32000; #hz44100; #hz48000; #hz8000};
+type SystemLog__934239505 =
+  {
+    callId : ?Nat;
+    level : {#error_; #info; #warn};
+    message : Text;
+    timestamp : Int
+  };
+type ToolsEnabled__811196006 =
+  {functionCalling : Bool; webSearch : Bool; xSearch : Bool};
+type TurnDetection__119024512 =
+  {
+    prefixPaddingMs : Nat;
+    serverVad : Bool;
+    silenceDurationMs : Nat;
+    threshold : Float
+  };
+type UserRole__1073662873 = {#admin; #guest; #user};
+type Voice__817973016 = {#ara; #eve; #leo; #rex; #sal};
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1073662873>
+    };
+  stable callsState :
+    {
+      callRecords : Map__605269027<CallId__642369320, CallRecord__52248411>;
+      nextCallId : {var value : Nat};
+      systemLogs : List__415060402<SystemLog__934239505>;
+      userCallIndex :
+        Map__605269027<Principal, List__415060402<CallId__642369320>>
+    };
+  stable configState :
+    {
+      adminConfig : AdminConfig__36162014;
+      nextPresetId : {var value : Nat};
+      presets : Map__605269027<PresetId__8920344, CallPreset__736603966>
+    }
+};
