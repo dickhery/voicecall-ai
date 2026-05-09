@@ -17,6 +17,30 @@ This version keeps the IC canister for auth, presets, and history, but moves the
 - Twilio Media Streams WebSocket `/media`
 - xAI Realtime Voice WebSocket
 
+## What Went Wrong In The Latest Deploy
+
+The deployed frontend canister is:
+
+```text
+2nukr-cyaaa-aaaak-qy2ja-cai
+```
+
+Open it through the certified asset gateway:
+
+```text
+https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+```
+
+Do not use this as the browser URL:
+
+```text
+https://2nukr-cyaaa-aaaak-qy2ja-cai.icp-api.io
+```
+
+`icp-api.io` is the IC API endpoint used by agents and CLI tooling. Browser-hosted asset canisters should use `https://<canister-id>.icp0.io` or `https://<canister-id>.ic0.app`.
+
+The other issue was `src/frontend/env.json`: it still had `undefined` backend settings and `http://localhost:3000` as the voice server when the frontend was built. Run the configuration command in this README before deploying the frontend so the asset canister receives the correct backend canister ID and public voice server URL.
+
 References:
 
 - Twilio Media Streams overview: https://www.twilio.com/docs/voice/media-streams
@@ -66,12 +90,23 @@ The current Caffeine frontend also reads runtime settings from:
 src/frontend/env.json
 ```
 
-Use `src/frontend/env.example.json` as the template. Set:
+Use the helper scripts rather than editing this file by hand:
+
+```powershell
+pnpm configure:frontend:local
+pnpm configure:frontend:ic -- --voice-server-url https://your-public-voice-server
+```
+
+The helper reads canister IDs from `.icp/data/mappings/`, writes `src/frontend/env.json`, and prints the URL you should open.
+
+If you do edit `src/frontend/env.json` directly, set:
 
 - `backend_canister_id`: your Motoko backend canister ID
-- `backend_host`: `https://icp0.io` for mainnet, or your local IC gateway for local development
+- `backend_host`: `https://icp-api.io` for mainnet, or your local IC gateway for local development
 - `ii_derivation_origin`: usually `https://<frontend-canister-id>.icp0.io`
 - `voice_server_url`: your Cloudflare Tunnel or deployed Node server URL
+
+The frontend build now fails if `src/frontend/env.json` still contains `undefined`, `replace-with...`, or a local voice server URL for a mainnet frontend. That is intentional: it prevents another upload with a broken runtime config.
 
 ## Windows Setup
 
@@ -125,6 +160,12 @@ FRONTEND_ORIGIN=*
 ```
 
 Leave `HOSTNAME` blank until your tunnel is running.
+
+For production, replace `FRONTEND_ORIGIN=*` with your IC frontend origin after the frontend canister exists:
+
+```text
+FRONTEND_ORIGIN=https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+```
 
 ### 4. Start a Cloudflare Tunnel
 
@@ -190,32 +231,21 @@ xaiConfigured     : True
 
 ## Configure the Frontend
 
-Copy the template:
+For local server testing, deploy/create both local canisters first, then run:
 
 ```powershell
-Copy-Item src\frontend\env.example.json src\frontend\env.json
-notepad src\frontend\env.json
+pnpm configure:frontend:local
 ```
 
-For local server testing, set:
+For an IC-hosted frontend calling your Windows server through Cloudflare, run:
 
-```json
-{
-  "voice_server_url": "http://localhost:3000"
-}
+```powershell
+pnpm configure:frontend:ic -- --voice-server-url https://example-random.trycloudflare.com
 ```
 
-For an IC-hosted frontend calling your Windows server through Cloudflare, set:
+Replace the example URL with your actual Cloudflare Tunnel URL. This writes all of `src\frontend\env.json`, including the backend canister ID, frontend origin, and voice server URL.
 
-```json
-{
-  "voice_server_url": "https://example-random.trycloudflare.com"
-}
-```
-
-Also set `backend_canister_id` before building the frontend.
-
-Until `backend_canister_id` is set, the login page can render, but the browser console will report `CANISTER_ID_BACKEND is not set` and authenticated backend calls will not work.
+Until `backend_canister_id` and `voice_server_url` are set, the login page can render, but authenticated backend calls and phone calls will not work.
 
 ## Local IC Deploy
 
@@ -233,22 +263,16 @@ $backendId = (icp canister status backend --id-only).Trim()
 $backendId
 ```
 
-Edit `src\frontend\env.json`:
-
-```json
-{
-  "backend_host": "http://127.0.0.1:8000",
-  "backend_canister_id": "<backendId from previous command>",
-  "project_id": "voicecall-ai",
-  "ii_derivation_origin": "http://localhost:8000",
-  "storage_gateway_url": "https://blob.caffeine.ai",
-  "voice_server_url": "http://localhost:3000"
-}
-```
-
-Deploy the frontend:
+Create the frontend canister if it does not exist yet, so `icp` can allocate its local canister ID without uploading stale assets:
 
 ```powershell
+icp canister create frontend
+```
+
+Now generate the frontend runtime config and redeploy the frontend with that config:
+
+```powershell
+pnpm configure:frontend:local
 icp deploy frontend
 $frontendId = (icp canister status frontend --id-only).Trim()
 "http://$frontendId.localhost:8000"
@@ -268,6 +292,8 @@ icp token balance -n ic
 icp cycles balance -n ic
 ```
 
+Use `-n ic` for token and cycle commands. Without `-n ic`, `icp cycles balance` can show your local network balance, which is why the first balance in your transcript looked much larger than the balance available for mainnet canister creation.
+
 Deploy the backend:
 
 ```powershell
@@ -276,34 +302,34 @@ $backendId = (icp canister status -e ic --id-only backend).Trim()
 $backendId
 ```
 
-Edit `src\frontend\env.json`:
-
-```json
-{
-  "backend_host": "https://icp0.io",
-  "backend_canister_id": "<backendId>",
-  "project_id": "voicecall-ai",
-  "ii_derivation_origin": "https://<frontend-canister-id>.icp0.io",
-  "storage_gateway_url": "https://blob.caffeine.ai",
-  "voice_server_url": "https://your-cloudflare-or-server-host"
-}
-```
-
-If this is the first frontend deploy and you do not know the frontend ID yet, deploy once, get the ID, update `ii_derivation_origin`, and deploy the frontend again:
+If this is the first frontend deploy and you do not know the frontend ID yet, create the frontend canister first:
 
 ```powershell
-icp deploy -e ic frontend
+icp canister create -e ic frontend
 $frontendId = (icp canister status -e ic --id-only frontend).Trim()
 $frontendId
-notepad src\frontend\env.json
+```
+
+Generate the frontend runtime config with your public voice server URL, then deploy the frontend:
+
+```powershell
+pnpm configure:frontend:ic -- --voice-server-url https://your-cloudflare-or-server-host
 icp deploy -e ic frontend
 ```
 
-Open:
+For the deployment shown in your terminal, open:
+
+```text
+https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+```
+
+For any future deployment, use:
 
 ```text
 https://<frontendId>.icp0.io
 ```
+
+If Chrome shows a certificate warning on `*.icp-api.io`, you are on the wrong host for the frontend. Switch the address to `*.icp0.io` or `*.ic0.app`.
 
 ## Test an End-To-End Call
 
@@ -349,8 +375,7 @@ pnpm --dir src/frontend build
 Backend:
 
 ```powershell
-# From the repository root, where mops.toml lives
-mops build
+icp build backend
 ```
 
 Server:
