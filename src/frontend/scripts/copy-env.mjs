@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 
 const source = resolve("env.json");
 const destination = resolve("dist/env.json");
+const assetConfig = resolve("dist/.ic-assets.json5");
 
 if (!existsSync(source)) {
   throw new Error(`Missing ${source}. Copy env.example.json to env.json first.`);
@@ -68,6 +69,16 @@ if (
   throw new Error(
     `${source} points at a mainnet IC frontend but voice_server_url is not https.`,
   );
+}
+
+if (existsSync(assetConfig)) {
+  const voiceOrigin = new URL(env.voice_server_url).origin;
+  const assetConfigText = readFileSync(assetConfig, "utf8");
+  if (!assetConfigText.includes(voiceOrigin)) {
+    throw new Error(
+      `${assetConfig} Content-Security-Policy does not allow ${voiceOrigin}. Add it to connect-src before deploying.`,
+    );
+  }
 }
 
 mkdirSync(dirname(destination), { recursive: true });

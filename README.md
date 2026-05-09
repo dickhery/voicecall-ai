@@ -363,6 +363,16 @@ The `/media` WebSocket bridges Twilio audio to xAI and sends xAI audio back to T
 - On a Twilio trial account, destination numbers usually must be verified.
 - If you turn on `VALIDATE_TWILIO_SIGNATURE=true`, test after your public tunnel URL is stable.
 
+## CSP Notes
+
+The IC asset canister serves a strict Content Security Policy from:
+
+```text
+src/frontend/public/.ic-assets.json5
+```
+
+If `voice_server_url` changes, add the new origin to the `connect-src` directive before redeploying the frontend. The build checks this now, so a mismatched CSP fails locally instead of letting the deployed browser block `/health` or `/initiate-call`.
+
 ## Useful Commands
 
 Frontend:
