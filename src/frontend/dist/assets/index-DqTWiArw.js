@@ -15757,7 +15757,7 @@ function mergeLoginOptions(loginOptions, otherLoginOptions) {
   };
 }
 const ONE_HOUR_IN_NANOSECONDS = BigInt(36e11);
-const DEFAULT_IDENTITY_PROVIDER = "https://id.ai";
+const DEFAULT_IDENTITY_PROVIDER = "https://identity.internetcomputer.org/";
 const InternetIdentityReactContext = reactExports.createContext(void 0);
 async function createAuthClient(createOptions) {
   const config = await loadConfig();
@@ -36937,62 +36937,51 @@ const createLucideIcon = (iconName, iconNode) => {
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$F = [
+const __iconNode$E = [
   ["path", { d: "m12 19-7-7 7-7", key: "1l729n" }],
   ["path", { d: "M19 12H5", key: "x3x0zl" }]
 ];
-const ArrowLeft = createLucideIcon("arrow-left", __iconNode$F);
+const ArrowLeft = createLucideIcon("arrow-left", __iconNode$E);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$E = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
-const Check = createLucideIcon("check", __iconNode$E);
+const __iconNode$D = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
+const Check = createLucideIcon("check", __iconNode$D);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$D = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
-const ChevronDown = createLucideIcon("chevron-down", __iconNode$D);
+const __iconNode$C = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
+const ChevronDown = createLucideIcon("chevron-down", __iconNode$C);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$C = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
-const ChevronLeft = createLucideIcon("chevron-left", __iconNode$C);
+const __iconNode$B = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
+const ChevronLeft = createLucideIcon("chevron-left", __iconNode$B);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$B = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
-const ChevronRight = createLucideIcon("chevron-right", __iconNode$B);
+const __iconNode$A = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
+const ChevronRight = createLucideIcon("chevron-right", __iconNode$A);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$A = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
-const ChevronUp = createLucideIcon("chevron-up", __iconNode$A);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$z = [
-  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
-  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
-];
-const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$z);
+const __iconNode$z = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
+const ChevronUp = createLucideIcon("chevron-up", __iconNode$z);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37000,10 +36989,10 @@ const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$z);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$y = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
+  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
+  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
 ];
-const CircleCheck = createLucideIcon("circle-check", __iconNode$y);
+const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$y);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37012,10 +37001,9 @@ const CircleCheck = createLucideIcon("circle-check", __iconNode$y);
  */
 const __iconNode$x = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
-  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
+  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
 ];
-const CircleX = createLucideIcon("circle-x", __iconNode$x);
+const CircleCheck = createLucideIcon("circle-check", __iconNode$x);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37024,9 +37012,10 @@ const CircleX = createLucideIcon("circle-x", __iconNode$x);
  */
 const __iconNode$w = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
+  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
+  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
 ];
-const Clock = createLucideIcon("clock", __iconNode$w);
+const CircleX = createLucideIcon("circle-x", __iconNode$w);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37034,10 +37023,10 @@ const Clock = createLucideIcon("clock", __iconNode$w);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$v = [
-  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
-  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
 ];
-const Copy = createLucideIcon("copy", __iconNode$v);
+const Clock = createLucideIcon("clock", __iconNode$v);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37045,11 +37034,10 @@ const Copy = createLucideIcon("copy", __iconNode$v);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$u = [
-  ["path", { d: "M12 15V3", key: "m9g1x1" }],
-  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
-  ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
+  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
+  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
 ];
-const Download = createLucideIcon("download", __iconNode$u);
+const Copy = createLucideIcon("copy", __iconNode$u);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37057,6 +37045,18 @@ const Download = createLucideIcon("download", __iconNode$u);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$t = [
+  ["path", { d: "M12 15V3", key: "m9g1x1" }],
+  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
+  ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
+];
+const Download = createLucideIcon("download", __iconNode$t);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$s = [
   [
     "path",
     {
@@ -37074,14 +37074,14 @@ const __iconNode$t = [
   ],
   ["path", { d: "m2 2 20 20", key: "1ooewy" }]
 ];
-const EyeOff = createLucideIcon("eye-off", __iconNode$t);
+const EyeOff = createLucideIcon("eye-off", __iconNode$s);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$s = [
+const __iconNode$r = [
   [
     "path",
     {
@@ -37091,19 +37091,7 @@ const __iconNode$s = [
   ],
   ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
 ];
-const Eye = createLucideIcon("eye", __iconNode$s);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$r = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "M12 16v-4", key: "1dtifu" }],
-  ["path", { d: "M12 8h.01", key: "e9boi3" }]
-];
-const Info = createLucideIcon("info", __iconNode$r);
+const Eye = createLucideIcon("eye", __iconNode$r);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37111,6 +37099,18 @@ const Info = createLucideIcon("info", __iconNode$r);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$q = [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "M12 16v-4", key: "1dtifu" }],
+  ["path", { d: "M12 8h.01", key: "e9boi3" }]
+];
+const Info = createLucideIcon("info", __iconNode$q);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$p = [
   [
     "path",
     {
@@ -37120,40 +37120,28 @@ const __iconNode$q = [
   ],
   ["circle", { cx: "16.5", cy: "7.5", r: ".5", fill: "currentColor", key: "w0ekpg" }]
 ];
-const KeyRound = createLucideIcon("key-round", __iconNode$q);
+const KeyRound = createLucideIcon("key-round", __iconNode$p);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$p = [
+const __iconNode$o = [
   ["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1", key: "10lvy0" }],
   ["rect", { width: "7", height: "5", x: "14", y: "3", rx: "1", key: "16une8" }],
   ["rect", { width: "7", height: "9", x: "14", y: "12", rx: "1", key: "1hutg5" }],
   ["rect", { width: "7", height: "5", x: "3", y: "16", rx: "1", key: "ldoo1y" }]
 ];
-const LayoutDashboard = createLucideIcon("layout-dashboard", __iconNode$p);
+const LayoutDashboard = createLucideIcon("layout-dashboard", __iconNode$o);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$o = [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]];
-const LoaderCircle = createLucideIcon("loader-circle", __iconNode$o);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$n = [
-  ["path", { d: "m16 17 5-5-5-5", key: "1bji2h" }],
-  ["path", { d: "M21 12H9", key: "dn1m92" }],
-  ["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", key: "1uf3rs" }]
-];
-const LogOut = createLucideIcon("log-out", __iconNode$n);
+const __iconNode$n = [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]];
+const LoaderCircle = createLucideIcon("loader-circle", __iconNode$n);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37161,11 +37149,11 @@ const LogOut = createLucideIcon("log-out", __iconNode$n);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$m = [
-  ["path", { d: "M4 12h16", key: "1lakjw" }],
-  ["path", { d: "M4 18h16", key: "19g7jn" }],
-  ["path", { d: "M4 6h16", key: "1o0s65" }]
+  ["path", { d: "m16 17 5-5-5-5", key: "1bji2h" }],
+  ["path", { d: "M21 12H9", key: "dn1m92" }],
+  ["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", key: "1uf3rs" }]
 ];
-const Menu = createLucideIcon("menu", __iconNode$m);
+const LogOut = createLucideIcon("log-out", __iconNode$m);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37173,14 +37161,11 @@ const Menu = createLucideIcon("menu", __iconNode$m);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$l = [
-  ["line", { x1: "2", x2: "22", y1: "2", y2: "22", key: "a6p6uj" }],
-  ["path", { d: "M18.89 13.23A7.12 7.12 0 0 0 19 12v-2", key: "80xlxr" }],
-  ["path", { d: "M5 10v2a7 7 0 0 0 12 5", key: "p2k8kg" }],
-  ["path", { d: "M15 9.34V5a3 3 0 0 0-5.68-1.33", key: "1gzdoj" }],
-  ["path", { d: "M9 9v3a3 3 0 0 0 5.12 2.12", key: "r2i35w" }],
-  ["line", { x1: "12", x2: "12", y1: "19", y2: "22", key: "x3vr5v" }]
+  ["path", { d: "M4 12h16", key: "1lakjw" }],
+  ["path", { d: "M4 18h16", key: "19g7jn" }],
+  ["path", { d: "M4 6h16", key: "1o0s65" }]
 ];
-const MicOff = createLucideIcon("mic-off", __iconNode$l);
+const Menu = createLucideIcon("menu", __iconNode$l);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37925,15 +37910,6 @@ function useInitiateCall() {
       return actor.initiateCall(input);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["myCalls"] })
-  });
-}
-function useGetEphemeralToken() {
-  const { actor } = useBackendActor();
-  return useMutation({
-    mutationFn: async (presetId) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.getEphemeralToken(presetId);
-    }
   });
 }
 function useAdminGetSystemLogs(limit = 100n) {
@@ -44008,6 +43984,85 @@ function AdminUsersPage() {
 const Route$4 = createFileRoute("/admin/users")({
   component: AdminUsersPage
 });
+let runtimeEnvPromise = null;
+async function loadRuntimeEnv() {
+  if (!runtimeEnvPromise) {
+    runtimeEnvPromise = fetch("/env.json", { cache: "no-store" }).then((response) => response.ok ? response.json() : {}).catch(() => ({}));
+  }
+  return runtimeEnvPromise;
+}
+function normalizeServerUrl(url) {
+  const trimmed = url.trim().replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^(localhost|127\.0\.0\.1|\[::1\])/i.test(trimmed)) {
+    return `http://${trimmed}`;
+  }
+  return `https://${trimmed}`;
+}
+async function getVoiceServerUrl() {
+  const runtimeEnv = await loadRuntimeEnv();
+  const url = runtimeEnv.voice_server_url;
+  if (!url || url === "undefined") {
+    throw new Error(
+      "Voice server URL is not configured. Set voice_server_url in src/frontend/env.json."
+    );
+  }
+  return normalizeServerUrl(url);
+}
+function serializePreset(preset) {
+  return {
+    id: preset.id.toString(),
+    name: preset.name,
+    systemPrompt: preset.systemPrompt,
+    voice: preset.voice,
+    audioFormat: preset.audioFormat,
+    sampleRate: preset.sampleRate,
+    turnDetection: {
+      serverVad: preset.turnDetection.serverVad,
+      threshold: preset.turnDetection.threshold,
+      silenceDurationMs: Number(preset.turnDetection.silenceDurationMs),
+      prefixPaddingMs: Number(preset.turnDetection.prefixPaddingMs)
+    },
+    toolsEnabled: preset.toolsEnabled
+  };
+}
+async function postJson(path, body) {
+  const baseUrl = await getVoiceServerUrl();
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.ok === false) {
+    throw new Error(
+      payload.error || `Voice server request failed (${response.status})`
+    );
+  }
+  return payload;
+}
+async function startVoiceServerCall({
+  recipientPhone,
+  preset,
+  callId
+}) {
+  return postJson("/initiate-call", {
+    recipientPhone,
+    preset: serializePreset(preset),
+    callId: callId.toString()
+  });
+}
+async function endVoiceServerCall(callSid) {
+  await postJson("/end-call", { callSid });
+}
+async function getVoiceServerHealth() {
+  const baseUrl = await getVoiceServerUrl();
+  const response = await fetch(`${baseUrl}/health`, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Voice server health check failed (${response.status})`);
+  }
+  return response.json();
+}
 const features = [
   {
     icon: Mic,
@@ -44224,7 +44279,11 @@ function IndexRoute$1() {
   var _a3, _b3;
   const { isAuthenticated, isInitializing, isAdmin, isAdminLoading } = useAuth();
   const navigate = useNavigate();
-  const configQuery = useGetAdminConfig();
+  const voiceServerQuery = useQuery({
+    queryKey: ["voiceServerHealth"],
+    queryFn: getVoiceServerHealth,
+    retry: false
+  });
   reactExports.useEffect(() => {
     if (!isInitializing && isAuthenticated && !isAdminLoading) {
       void navigate({ to: isAdmin ? "/admin/dashboard" : "/user/dashboard" });
@@ -44233,9 +44292,9 @@ function IndexRoute$1() {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     LoginPage,
     {
-      xaiConfigured: (_a3 = configQuery.data) == null ? void 0 : _a3.hasXaiKey,
-      twilioConfigured: (_b3 = configQuery.data) == null ? void 0 : _b3.hasTwilioAuth,
-      configLoading: configQuery.isLoading
+      xaiConfigured: ((_a3 = voiceServerQuery.data) == null ? void 0 : _a3.xaiConfigured) ?? false,
+      twilioConfigured: ((_b3 = voiceServerQuery.data) == null ? void 0 : _b3.twilioConfigured) ?? false,
+      configLoading: voiceServerQuery.isLoading
     }
   );
 }
@@ -44930,65 +44989,7 @@ function AlertDialogCancel({
     }
   );
 }
-const XAI_WS_URL = "wss://api.x.ai/v1/realtime?model=grok-voice-think-fast-1.0";
-const AUDIO_CHUNK_MS = 100;
 const WAVEFORM_BARS = 20;
-function sampleRateToHz(sr) {
-  switch (sr) {
-    case SampleRate.hz8000:
-      return 8e3;
-    case SampleRate.hz16000:
-      return 16e3;
-    case SampleRate.hz22050:
-      return 22050;
-    case SampleRate.hz24000:
-      return 24e3;
-    case SampleRate.hz32000:
-      return 32e3;
-    case SampleRate.hz44100:
-      return 44100;
-    case SampleRate.hz48000:
-      return 48e3;
-    default:
-      return 16e3;
-  }
-}
-function audioFormatToString(af) {
-  switch (af) {
-    case AudioFormat.pcmu:
-      return "audio/pcmu";
-    case AudioFormat.pcma:
-      return "audio/pcma";
-    default:
-      return "audio/pcm";
-  }
-}
-function float32ToBase64Pcm16(float32) {
-  const pcm = new Int16Array(float32.length);
-  for (let i = 0; i < float32.length; i++) {
-    const s2 = Math.max(-1, Math.min(1, float32[i]));
-    pcm[i] = s2 < 0 ? s2 * 32768 : s2 * 32767;
-  }
-  const bytes = new Uint8Array(pcm.buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-function base64Pcm16ToFloat32(b64) {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  const pcm = new Int16Array(bytes.buffer);
-  const float32 = new Float32Array(pcm.length);
-  for (let i = 0; i < pcm.length; i++) {
-    float32[i] = pcm[i] / (pcm[i] < 0 ? 32768 : 32767);
-  }
-  return float32;
-}
 function useXaiVoice() {
   const [status, setStatus] = reactExports.useState("idle");
   const [recipient, setRecipient] = reactExports.useState("");
@@ -44999,149 +45000,36 @@ function useXaiVoice() {
   const [audioLevels, setAudioLevels] = reactExports.useState(
     Array(WAVEFORM_BARS).fill(0)
   );
-  const wsRef = reactExports.useRef(null);
-  const streamRef = reactExports.useRef(null);
-  const audioCtxRef = reactExports.useRef(null);
-  const processorRef = reactExports.useRef(null);
   const timerRef = reactExports.useRef(null);
   const startTimeRef = reactExports.useRef(0);
-  const isMutedRef = reactExports.useRef(false);
-  const presetRef = reactExports.useRef(null);
-  const playbackCtxRef = reactExports.useRef(null);
-  const nextPlayTimeRef = reactExports.useRef(0);
+  const activeCallIdRef = reactExports.useRef(null);
+  const activeCallSidRef = reactExports.useRef(null);
   const initiateCall = useInitiateCall();
-  const getEphemeralToken = useGetEphemeralToken();
   const updateCallStatus = useUpdateCallStatus();
   const { setActiveCall, clearCall } = useCallStore();
-  const activeCallIdRef = reactExports.useRef(null);
-  const transcriptRef = reactExports.useRef("");
-  const cleanup = reactExports.useCallback(() => {
+  const cleanupTimer = reactExports.useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (processorRef.current) {
-      processorRef.current.disconnect();
-      processorRef.current = null;
-    }
-    if (streamRef.current) {
-      for (const track2 of streamRef.current.getTracks()) {
-        track2.stop();
-      }
-      streamRef.current = null;
-    }
-    if (audioCtxRef.current) {
-      audioCtxRef.current.close().catch(() => {
-      });
-      audioCtxRef.current = null;
-    }
-    if (playbackCtxRef.current) {
-      playbackCtxRef.current.close().catch(() => {
-      });
-      playbackCtxRef.current = null;
-    }
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
     setAudioLevels(Array(WAVEFORM_BARS).fill(0));
   }, []);
-  const playPcmChunk = reactExports.useCallback((b64, sampleRate) => {
-    if (!playbackCtxRef.current) {
-      playbackCtxRef.current = new AudioContext({ sampleRate });
-      nextPlayTimeRef.current = playbackCtxRef.current.currentTime;
-    }
-    const ctx = playbackCtxRef.current;
-    const float32 = base64Pcm16ToFloat32(b64);
-    const buffer = ctx.createBuffer(1, float32.length, sampleRate);
-    buffer.copyToChannel(float32, 0);
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    const startAt = Math.max(ctx.currentTime, nextPlayTimeRef.current);
-    source.start(startAt);
-    nextPlayTimeRef.current = startAt + buffer.duration;
+  const resetAfterDelay = reactExports.useCallback(() => {
+    setTimeout(() => {
+      setStatus("idle");
+      setDurationSecs(0);
+      setRecipient("");
+      setPresetName("");
+      setErrorMessage(null);
+      setIsMuted(false);
+    }, 3e3);
   }, []);
-  const startMicCapture = reactExports.useCallback(
-    async (ws, preset) => {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          sampleRate: sampleRateToHz(preset.sampleRate)
-        }
-      });
-      streamRef.current = stream;
-      const ctx = new AudioContext({
-        sampleRate: sampleRateToHz(preset.sampleRate)
-      });
-      audioCtxRef.current = ctx;
-      const source = ctx.createMediaStreamSource(stream);
-      const bufferSize = Math.round(
-        sampleRateToHz(preset.sampleRate) * AUDIO_CHUNK_MS / 1e3
-      );
-      const validSizes = [256, 512, 1024, 2048, 4096, 8192, 16384];
-      const nearestSize = validSizes.reduce(
-        (prev, curr) => Math.abs(curr - bufferSize) < Math.abs(prev - bufferSize) ? curr : prev
-      );
-      const processor = ctx.createScriptProcessor(nearestSize, 1, 1);
-      processorRef.current = processor;
-      processor.onaudioprocess = (e) => {
-        if (ws.readyState !== WebSocket.OPEN) return;
-        const channelData = e.inputBuffer.getChannelData(0);
-        const levels = [];
-        const step = Math.floor(channelData.length / WAVEFORM_BARS);
-        for (let i = 0; i < WAVEFORM_BARS; i++) {
-          let sum = 0;
-          for (let j2 = 0; j2 < step; j2++) {
-            sum += Math.abs(channelData[i * step + j2]);
-          }
-          levels.push(Math.min(1, sum / step / 0.3));
-        }
-        setAudioLevels(levels);
-        if (isMutedRef.current) return;
-        const b64 = float32ToBase64Pcm16(Float32Array.from(channelData));
-        ws.send(
-          JSON.stringify({ type: "input_audio_buffer.append", audio: b64 })
-        );
-      };
-      source.connect(processor);
-      processor.connect(ctx.destination);
-    },
-    []
-  );
-  const buildSessionUpdate = reactExports.useCallback((preset) => {
-    const formatStr = audioFormatToString(preset.audioFormat);
-    const isPcmu = formatStr === "audio/pcmu";
-    const isPcma = formatStr === "audio/pcma";
-    const audioInputFormat = isPcmu || isPcma ? { type: formatStr } : { type: formatStr, rate: sampleRateToHz(preset.sampleRate) };
-    const audioOutputFormat = isPcmu || isPcma ? { type: formatStr } : { type: formatStr, rate: sampleRateToHz(preset.sampleRate) };
-    return {
-      type: "session.update",
-      session: {
-        modalities: ["text", "audio"],
-        instructions: preset.systemPrompt,
-        voice: preset.voice,
-        input_audio_format: audioInputFormat,
-        output_audio_format: audioOutputFormat,
-        input_audio_transcription: { model: "whisper-1" },
-        turn_detection: {
-          type: "server_vad",
-          threshold: preset.turnDetection.threshold,
-          prefix_padding_ms: Number(preset.turnDetection.prefixPaddingMs),
-          silence_duration_ms: Number(preset.turnDetection.silenceDurationMs)
-        },
-        tools: [
-          ...preset.toolsEnabled.webSearch ? [
-            {
-              type: "web_search"
-            }
-          ] : []
-        ],
-        tool_choice: "auto",
-        temperature: 0.8,
-        max_response_output_tokens: "inf"
-      }
-    };
+  const startDurationTimer = reactExports.useCallback(() => {
+    startTimeRef.current = Date.now();
+    setDurationSecs(0);
+    timerRef.current = setInterval(() => {
+      setDurationSecs(Math.floor((Date.now() - startTimeRef.current) / 1e3));
+    }, 1e3);
   }, []);
   const startCall = reactExports.useCallback(
     async (preset, recipientPhone) => {
@@ -45149,7 +45037,8 @@ function useXaiVoice() {
       setRecipient(recipientPhone);
       setPresetName(preset.name);
       setErrorMessage(null);
-      presetRef.current = preset;
+      activeCallIdRef.current = null;
+      activeCallSidRef.current = null;
       try {
         const callResult = await initiateCall.mutateAsync({
           recipientPhone,
@@ -45162,136 +45051,71 @@ function useXaiVoice() {
         activeCallIdRef.current = callId;
         setActiveCall(callId, recipientPhone, preset.id);
         setStatus("connecting");
-        const tokenResult = await getEphemeralToken.mutateAsync(preset.id);
-        if (tokenResult.__kind__ === "err") {
-          throw new Error(tokenResult.err);
-        }
-        const { token, websocketUrl } = tokenResult.ok;
-        const wsUrl = websocketUrl || XAI_WS_URL;
-        const ws = new WebSocket(wsUrl, [`xai-client-secret.${token}`]);
-        wsRef.current = ws;
-        ws.onopen = async () => {
-          setStatus("in_call");
-          ws.send(JSON.stringify(buildSessionUpdate(preset)));
-          startTimeRef.current = Date.now();
-          timerRef.current = setInterval(() => {
-            setDurationSecs(
-              Math.floor((Date.now() - startTimeRef.current) / 1e3)
-            );
-          }, 1e3);
-          try {
-            await startMicCapture(ws, preset);
-          } catch (_micErr) {
-            ue.error(
-              "Microphone access denied — call audio will be AI-only"
-            );
-          }
-        };
-        ws.onmessage = (event) => {
-          try {
-            const msg = JSON.parse(event.data);
-            handleWsMessage(msg, preset);
-          } catch {
-          }
-        };
-        ws.onerror = () => {
-          setStatus("error");
-          setErrorMessage("WebSocket connection error");
-          cleanup();
-          clearCall();
-        };
-        ws.onclose = (e) => {
-          if (wsRef.current !== null) {
-            setStatus(e.wasClean ? "completed" : "error");
-            if (!e.wasClean)
-              setErrorMessage(`Connection closed unexpectedly (${e.code})`);
-          }
-          cleanup();
-          clearCall();
-        };
+        const serverCall = await startVoiceServerCall({
+          recipientPhone,
+          preset,
+          callId
+        });
+        activeCallSidRef.current = serverCall.callSid;
+        setStatus("in_call");
+        startDurationTimer();
+        ue.success("Call placed", {
+          description: `Twilio SID ${serverCall.callSid}`
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
         setStatus("error");
         setErrorMessage(message);
         ue.error(`Call failed: ${message}`);
-        cleanup();
+        if (activeCallIdRef.current !== null) {
+          updateCallStatus.mutate({
+            callId: activeCallIdRef.current,
+            status: CallStatus.failed,
+            transcript: null
+          });
+        }
+        cleanupTimer();
         clearCall();
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       initiateCall,
-      getEphemeralToken,
       setActiveCall,
-      clearCall,
-      buildSessionUpdate,
-      startMicCapture,
-      cleanup
+      startDurationTimer,
+      updateCallStatus,
+      cleanupTimer,
+      clearCall
     ]
   );
-  function handleWsMessage(msg, preset) {
-    const type = msg.type;
-    switch (type) {
-      case "session.created":
-        break;
-      case "response.output_audio.delta": {
-        const delta = msg.delta;
-        if (delta) {
-          playPcmChunk(delta, sampleRateToHz(preset.sampleRate));
-        }
-        break;
-      }
-      case "conversation.item.created": {
-        const item = msg.item;
-        if (item == null ? void 0 : item.content) {
-          const text = item.content.map((c2) => c2.text ?? "").join("");
-          if (text)
-            transcriptRef.current += `${item.role === "assistant" ? "AI: " : "User: "}${text}
-`;
-        }
-        break;
-      }
-      case "error": {
-        const errObj = msg.error;
-        ue.error(`xAI error: ${(errObj == null ? void 0 : errObj.message) ?? "unknown"}`);
-        break;
-      }
-    }
-  }
   const endCall = reactExports.useCallback(() => {
     setStatus("completed");
+    cleanupTimer();
+    const callSid = activeCallSidRef.current;
+    if (callSid) {
+      endVoiceServerCall(callSid).catch((err) => {
+        const message = err instanceof Error ? err.message : "Unknown error";
+        ue.error(`Unable to end Twilio call: ${message}`);
+      });
+    }
     if (activeCallIdRef.current !== null) {
       updateCallStatus.mutate({
         callId: activeCallIdRef.current,
         status: CallStatus.completed,
-        transcript: transcriptRef.current || null
+        transcript: null
       });
-      activeCallIdRef.current = null;
-      transcriptRef.current = "";
     }
-    cleanup();
+    activeCallIdRef.current = null;
+    activeCallSidRef.current = null;
     clearCall();
-    setTimeout(() => {
-      setStatus("idle");
-      setDurationSecs(0);
-      setRecipient("");
-      setPresetName("");
-    }, 3e3);
-  }, [cleanup, clearCall, updateCallStatus]);
+    resetAfterDelay();
+  }, [cleanupTimer, updateCallStatus, clearCall, resetAfterDelay]);
   const toggleMute = reactExports.useCallback(() => {
-    isMutedRef.current = !isMutedRef.current;
-    setIsMuted(isMutedRef.current);
-    if (streamRef.current) {
-      for (const track2 of streamRef.current.getAudioTracks()) {
-        track2.enabled = !isMutedRef.current;
-      }
-    }
+    setIsMuted((value) => !value);
+    ue.info("Use the phone keypad or handset mute for live call audio.");
   }, []);
   reactExports.useEffect(() => {
-    return () => {
-      cleanup();
-    };
-  }, [cleanup]);
+    return () => cleanupTimer();
+  }, [cleanupTimer]);
   return {
     status,
     recipient,
@@ -53173,28 +52997,6 @@ const STATUS_LABELS = {
   completed: "Completed",
   error: "Error"
 };
-function AudioWaveform({
-  levels,
-  active
-}) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-0.5 h-8", children: Array.from({ length: levels.length }, (_2, i) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-    motion.div,
-    {
-      className: "w-1 rounded-full bg-primary",
-      animate: {
-        height: active ? `${Math.max(4, levels[i] * 32)}px` : "4px",
-        opacity: active ? 0.7 + levels[i] * 0.3 : 0.3
-      },
-      transition: {
-        duration: 0.1,
-        ease: "easeOut",
-        delay: i * 0.01
-      },
-      style: { minHeight: "4px" }
-    },
-    `waveform-bar-${levels.length}-${i}`
-  )) });
-}
 function StatCard({
   icon,
   label,
@@ -53219,17 +53021,7 @@ function StatCard({
 function ActiveCallPanel({
   voice
 }) {
-  const {
-    status,
-    recipient,
-    presetName,
-    durationSecs,
-    isMuted,
-    errorMessage,
-    audioLevels,
-    endCall,
-    toggleMute
-  } = voice;
+  const { status, recipient, presetName, durationSecs, errorMessage, endCall } = voice;
   const isActive = status === "in_call" || status === "connecting" || status === "initiating";
   if (status === "idle") return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -53288,38 +53080,29 @@ function ActiveCallPanel({
                 /* @__PURE__ */ jsxRuntimeExports.jsx(Zap, { className: "w-3 h-3" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate max-w-[140px]", children: presetName })
               ] }),
-              status === "in_call" && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 min-w-0 flex justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(AudioWaveform, { levels: audioLevels, active: !isMuted }) }),
+              status === "in_call" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Badge,
+                {
+                  variant: "outline",
+                  className: "text-xs border-primary/40 text-primary",
+                  children: "Twilio Media Stream"
+                }
+              ),
               status === "error" && errorMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-destructive flex-1", children: errorMessage }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 ml-auto shrink-0", children: [
-                status === "in_call" && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  Button,
-                  {
-                    variant: "outline",
-                    size: "sm",
-                    onClick: toggleMute,
-                    "data-ocid": "dashboard.active_call.mute_button",
-                    className: `gap-1.5 h-8 text-xs ${isMuted ? "border-destructive/50 text-destructive" : "border-border"}`,
-                    children: [
-                      isMuted ? /* @__PURE__ */ jsxRuntimeExports.jsx(MicOff, { className: "w-3.5 h-3.5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Mic, { className: "w-3.5 h-3.5" }),
-                      isMuted ? "Unmute" : "Mute"
-                    ]
-                  }
-                ),
-                isActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  Button,
-                  {
-                    variant: "destructive",
-                    size: "sm",
-                    onClick: endCall,
-                    "data-ocid": "dashboard.active_call.end_button",
-                    className: "gap-1.5 h-8 text-xs",
-                    children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(PhoneOff, { className: "w-3.5 h-3.5" }),
-                      "End Call"
-                    ]
-                  }
-                )
-              ] })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 ml-auto shrink-0", children: isActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                Button,
+                {
+                  variant: "destructive",
+                  size: "sm",
+                  onClick: endCall,
+                  "data-ocid": "dashboard.active_call.end_button",
+                  className: "gap-1.5 h-8 text-xs",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(PhoneOff, { className: "w-3.5 h-3.5" }),
+                    "End Call"
+                  ]
+                }
+              ) })
             ] }) })
           ]
         }

@@ -1,0 +1,4 @@
+{
+  "backend": "replace-with-existing-backend-canister-id",
+  "frontend": "replace-with-existing-frontend-canister-id"
+}

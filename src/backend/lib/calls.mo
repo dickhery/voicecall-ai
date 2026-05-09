@@ -3,6 +3,7 @@ import List "mo:core/List";
 import Principal "mo:core/Principal";
 import Time "mo:core/Time";
 import Runtime "mo:core/Runtime";
+import Nat "mo:core/Nat";
 import Types "../types/calls";
 import Common "../types/common";
 

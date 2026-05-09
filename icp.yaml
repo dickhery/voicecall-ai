@@ -1,0 +1,23 @@
+networks:
+  - name: local
+    mode: managed
+    gateway:
+      port: 8000
+
+canisters:
+  - name: backend
+    recipe:
+      type: "@dfinity/motoko@v4.1.0"
+      configuration:
+        main: src/backend/main.mo
+        candid: src/backend/dist/backend.did
+        args: "--actor-idl src/backend/system-idl"
+
+  - name: frontend
+    recipe:
+      type: "@dfinity/asset-canister@v2.1.0"
+      configuration:
+        dir: src/frontend/dist
+        build:
+          - pnpm --dir src/frontend install --prefer-offline
+          - pnpm --dir src/frontend build

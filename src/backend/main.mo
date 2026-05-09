@@ -5,7 +5,7 @@ import CallsLib "lib/calls";
 import ConfigApi "mixins/config-api";
 import CallsApi "mixins/calls-api";
 
-actor {
+persistent actor {
   // Authorization state (first authenticated user becomes admin)
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);

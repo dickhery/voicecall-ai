@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
-import { useGetAdminConfig } from "@/hooks/use-backend";
+import { getVoiceServerHealth } from "@/lib/voice-server";
 import LoginPage from "@/pages/LoginPage";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
@@ -11,7 +12,11 @@ function IndexRoute() {
   const { isAuthenticated, isInitializing, isAdmin, isAdminLoading } =
     useAuth();
   const navigate = useNavigate();
-  const configQuery = useGetAdminConfig();
+  const voiceServerQuery = useQuery({
+    queryKey: ["voiceServerHealth"],
+    queryFn: getVoiceServerHealth,
+    retry: false,
+  });
 
   useEffect(() => {
     if (!isInitializing && isAuthenticated && !isAdminLoading) {
@@ -21,9 +26,9 @@ function IndexRoute() {
 
   return (
     <LoginPage
-      xaiConfigured={configQuery.data?.hasXaiKey}
-      twilioConfigured={configQuery.data?.hasTwilioAuth}
-      configLoading={configQuery.isLoading}
+      xaiConfigured={voiceServerQuery.data?.xaiConfigured ?? false}
+      twilioConfigured={voiceServerQuery.data?.twilioConfigured ?? false}
+      configLoading={voiceServerQuery.isLoading}
     />
   );
 }

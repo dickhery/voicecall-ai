@@ -1604,9 +1604,6 @@ video {
 .border-destructive\/30 {
   border-color: oklch(var(--destructive) / 0.3);
 }
-.border-destructive\/50 {
-  border-color: oklch(var(--destructive) / 0.5);
-}
 .border-green-500\/30 {
   border-color: rgb(34 197 94 / 0.3);
 }

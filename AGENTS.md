@@ -13,10 +13,10 @@
 - **lint fix**: `pnpm fix`
 - **build**: `pnpm build`
 
-**Backend** (run from `src/backend/`):
+**Backend** (run from root):
 
 - **install**: `mops install`
-- **typecheck**: `mops check --fix`
+- **typecheck/build**: `mops build`
 - **build**: `mops build`
 
 **Backend and frontend integration** (run from root):

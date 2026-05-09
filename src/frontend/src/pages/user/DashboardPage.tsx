@@ -40,8 +40,6 @@ import {
   Clock,
   Copy,
   Loader2,
-  Mic,
-  MicOff,
   Phone,
   PhoneOff,
   Plus,
@@ -90,32 +88,6 @@ const STATUS_LABELS: Record<XaiCallStatus, string> = {
   error: "Error",
 };
 
-function AudioWaveform({
-  levels,
-  active,
-}: { levels: number[]; active: boolean }) {
-  return (
-    <div className="flex items-center gap-0.5 h-8">
-      {Array.from({ length: levels.length }, (_, i) => (
-        <motion.div
-          key={`waveform-bar-${levels.length}-${i}`}
-          className="w-1 rounded-full bg-primary"
-          animate={{
-            height: active ? `${Math.max(4, levels[i] * 32)}px` : "4px",
-            opacity: active ? 0.7 + levels[i] * 0.3 : 0.3,
-          }}
-          transition={{
-            duration: 0.1,
-            ease: "easeOut",
-            delay: i * 0.01,
-          }}
-          style={{ minHeight: "4px" }}
-        />
-      ))}
-    </div>
-  );
-}
-
 function StatCard({
   icon,
   label,
@@ -159,17 +131,8 @@ function ActiveCallPanel({
 }: {
   voice: ReturnType<typeof useXaiVoice>;
 }) {
-  const {
-    status,
-    recipient,
-    presetName,
-    durationSecs,
-    isMuted,
-    errorMessage,
-    audioLevels,
-    endCall,
-    toggleMute,
-  } = voice;
+  const { status, recipient, presetName, durationSecs, errorMessage, endCall } =
+    voice;
   const isActive =
     status === "in_call" || status === "connecting" || status === "initiating";
 
@@ -249,11 +212,13 @@ function ActiveCallPanel({
               <span className="truncate max-w-[140px]">{presetName}</span>
             </div>
 
-            {/* Waveform */}
             {status === "in_call" && (
-              <div className="flex-1 min-w-0 flex justify-center">
-                <AudioWaveform levels={audioLevels} active={!isMuted} />
-              </div>
+              <Badge
+                variant="outline"
+                className="text-xs border-primary/40 text-primary"
+              >
+                Twilio Media Stream
+              </Badge>
             )}
 
             {/* Error message */}
@@ -263,26 +228,6 @@ function ActiveCallPanel({
 
             {/* Controls */}
             <div className="flex items-center gap-2 ml-auto shrink-0">
-              {status === "in_call" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleMute}
-                  data-ocid="dashboard.active_call.mute_button"
-                  className={`gap-1.5 h-8 text-xs ${
-                    isMuted
-                      ? "border-destructive/50 text-destructive"
-                      : "border-border"
-                  }`}
-                >
-                  {isMuted ? (
-                    <MicOff className="w-3.5 h-3.5" />
-                  ) : (
-                    <Mic className="w-3.5 h-3.5" />
-                  )}
-                  {isMuted ? "Unmute" : "Mute"}
-                </Button>
-              )}
               {isActive && (
                 <Button
                   variant="destructive"

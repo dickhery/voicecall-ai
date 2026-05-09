@@ -26,16 +26,13 @@ mixin (
     OutCall.transform(input);
   };
 
-  // Initiate an outbound call via Twilio REST API
+  // Create an on-chain call record before the external voice server places the
+  // Twilio call. Real-time Twilio/xAI traffic cannot reliably run from the IC.
   public shared ({ caller }) func initiateCall(
     input : CallTypes.InitiateCallInput,
   ) : async CallTypes.InitiateCallResult {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: must be logged in");
-    };
-    let creds = ConfigLib.getTwilioCredentials(configState);
-    if (creds.accountSid == "") {
-      return #err("Twilio not configured. Admin must set credentials first.");
     };
     switch (ConfigLib.getPreset(configState, input.presetId)) {
       case null { return #err("Preset not found") };
@@ -49,39 +46,18 @@ mixin (
       input.recipientPhone,
       input.presetId,
     );
-    CallsLib.addSystemLog(callsState, #info, "Initiating call " # debug_show(callRecord.id) # " to " # input.recipientPhone, ?callRecord.id);
+    ignore CallsLib.updateCallRecord(callsState, callRecord.id, #inProgress, null, null, null);
+    CallsLib.addSystemLog(
+      callsState,
+      #info,
+      "Prepared call " # debug_show(callRecord.id) # " for server-side Twilio bridge to " # input.recipientPhone,
+      ?callRecord.id,
+    );
 
-    // Build Twilio API request
-    let twilioUrl = "https://api.twilio.com/2010-04-01/Accounts/" # creds.accountSid # "/Calls.json";
-    // Webhook URL — the canister serves TwiML at this endpoint
-    // Note: webhook URL must be configured by admin; using placeholder for TwiML callback
-    let webhookUrl = "https://" # creds.accountSid # ".icp0.io/twilio-webhook";
-
-    let bodyText = "To=" # input.recipientPhone
-      # "&From=" # creds.fromNumber
-      # "&Url=" # webhookUrl;
-    let credentials = creds.accountSid # ":" # creds.authToken;
-    let b64Creds = encodeBase64(credentials);
-    let headers : [OutCall.Header] = [
-      { name = "Content-Type"; value = "application/x-www-form-urlencoded" },
-      { name = "Authorization"; value = "Basic " # b64Creds },
-    ];
-
-    try {
-      let responseText = await OutCall.httpPostRequest(twilioUrl, headers, bodyText, transform);
-      // Extract SID from JSON response — Twilio returns {"sid":"CA...",...}
-      let finalSid = switch (extractJsonField(responseText, "sid")) {
-        case null { "unknown-" # debug_show(callRecord.id) };
-        case (?s) { s };
-      };
-      ignore CallsLib.updateCallRecord(callsState, callRecord.id, #inProgress, ?finalSid, null, null);
-      CallsLib.addSystemLog(callsState, #info, "Call placed. Twilio SID: " # finalSid, ?callRecord.id);
-      #ok({ callId = callRecord.id; callSid = finalSid });
-    } catch (e) {
-      ignore CallsLib.updateCallRecord(callsState, callRecord.id, #failed, null, ?Time.now(), null);
-      CallsLib.addSystemLog(callsState, #error_, "Twilio API error: " # e.message(), ?callRecord.id);
-      #err("Failed to place call: " # e.message());
-    };
+    #ok({
+      callId = callRecord.id;
+      callSid = "server-pending-" # debug_show(callRecord.id);
+    });
   };
 
   // Twilio webhook: accept TwiML callback and return XML to keep call alive

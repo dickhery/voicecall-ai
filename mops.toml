@@ -4,7 +4,10 @@ version = "0.1.0"
 
 [build]
 outputDir = "src/backend/dist"
-args = [ "--release" ]
+args = [
+  "--release",
+  "--actor-idl=src/backend/system-idl"
+]
 
 [canisters.backend]
 main = "src/backend/main.mo"

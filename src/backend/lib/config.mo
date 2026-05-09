@@ -1,6 +1,8 @@
 import Map "mo:core/Map";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
+import Nat "mo:core/Nat";
+import Iter "mo:core/Iter";
 import Types "../types/config";
 import Common "../types/common";
 
