@@ -3,15 +3,50 @@ import http from "node:http";
 import crypto from "node:crypto";
 import cors from "cors";
 import express from "express";
+import Stripe from "stripe";
 import twilio from "twilio";
 import WebSocket, { WebSocketServer } from "ws";
+import {
+  getBackendActor,
+  getIcpServerPrincipalText,
+  normalizePurchaseIntent,
+  normalizeReservation,
+  okOrThrow,
+  principalFromText,
+  stripeModeToCandid,
+  unwrapOptional,
+} from "./ic-backend.js";
 
 const PORT = Number(process.env.PORT || 3000);
 const XAI_MODEL = process.env.XAI_MODEL || "grok-voice-think-fast-1.0";
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
-const SERVER_VERSION = "2026-05-09-cors-origin-normalization";
+const SERVER_VERSION = "2026-05-09-stripe-prepaid-minutes";
 const SERVER_STARTED_AT = new Date().toISOString();
+
+const BILLING_PACKAGES = {
+  pack_5: {
+    id: "pack_5",
+    name: "$5 - 45 minutes",
+    amountCents: 500,
+    seconds: 45 * 60,
+    priceEnvSuffix: "5",
+  },
+  pack_10: {
+    id: "pack_10",
+    name: "$10 - 90 minutes",
+    amountCents: 1000,
+    seconds: 90 * 60,
+    priceEnvSuffix: "10",
+  },
+  pack_20: {
+    id: "pack_20",
+    name: "$20 - 180 minutes",
+    amountCents: 2000,
+    seconds: 180 * 60,
+    priceEnvSuffix: "20",
+  },
+};
 
 const app = express();
 app.set("trust proxy", true);
@@ -87,6 +122,17 @@ app.use(
     },
   }),
 );
+
+app.post(
+  "/stripe/webhook/test",
+  express.raw({ type: "application/json" }),
+  stripeWebhookHandler("test"),
+);
+app.post(
+  "/stripe/webhook/live",
+  express.raw({ type: "application/json" }),
+  stripeWebhookHandler("live"),
+);
 app.use(express.json({ limit: "256kb" }));
 app.use(express.urlencoded({ extended: false }));
 
@@ -105,6 +151,58 @@ const twilioClient =
     ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN)
     : null;
 const { VoiceResponse } = twilio.twiml;
+
+const stripeClients = new Map();
+
+function getStripeClient(mode) {
+  const keyName = mode === "test" ? "STRIPE_TEST_SECRET_KEY" : "STRIPE_LIVE_SECRET_KEY";
+  const secretKey = process.env[keyName];
+  if (!secretKey) {
+    throw new Error(`Missing ${keyName} in the server environment.`);
+  }
+  if (!stripeClients.has(mode)) {
+    stripeClients.set(mode, new Stripe(secretKey));
+  }
+  return stripeClients.get(mode);
+}
+
+function getStripeWebhookSecret(mode) {
+  const keyName =
+    mode === "test" ? "STRIPE_TEST_WEBHOOK_SECRET" : "STRIPE_LIVE_WEBHOOK_SECRET";
+  const value = process.env[keyName];
+  if (!value) {
+    throw new Error(`Missing ${keyName} in the server environment.`);
+  }
+  return value;
+}
+
+function getStripePriceId(mode, pkg) {
+  const envName = `STRIPE_${mode.toUpperCase()}_PRICE_${pkg.priceEnvSuffix}`;
+  return process.env[envName] || "";
+}
+
+function getFrontendReturnBase(rawUrl) {
+  const explicitReturnUrl = String(rawUrl || "").trim();
+  const candidate = String(rawUrl || process.env.FRONTEND_URL || process.env.FRONTEND_ORIGIN || "")
+    .split(",")[0]
+    .trim();
+  if (!candidate || candidate === "*") {
+    throw new Error("Missing FRONTEND_URL or FRONTEND_ORIGIN for Stripe Checkout redirects.");
+  }
+  const normalized = explicitReturnUrl ? candidate : normalizeOrigin(candidate);
+  if (!/^https?:\/\//i.test(normalized)) {
+    throw new Error("Stripe return URL must be an absolute http or https URL.");
+  }
+  new URL(normalized);
+  return normalized;
+}
+
+function centsToDollars(amountCents) {
+  return (amountCents / 100).toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+  });
+}
 
 function log(level, message, meta = {}) {
   const entry = {
@@ -146,6 +244,10 @@ function getPublicWsUrl() {
 
 function requireServerConfig() {
   const missing = requiredEnv.filter((key) => !process.env[key]);
+  if (!process.env.BACKEND_CANISTER_ID) missing.push("BACKEND_CANISTER_ID");
+  if (!process.env.ICP_SERVER_IDENTITY_JSON && !process.env.ICP_SERVER_IDENTITY_SECRET_KEY) {
+    missing.push("ICP_SERVER_IDENTITY_JSON");
+  }
   if (missing.length > 0) {
     throw new Error(`Missing server environment variables: ${missing.join(", ")}`);
   }
@@ -250,6 +352,223 @@ function getSessionFromRequest(req) {
   return { sessionId, session: callSessions.get(sessionId) };
 }
 
+async function getPurchaseIntentOrThrow(purchaseIntentId) {
+  const actor = await getBackendActor();
+  const optionalIntent = await actor.getPurchaseIntentForServer(purchaseIntentId);
+  const intent = normalizePurchaseIntent(unwrapOptional(optionalIntent));
+  if (!intent) {
+    throw new Error("Purchase intent not found.");
+  }
+  return intent;
+}
+
+async function createCheckoutSession({ purchaseIntentId, returnUrl }) {
+  const intent = await getPurchaseIntentOrThrow(purchaseIntentId);
+  if (intent.status !== "pending") {
+    throw new Error("This purchase intent is no longer pending.");
+  }
+
+  const pkg = BILLING_PACKAGES[intent.packageId];
+  if (!pkg) {
+    throw new Error("Unknown billing package.");
+  }
+  if (pkg.amountCents !== intent.amountCents || pkg.seconds !== intent.seconds) {
+    throw new Error("Billing package details do not match the purchase intent.");
+  }
+
+  const stripe = getStripeClient(intent.mode);
+  const priceId = getStripePriceId(intent.mode, pkg);
+  const returnBase = getFrontendReturnBase(returnUrl);
+  const successUrl = new URL(returnBase);
+  successUrl.searchParams.set("billing", "success");
+  successUrl.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
+  const cancelUrl = new URL(returnBase);
+  cancelUrl.searchParams.set("billing", "canceled");
+
+  const metadata = {
+    purchaseIntentId: intent.id,
+    principal: intent.user,
+    packageId: intent.packageId,
+    seconds: String(intent.seconds),
+    mode: intent.mode,
+  };
+
+  const lineItem = priceId
+    ? { price: priceId, quantity: 1 }
+    : {
+        quantity: 1,
+        price_data: {
+          currency: "usd",
+          unit_amount: intent.amountCents,
+          product_data: {
+            name: `VoiceCall AI phone time: ${Math.floor(intent.seconds / 60)} minutes`,
+            description: `${centsToDollars(intent.amountCents)} prepaid AI phone time`,
+          },
+        },
+      };
+
+  return stripe.checkout.sessions.create({
+    mode: "payment",
+    line_items: [lineItem],
+    success_url: successUrl.toString(),
+    cancel_url: cancelUrl.toString(),
+    metadata,
+    payment_intent_data: { metadata },
+  });
+}
+
+async function fulfillCheckoutSession(session, mode) {
+  if (!session?.id) return;
+  if (session.payment_status !== "paid") {
+    log("info", "Ignoring unpaid Checkout Session", {
+      sessionId: session.id,
+      paymentStatus: session.payment_status,
+      mode,
+    });
+    return;
+  }
+
+  const purchaseIntentId = session.metadata?.purchaseIntentId;
+  const principal = session.metadata?.principal;
+  const seconds = Number(session.metadata?.seconds || 0);
+  const sessionMode = session.metadata?.mode || mode;
+  if (!purchaseIntentId || !principal || !Number.isFinite(seconds) || seconds <= 0) {
+    throw new Error("Checkout Session metadata is incomplete.");
+  }
+  if (sessionMode !== mode) {
+    throw new Error("Checkout Session mode does not match the webhook endpoint.");
+  }
+
+  const actor = await getBackendActor();
+  const result = await actor.creditPaidSeconds(
+    session.id,
+    purchaseIntentId,
+    principalFromText(principal),
+    BigInt(seconds),
+    stripeModeToCandid(mode),
+  );
+  okOrThrow(result, "Unable to credit paid phone time.");
+  log("info", "Credited paid phone time", {
+    sessionId: session.id,
+    purchaseIntentId,
+    principal,
+    seconds,
+    mode,
+  });
+}
+
+function stripeWebhookHandler(mode) {
+  return async (req, res) => {
+    try {
+      const stripe = getStripeClient(mode);
+      const signature = req.get("stripe-signature");
+      const event = stripe.webhooks.constructEvent(
+        req.body,
+        signature,
+        getStripeWebhookSecret(mode),
+      );
+
+      if (
+        event.type === "checkout.session.completed" ||
+        event.type === "checkout.session.async_payment_succeeded"
+      ) {
+        await fulfillCheckoutSession(event.data.object, mode);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      log("error", "Stripe webhook failed", { mode, error: error.message });
+      res.status(400).send(`Webhook Error: ${error.message}`);
+    }
+  };
+}
+
+function transcriptToText(session) {
+  if (!session?.transcript?.length) return null;
+  return session.transcript
+    .map((entry) => `${entry.speaker}: ${entry.text}`)
+    .join("")
+    .slice(0, 20_000);
+}
+
+async function finishPaidSession(session, reason = "completed") {
+  if (!session || session.finished) return;
+  session.finished = true;
+  session.billingFinishedAt = Date.now();
+  if (session.cutoffTimer) {
+    clearTimeout(session.cutoffTimer);
+    session.cutoffTimer = null;
+  }
+
+  const usedSeconds = session.billingStartedAt
+    ? Math.ceil((session.billingFinishedAt - session.billingStartedAt) / 1000)
+    : 0;
+
+  if (session.reservationId) {
+    try {
+      const actor = await getBackendActor();
+      okOrThrow(
+        await actor.finishCallAndDebit(
+          session.reservationId,
+          BigInt(Math.max(0, usedSeconds)),
+          session.callSid ? [session.callSid] : [],
+          transcriptToText(session) ? [transcriptToText(session)] : [],
+        ),
+        "Unable to finish and debit paid call.",
+      );
+      log("info", "Finished paid call session", {
+        sessionId: session.id,
+        reservationId: session.reservationId,
+        callSid: session.callSid,
+        usedSeconds,
+        reason,
+      });
+    } catch (error) {
+      log("error", "Failed to finish paid call session", {
+        sessionId: session.id,
+        reservationId: session.reservationId,
+        error: error.message,
+      });
+    }
+  }
+
+  callSessions.delete(session.id);
+  if (session.callSid) callsBySid.delete(session.callSid);
+}
+
+function startBillingTimer(session, closeBoth) {
+  if (!session || session.billingStartedAt) return;
+  session.billingStartedAt = Date.now();
+  const allowedSeconds = Math.max(1, Number(session.allowedSeconds || 1));
+  session.cutoffTimer = setTimeout(async () => {
+    log("info", "Paid call time exhausted", {
+      sessionId: session.id,
+      reservationId: session.reservationId,
+      callSid: session.callSid,
+      allowedSeconds,
+    });
+    try {
+      if (session.callSid && twilioClient) {
+        await twilioClient.calls(session.callSid).update({ status: "completed" });
+      }
+    } catch (error) {
+      log("warn", "Unable to end Twilio call at paid-time cutoff", {
+        callSid: session.callSid,
+        error: error.message,
+      });
+    }
+    closeBoth();
+    await finishPaidSession(session, "paid_time_exhausted");
+  }, allowedSeconds * 1000);
+  session.cutoffTimer.unref?.();
+}
+
+function isTerminalTwilioStatus(status) {
+  return ["completed", "failed", "busy", "no-answer", "canceled"].includes(
+    String(status || "").toLowerCase(),
+  );
+}
+
 app.get("/health", (_req, res) => {
   res.json({
     ok: true,
@@ -266,16 +585,64 @@ app.get("/health", (_req, res) => {
         process.env.TWILIO_PHONE_NUMBER,
     ),
     xaiConfigured: Boolean(process.env.XAI_API_KEY),
+    billingConfigured: Boolean(
+      process.env.BACKEND_CANISTER_ID &&
+        (process.env.ICP_SERVER_IDENTITY_JSON || process.env.ICP_SERVER_IDENTITY_SECRET_KEY) &&
+        process.env.STRIPE_TEST_SECRET_KEY &&
+        process.env.STRIPE_TEST_WEBHOOK_SECRET &&
+        process.env.STRIPE_LIVE_SECRET_KEY &&
+        process.env.STRIPE_LIVE_WEBHOOK_SECRET,
+    ),
+    backendCanisterId: process.env.BACKEND_CANISTER_ID || "",
+    backendHost: process.env.BACKEND_HOST || "https://icp-api.io",
+    icpServerPrincipal: getIcpServerPrincipalText(),
     model: XAI_MODEL,
   });
 });
 
+app.post("/billing/create-checkout-session", async (req, res) => {
+  try {
+    const purchaseIntentId = String(req.body.purchaseIntentId || "");
+    if (!purchaseIntentId) {
+      throw new Error("purchaseIntentId is required.");
+    }
+    const session = await createCheckoutSession({
+      purchaseIntentId,
+      returnUrl: req.body.returnUrl,
+    });
+    res.json({
+      ok: true,
+      id: session.id,
+      url: session.url,
+    });
+  } catch (error) {
+    log("error", "Failed to create Checkout Session", { error: error.message });
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
 app.post("/initiate-call", async (req, res) => {
+  let reservationId = "";
+  let reservation = null;
+  let twilioCallSid = "";
   try {
     requireServerConfig();
-    const recipientPhone = normalizePhone(req.body.recipientPhone);
+    reservationId = String(req.body.reservationId || "");
+    const callToken = String(req.body.callToken || "");
+    if (!reservationId || !callToken) {
+      throw new Error("A paid call reservation is required.");
+    }
+    const actor = await getBackendActor();
+    const verified = await actor.verifyCallReservation(reservationId, callToken);
+    reservation = normalizeReservation(
+      okOrThrow(verified, "Unable to verify paid call reservation."),
+    );
+    const recipientPhone = normalizePhone(reservation.recipientPhone);
     const preset = toPlainPreset(req.body.preset);
-    const callId = String(req.body.callId || "");
+    const callId = String(req.body.callId || reservation.callId || "");
+    if (callId && callId !== reservation.callId) {
+      throw new Error("Call ID does not match the paid reservation.");
+    }
     const sessionId = crypto.randomUUID();
     const publicBaseUrl = getPublicBaseUrl();
     const twimlUrl = new URL("/twiml", publicBaseUrl);
@@ -287,9 +654,15 @@ app.post("/initiate-call", async (req, res) => {
     const session = {
       id: sessionId,
       callId,
+      reservationId,
+      allowedSeconds: reservation.allowedSeconds,
       recipientPhone,
       preset,
       createdAt: Date.now(),
+      billingStartedAt: null,
+      billingFinishedAt: null,
+      cutoffTimer: null,
+      finished: false,
       callSid: null,
       streamSid: null,
       transcript: [],
@@ -307,7 +680,12 @@ app.post("/initiate-call", async (req, res) => {
     });
 
     session.callSid = call.sid;
+    twilioCallSid = call.sid;
     callsBySid.set(call.sid, sessionId);
+    okOrThrow(
+      await actor.markReservationStarted(reservationId, call.sid),
+      "Unable to mark paid reservation as started.",
+    );
     log("info", "Twilio call created", { callSid: call.sid, callId, sessionId });
 
     res.json({
@@ -315,9 +693,31 @@ app.post("/initiate-call", async (req, res) => {
       callSid: call.sid,
       sessionId,
       status: call.status,
+      allowedSeconds: reservation.allowedSeconds,
     });
   } catch (error) {
     log("error", "Failed to initiate call", { error: error.message });
+    if (twilioCallSid && twilioClient) {
+      try {
+        await twilioClient.calls(twilioCallSid).update({ status: "completed" });
+      } catch (endError) {
+        log("warn", "Unable to end failed Twilio call", {
+          callSid: twilioCallSid,
+          error: endError.message,
+        });
+      }
+    }
+    if (reservationId && reservation) {
+      try {
+        const actor = await getBackendActor();
+        await actor.cancelCallReservation(reservationId, error.message);
+      } catch (cancelError) {
+        log("warn", "Unable to cancel failed reservation", {
+          reservationId,
+          error: cancelError.message,
+        });
+      }
+    }
     res.status(400).json({ ok: false, error: error.message });
   }
 });
@@ -333,7 +733,10 @@ app.post("/end-call", async (req, res) => {
     const sessionId = callsBySid.get(callSid);
     if (sessionId) {
       const session = callSessions.get(sessionId);
-      if (session) session.endedAt = Date.now();
+      if (session) {
+        session.endedAt = Date.now();
+        await finishPaidSession(session, "user_requested_end");
+      }
     }
     res.json({ ok: true });
   } catch (error) {
@@ -378,7 +781,7 @@ app.post("/twiml", (req, res) => {
   }
 });
 
-app.post("/call-status", (req, res) => {
+app.post("/call-status", async (req, res) => {
   if (!validateTwilioRequest(req)) {
     log("warn", "Rejected status callback with invalid signature");
     res.sendStatus(403);
@@ -389,6 +792,9 @@ app.post("/call-status", (req, res) => {
   if (session) {
     session.lastStatus = req.body.CallStatus;
     session.lastStatusAt = Date.now();
+    if (isTerminalTwilioStatus(req.body.CallStatus)) {
+      await finishPaidSession(session, `twilio_${req.body.CallStatus}`);
+    }
   }
   log("info", "Twilio status callback", {
     sessionId,
@@ -548,6 +954,7 @@ mediaWss.on("connection", (twilioWs, request) => {
         return;
       }
       session.streamSid = streamSid;
+      startBillingTimer(session, closeBoth);
       connectToXai();
       return;
     }
@@ -570,11 +977,13 @@ mediaWss.on("connection", (twilioWs, request) => {
         streamSid,
       });
       closeBoth();
+      finishPaidSession(session, "twilio_media_stop");
     }
   });
 
   twilioWs.on("close", () => {
     if (xaiWs && xaiWs.readyState === WebSocket.OPEN) xaiWs.close();
+    finishPaidSession(session, "twilio_ws_close");
   });
 
   twilioWs.on("error", (error) => {
@@ -587,14 +996,17 @@ setInterval(() => {
   const cutoff = Date.now() - SESSION_TTL_MS;
   for (const [sessionId, session] of callSessions.entries()) {
     if (session.createdAt < cutoff) {
-      callSessions.delete(sessionId);
-      if (session.callSid) callsBySid.delete(session.callSid);
+      finishPaidSession(session, "session_ttl_cleanup");
     }
   }
 }, 15 * 60 * 1000).unref();
 
 server.listen(PORT, () => {
   const missing = requiredEnv.filter((key) => !process.env[key]);
+  if (!process.env.BACKEND_CANISTER_ID) missing.push("BACKEND_CANISTER_ID");
+  if (!process.env.ICP_SERVER_IDENTITY_JSON && !process.env.ICP_SERVER_IDENTITY_SECRET_KEY) {
+    missing.push("ICP_SERVER_IDENTITY_JSON");
+  }
   log("info", "VoiceCall AI server listening", {
     serverVersion: SERVER_VERSION,
     port: PORT,

@@ -2,7 +2,10 @@ import type { backendInterface } from "../backend";
 import {
   AudioFormat,
   CallStatus,
+  CallReservationStatus,
+  PurchaseIntentStatus,
   SampleRate,
+  StripeMode,
   UserRole,
   Variant_info_warn_error,
   Voice,
@@ -104,7 +107,26 @@ export const mockBackend: backendInterface = {
 
   assignCallerUserRole: async (_user: Principal, _role: UserRole) => undefined,
 
+  cancelCallReservation: async (_reservationId: string, _reason: string) => ({
+    __kind__: "ok",
+    ok: true,
+  }),
+
   createPreset: async (_input) => samplePreset,
+
+  createPurchaseIntent: async (packageId: string) => ({
+    __kind__: "ok",
+    ok: {
+      id: "pi_mock",
+      user: samplePrincipal,
+      packageId,
+      amountCents: BigInt(packageId === "pack_20" ? 2000 : packageId === "pack_10" ? 1000 : 500),
+      seconds: BigInt(packageId === "pack_20" ? 10800 : packageId === "pack_10" ? 5400 : 2700),
+      mode: StripeMode.test,
+      createdAt: BigInt(Date.now() * 1_000_000),
+      status: PurchaseIntentStatus.pending,
+    },
+  }),
 
   deletePreset: async (_id: bigint) => true,
 
@@ -117,6 +139,12 @@ export const mockBackend: backendInterface = {
     twilioAccountSid: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
   }),
 
+  getBillingPackages: async () => [
+    { id: "pack_5", name: "$5 - 45 minutes", amountCents: 500n, seconds: 2700n },
+    { id: "pack_10", name: "$10 - 90 minutes", amountCents: 1000n, seconds: 5400n },
+    { id: "pack_20", name: "$20 - 180 minutes", amountCents: 2000n, seconds: 10800n },
+  ],
+
   getCallRecord: async (_id: bigint) => sampleCallRecord,
 
   getCallerUserRole: async () => UserRole.admin,
@@ -127,6 +155,17 @@ export const mockBackend: backendInterface = {
       token: "ephemeral-token-sample-12345",
       websocketUrl: "wss://api.x.ai/v1/audio/speech/realtime",
     },
+  }),
+
+  getMyBillingStatus: async () => ({
+    balanceSeconds: 5400n,
+    reservedSeconds: 0n,
+    availableSeconds: 5400n,
+    packages: [
+      { id: "pack_5", name: "$5 - 45 minutes", amountCents: 500n, seconds: 2700n },
+      { id: "pack_10", name: "$10 - 90 minutes", amountCents: 1000n, seconds: 5400n },
+      { id: "pack_20", name: "$20 - 180 minutes", amountCents: 2000n, seconds: 10800n },
+    ],
   }),
 
   getPreset: async (_id: bigint) => samplePreset,
@@ -144,6 +183,22 @@ export const mockBackend: backendInterface = {
   listMyCalls: async () => [sampleCallRecord, sampleCallRecord2],
 
   listMyPresets: async () => [samplePreset, samplePreset2],
+
+  reserveCall: async (input) => ({
+    __kind__: "ok",
+    ok: {
+      id: "res_mock",
+      callId: 3n,
+      user: samplePrincipal,
+      recipientPhone: input.recipientPhone,
+      presetId: input.presetId,
+      allowedSeconds: 5400n,
+      callToken: "ct_mock",
+      createdAt: BigInt(Date.now() * 1_000_000),
+      expiresAt: BigInt((Date.now() + 15 * 60 * 1000) * 1_000_000),
+      status: CallReservationStatus.reserved,
+    },
+  }),
 
   setAdminConfig: async (
     _xaiApiKey: string,

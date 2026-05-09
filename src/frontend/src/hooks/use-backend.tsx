@@ -1,10 +1,13 @@
 import { type CallStatus, createActor } from "@/backend";
 import type {
   CallId,
+  BillingStatus,
+  CreatePurchaseIntentResult,
   EphemeralTokenResult,
   InitiateCallInput,
   InitiateCallResult,
   PresetId,
+  ReserveCallResult,
 } from "@/backend";
 import type {
   AdminConfig,
@@ -136,6 +139,44 @@ export function useInitiateCall() {
       return actor.initiateCall(input);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["myCalls"] }),
+  });
+}
+
+export function useGetMyBillingStatus() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery<BillingStatus | null>({
+    queryKey: ["myBillingStatus"],
+    queryFn: async () => {
+      if (!actor) return null;
+      return actor.getMyBillingStatus();
+    },
+    enabled: !!actor && !isFetching,
+    refetchInterval: 10_000,
+  });
+}
+
+export function useCreatePurchaseIntent() {
+  const { actor } = useBackendActor();
+  return useMutation<CreatePurchaseIntentResult, Error, string>({
+    mutationFn: async (packageId) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.createPurchaseIntent(packageId);
+    },
+  });
+}
+
+export function useReserveCall() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<ReserveCallResult, Error, InitiateCallInput>({
+    mutationFn: async (input) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.reserveCall(input);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["myCalls"] });
+      qc.invalidateQueries({ queryKey: ["myBillingStatus"] });
+    },
   });
 }
 

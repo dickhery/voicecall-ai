@@ -58,6 +58,11 @@ type SystemLog =
    message: text;
    timestamp: int;
  };
+type StripeMode = 
+ variant {
+   live;
+   test;
+ };
 type SampleRate = 
  variant {
    hz16000;
@@ -67,6 +72,30 @@ type SampleRate =
    hz44100;
    hz48000;
    hz8000;
+ };
+type ReserveCallResult = 
+ variant {
+   err: text;
+   ok: CallReservationPublic;
+ };
+type PurchaseIntentStatus = 
+ variant {
+   canceled;
+   paid;
+   pending;
+ };
+type PurchaseIntentPublic = 
+ record {
+   amountCents: nat;
+   createdAt: int;
+   id: text;
+   mode: StripeMode;
+   packageId: text;
+   paidAt: opt int;
+   seconds: nat;
+   status: PurchaseIntentStatus;
+   stripeSessionId: opt text;
+   user: principal;
  };
 type PresetId = nat;
 type InitiateCallResult = 
@@ -90,12 +119,44 @@ type EphemeralTokenResult =
          websocketUrl: text;
        };
  };
+type CreatePurchaseIntentResult = 
+ variant {
+   err: text;
+   ok: PurchaseIntentPublic;
+ };
 type CallStatus = 
  variant {
    completed;
    failed;
    inProgress;
    pending;
+ };
+type CallReservationStatus = 
+ variant {
+   active;
+   canceled;
+   finished;
+   "reserved";
+ };
+type CallReservationPublic = 
+ record {
+   allowedSeconds: nat;
+   billedSeconds: opt nat;
+   callId: nat;
+   callSid: opt text;
+   callToken: opt text;
+   canceledReason: opt text;
+   createdAt: int;
+   expiresAt: int;
+   finishedAt: opt int;
+   id: text;
+   presetId: nat;
+   recipientPhone: text;
+   startedAt: opt int;
+   status: CallReservationStatus;
+   transcript: opt text;
+   usedSeconds: opt nat;
+   user: principal;
  };
 type CallRecordPublic = 
  record {
@@ -132,6 +193,25 @@ type CallPreset =
    voice: Voice;
  };
 type CallId = nat;
+type BillingStatus = 
+ record {
+   availableSeconds: nat;
+   balanceSeconds: nat;
+   packages: vec BillingPackage;
+   reservedSeconds: nat;
+ };
+type BillingPackage = 
+ record {
+   amountCents: nat;
+   id: text;
+   name: text;
+   seconds: nat;
+ };
+type BillingMutationResult = 
+ variant {
+   err: text;
+   ok: bool;
+ };
 type AudioFormat = 
  variant {
    pcm;
@@ -144,9 +224,16 @@ service : {
   adminListAllCalls: () -> (vec CallRecordPublic) query;
   adminListUserCalls: (userId: principal) -> (vec CallRecordPublic) query;
   assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  cancelCallReservation: (reservationId: text, reason: text) ->
+   (BillingMutationResult);
   createPreset: (input: CallPresetInput) -> (CallPreset);
+  createPurchaseIntent: (packageId: text) -> (CreatePurchaseIntentResult);
+  creditPaidSeconds: (stripeSessionId: text, purchaseIntentId: text, user:
+   principal, seconds: nat, mode: StripeMode) -> (BillingMutationResult);
   deletePreset: (id: PresetId) -> (bool);
   duplicatePreset: (id: PresetId) -> (opt CallPreset);
+  finishCallAndDebit: (reservationId: text, usedSeconds: nat, callSid:
+   opt text, transcript: opt text) -> (BillingMutationResult);
   getAdminConfig: () ->
    (record {
       hasTwilioAuth: bool;
@@ -154,14 +241,21 @@ service : {
       twilioAccountSid: text;
       twilioFromNumber: text;
     }) query;
+  getBillingPackages: () -> (vec BillingPackage) query;
   getCallRecord: (id: CallId) -> (opt CallRecordPublic) query;
   getCallerUserRole: () -> (UserRole) query;
   getEphemeralToken: (presetId: PresetId) -> (EphemeralTokenResult);
+  getMyBillingStatus: () -> (BillingStatus) query;
   getPreset: (id: PresetId) -> (opt CallPreset) query;
+  getPurchaseIntentForServer: (purchaseIntentId: text) ->
+   (opt PurchaseIntentPublic) query;
   initiateCall: (input: InitiateCallInput) -> (InitiateCallResult);
   isCallerAdmin: () -> (bool) query;
   listMyCalls: () -> (vec CallRecordPublic) query;
   listMyPresets: () -> (vec CallPreset) query;
+  markReservationStarted: (reservationId: text, callSid: text) ->
+   (BillingMutationResult);
+  reserveCall: (input: InitiateCallInput) -> (ReserveCallResult);
   setAdminConfig: (xaiApiKey: text, twilioAccountSid: text, twilioAuthToken:
    text, twilioFromNumber: text) -> ();
   transform: (input: TransformationInput) -> (TransformationOutput) query;
@@ -169,4 +263,6 @@ service : {
   updateCallStatus: (callId: CallId, status: CallStatus, transcript:
    opt text) -> (bool);
   updatePreset: (id: PresetId, input: CallPresetInput) -> (opt CallPreset);
+  verifyCallReservation: (reservationId: text, callToken: text) ->
+   (ReserveCallResult);
 }

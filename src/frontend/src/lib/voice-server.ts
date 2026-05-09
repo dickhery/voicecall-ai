@@ -8,6 +8,7 @@ export interface VoiceServerCall {
   callSid: string;
   sessionId: string;
   status?: string;
+  allowedSeconds?: number;
 }
 
 export interface VoiceServerHealth {
@@ -15,7 +16,14 @@ export interface VoiceServerHealth {
   publicHost: string;
   twilioConfigured: boolean;
   xaiConfigured: boolean;
+  billingConfigured?: boolean;
   model: string;
+}
+
+export interface CheckoutSessionResponse {
+  ok: true;
+  id: string;
+  url: string;
 }
 
 let runtimeEnvPromise: Promise<RuntimeEnv> | null = null;
@@ -100,20 +108,39 @@ export async function startVoiceServerCall({
   recipientPhone,
   preset,
   callId,
+  reservationId,
+  callToken,
 }: {
   recipientPhone: string;
   preset: CallPreset;
   callId: bigint;
+  reservationId: string;
+  callToken: string;
 }): Promise<VoiceServerCall> {
   return postJson<VoiceServerCall>("/initiate-call", {
     recipientPhone,
     preset: serializePreset(preset),
     callId: callId.toString(),
+    reservationId,
+    callToken,
   });
 }
 
 export async function endVoiceServerCall(callSid: string): Promise<void> {
   await postJson<{ ok: true }>("/end-call", { callSid });
+}
+
+export async function createCheckoutSession({
+  purchaseIntentId,
+  returnUrl,
+}: {
+  purchaseIntentId: string;
+  returnUrl: string;
+}): Promise<CheckoutSessionResponse> {
+  return postJson<CheckoutSessionResponse>("/billing/create-checkout-session", {
+    purchaseIntentId,
+    returnUrl,
+  });
 }
 
 export async function getVoiceServerHealth(): Promise<VoiceServerHealth> {

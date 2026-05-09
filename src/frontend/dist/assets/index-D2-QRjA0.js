@@ -35889,6 +35889,76 @@ const InitiateCallResult = Variant({
   "ok": Record({ "callSid": Text, "callId": Nat }),
   "err": Text
 });
+const StripeMode = Variant({
+  "live": Null,
+  "test": Null
+});
+const PurchaseIntentStatus = Variant({
+  "canceled": Null,
+  "paid": Null,
+  "pending": Null
+});
+const PurchaseIntentPublic = Record({
+  "amountCents": Nat,
+  "createdAt": Int,
+  "id": Text,
+  "mode": StripeMode,
+  "packageId": Text,
+  "paidAt": Opt(Int),
+  "seconds": Nat,
+  "status": PurchaseIntentStatus,
+  "stripeSessionId": Opt(Text),
+  "user": Principal2
+});
+const CreatePurchaseIntentResult = Variant({
+  "ok": PurchaseIntentPublic,
+  "err": Text
+});
+const CallReservationStatus = Variant({
+  "active": Null,
+  "canceled": Null,
+  "finished": Null,
+  "reserved": Null
+});
+const CallReservationPublic = Record({
+  "allowedSeconds": Nat,
+  "billedSeconds": Opt(Nat),
+  "callId": Nat,
+  "callSid": Opt(Text),
+  "callToken": Opt(Text),
+  "canceledReason": Opt(Text),
+  "createdAt": Int,
+  "expiresAt": Int,
+  "finishedAt": Opt(Int),
+  "id": Text,
+  "presetId": Nat,
+  "recipientPhone": Text,
+  "startedAt": Opt(Int),
+  "status": CallReservationStatus,
+  "transcript": Opt(Text),
+  "usedSeconds": Opt(Nat),
+  "user": Principal2
+});
+const ReserveCallResult = Variant({
+  "ok": CallReservationPublic,
+  "err": Text
+});
+const BillingPackage = Record({
+  "amountCents": Nat,
+  "id": Text,
+  "name": Text,
+  "seconds": Nat
+});
+const BillingStatus = Record({
+  "availableSeconds": Nat,
+  "balanceSeconds": Nat,
+  "packages": Vec(BillingPackage),
+  "reservedSeconds": Nat
+});
+const BillingMutationResult = Variant({
+  "ok": Bool,
+  "err": Text
+});
 const http_header = Record({
   "value": Text,
   "name": Text
@@ -35917,9 +35987,29 @@ Service({
     ["query"]
   ),
   "assignCallerUserRole": Func([Principal2, UserRole$1], [], []),
+  "cancelCallReservation": Func(
+    [Text, Text],
+    [BillingMutationResult],
+    []
+  ),
   "createPreset": Func([CallPresetInput], [CallPreset], []),
+  "createPurchaseIntent": Func(
+    [Text],
+    [CreatePurchaseIntentResult],
+    []
+  ),
+  "creditPaidSeconds": Func(
+    [Text, Text, Principal2, Nat, StripeMode],
+    [BillingMutationResult],
+    []
+  ),
   "deletePreset": Func([PresetId], [Bool], []),
   "duplicatePreset": Func([PresetId], [Opt(CallPreset)], []),
+  "finishCallAndDebit": Func(
+    [Text, Nat, Opt(Text), Opt(Text)],
+    [BillingMutationResult],
+    []
+  ),
   "getAdminConfig": Func(
     [],
     [
@@ -35933,13 +36023,26 @@ Service({
     ["query"]
   ),
   "getCallRecord": Func([CallId], [Opt(CallRecordPublic)], ["query"]),
+  "getBillingPackages": Func([], [Vec(BillingPackage)], ["query"]),
   "getCallerUserRole": Func([], [UserRole$1], ["query"]),
   "getEphemeralToken": Func([PresetId], [EphemeralTokenResult], []),
+  "getMyBillingStatus": Func([], [BillingStatus], ["query"]),
   "getPreset": Func([PresetId], [Opt(CallPreset)], ["query"]),
+  "getPurchaseIntentForServer": Func(
+    [Text],
+    [Opt(PurchaseIntentPublic)],
+    ["query"]
+  ),
   "initiateCall": Func([InitiateCallInput], [InitiateCallResult], []),
   "isCallerAdmin": Func([], [Bool], ["query"]),
   "listMyCalls": Func([], [Vec(CallRecordPublic)], ["query"]),
   "listMyPresets": Func([], [Vec(CallPreset)], ["query"]),
+  "markReservationStarted": Func(
+    [Text, Text],
+    [BillingMutationResult],
+    []
+  ),
+  "reserveCall": Func([InitiateCallInput], [ReserveCallResult], []),
   "setAdminConfig": Func([Text, Text, Text, Text], [], []),
   "transform": Func(
     [TransformationInput],
@@ -36057,6 +36160,76 @@ const idlFactory = ({ IDL: IDL2 }) => {
     "ok": IDL2.Record({ "callSid": IDL2.Text, "callId": IDL2.Nat }),
     "err": IDL2.Text
   });
+  const StripeMode2 = IDL2.Variant({
+    "live": IDL2.Null,
+    "test": IDL2.Null
+  });
+  const PurchaseIntentStatus2 = IDL2.Variant({
+    "canceled": IDL2.Null,
+    "paid": IDL2.Null,
+    "pending": IDL2.Null
+  });
+  const PurchaseIntentPublic2 = IDL2.Record({
+    "amountCents": IDL2.Nat,
+    "createdAt": IDL2.Int,
+    "id": IDL2.Text,
+    "mode": StripeMode2,
+    "packageId": IDL2.Text,
+    "paidAt": IDL2.Opt(IDL2.Int),
+    "seconds": IDL2.Nat,
+    "status": PurchaseIntentStatus2,
+    "stripeSessionId": IDL2.Opt(IDL2.Text),
+    "user": IDL2.Principal
+  });
+  const CreatePurchaseIntentResult2 = IDL2.Variant({
+    "ok": PurchaseIntentPublic2,
+    "err": IDL2.Text
+  });
+  const CallReservationStatus2 = IDL2.Variant({
+    "active": IDL2.Null,
+    "canceled": IDL2.Null,
+    "finished": IDL2.Null,
+    "reserved": IDL2.Null
+  });
+  const CallReservationPublic2 = IDL2.Record({
+    "allowedSeconds": IDL2.Nat,
+    "billedSeconds": IDL2.Opt(IDL2.Nat),
+    "callId": IDL2.Nat,
+    "callSid": IDL2.Opt(IDL2.Text),
+    "callToken": IDL2.Opt(IDL2.Text),
+    "canceledReason": IDL2.Opt(IDL2.Text),
+    "createdAt": IDL2.Int,
+    "expiresAt": IDL2.Int,
+    "finishedAt": IDL2.Opt(IDL2.Int),
+    "id": IDL2.Text,
+    "presetId": IDL2.Nat,
+    "recipientPhone": IDL2.Text,
+    "startedAt": IDL2.Opt(IDL2.Int),
+    "status": CallReservationStatus2,
+    "transcript": IDL2.Opt(IDL2.Text),
+    "usedSeconds": IDL2.Opt(IDL2.Nat),
+    "user": IDL2.Principal
+  });
+  const ReserveCallResult2 = IDL2.Variant({
+    "ok": CallReservationPublic2,
+    "err": IDL2.Text
+  });
+  const BillingPackage2 = IDL2.Record({
+    "amountCents": IDL2.Nat,
+    "id": IDL2.Text,
+    "name": IDL2.Text,
+    "seconds": IDL2.Nat
+  });
+  const BillingStatus2 = IDL2.Record({
+    "availableSeconds": IDL2.Nat,
+    "balanceSeconds": IDL2.Nat,
+    "packages": IDL2.Vec(BillingPackage2),
+    "reservedSeconds": IDL2.Nat
+  });
+  const BillingMutationResult2 = IDL2.Variant({
+    "ok": IDL2.Bool,
+    "err": IDL2.Text
+  });
   const http_header2 = IDL2.Record({ "value": IDL2.Text, "name": IDL2.Text });
   const http_request_result2 = IDL2.Record({
     "status": IDL2.Nat,
@@ -36082,9 +36255,29 @@ const idlFactory = ({ IDL: IDL2 }) => {
       ["query"]
     ),
     "assignCallerUserRole": IDL2.Func([IDL2.Principal, UserRole2], [], []),
+    "cancelCallReservation": IDL2.Func(
+      [IDL2.Text, IDL2.Text],
+      [BillingMutationResult2],
+      []
+    ),
     "createPreset": IDL2.Func([CallPresetInput2], [CallPreset2], []),
+    "createPurchaseIntent": IDL2.Func(
+      [IDL2.Text],
+      [CreatePurchaseIntentResult2],
+      []
+    ),
+    "creditPaidSeconds": IDL2.Func(
+      [IDL2.Text, IDL2.Text, IDL2.Principal, IDL2.Nat, StripeMode2],
+      [BillingMutationResult2],
+      []
+    ),
     "deletePreset": IDL2.Func([PresetId2], [IDL2.Bool], []),
     "duplicatePreset": IDL2.Func([PresetId2], [IDL2.Opt(CallPreset2)], []),
+    "finishCallAndDebit": IDL2.Func(
+      [IDL2.Text, IDL2.Nat, IDL2.Opt(IDL2.Text), IDL2.Opt(IDL2.Text)],
+      [BillingMutationResult2],
+      []
+    ),
     "getAdminConfig": IDL2.Func(
       [],
       [
@@ -36102,13 +36295,26 @@ const idlFactory = ({ IDL: IDL2 }) => {
       [IDL2.Opt(CallRecordPublic2)],
       ["query"]
     ),
+    "getBillingPackages": IDL2.Func([], [IDL2.Vec(BillingPackage2)], ["query"]),
     "getCallerUserRole": IDL2.Func([], [UserRole2], ["query"]),
     "getEphemeralToken": IDL2.Func([PresetId2], [EphemeralTokenResult2], []),
+    "getMyBillingStatus": IDL2.Func([], [BillingStatus2], ["query"]),
     "getPreset": IDL2.Func([PresetId2], [IDL2.Opt(CallPreset2)], ["query"]),
+    "getPurchaseIntentForServer": IDL2.Func(
+      [IDL2.Text],
+      [IDL2.Opt(PurchaseIntentPublic2)],
+      ["query"]
+    ),
     "initiateCall": IDL2.Func([InitiateCallInput2], [InitiateCallResult2], []),
     "isCallerAdmin": IDL2.Func([], [IDL2.Bool], ["query"]),
     "listMyCalls": IDL2.Func([], [IDL2.Vec(CallRecordPublic2)], ["query"]),
     "listMyPresets": IDL2.Func([], [IDL2.Vec(CallPreset2)], ["query"]),
+    "markReservationStarted": IDL2.Func(
+      [IDL2.Text, IDL2.Text],
+      [BillingMutationResult2],
+      []
+    ),
+    "reserveCall": IDL2.Func([InitiateCallInput2], [ReserveCallResult2], []),
     "setAdminConfig": IDL2.Func(
       [IDL2.Text, IDL2.Text, IDL2.Text, IDL2.Text],
       [],
@@ -36263,6 +36469,20 @@ class Backend {
       return result;
     }
   }
+  async cancelCallReservation(arg0, arg1) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.cancelCallReservation(arg0, arg1);
+        return from_candid_BillingMutationResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.cancelCallReservation(arg0, arg1);
+      return from_candid_BillingMutationResult(result);
+    }
+  }
   async createPreset(arg0) {
     if (this.processError) {
       try {
@@ -36275,6 +36495,20 @@ class Backend {
     } else {
       const result = await this.actor.createPreset(to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg0));
       return from_candid_CallPreset_n23(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async createPurchaseIntent(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.createPurchaseIntent(arg0);
+        return from_candid_CreatePurchaseIntentResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.createPurchaseIntent(arg0);
+      return from_candid_CreatePurchaseIntentResult(result);
     }
   }
   async deletePreset(arg0) {
@@ -36319,6 +36553,20 @@ class Backend {
       return result;
     }
   }
+  async getBillingPackages() {
+    if (this.processError) {
+      try {
+        const result = await this.actor.getBillingPackages();
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.getBillingPackages();
+      return result;
+    }
+  }
   async getCallRecord(arg0) {
     if (this.processError) {
       try {
@@ -36359,6 +36607,20 @@ class Backend {
     } else {
       const result = await this.actor.getEphemeralToken(arg0);
       return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async getMyBillingStatus() {
+    if (this.processError) {
+      try {
+        const result = await this.actor.getMyBillingStatus();
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.getMyBillingStatus();
+      return result;
     }
   }
   async getPreset(arg0) {
@@ -36431,6 +36693,20 @@ class Backend {
       return from_candid_vec_n39(this._uploadFile, this._downloadFile, result);
     }
   }
+  async reserveCall(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.reserveCall(arg0);
+        return from_candid_ReserveCallResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.reserveCall(arg0);
+      return from_candid_ReserveCallResult(result);
+    }
+  }
   async setAdminConfig(arg0, arg1, arg2, arg3) {
     if (this.processError) {
       try {
@@ -36501,6 +36777,83 @@ class Backend {
       return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
     }
   }
+}
+function from_candid_opt_text(value) {
+  return value.length === 0 ? void 0 : value[0];
+}
+function from_candid_opt_nat(value) {
+  return value.length === 0 ? void 0 : value[0];
+}
+function from_candid_StripeMode(value) {
+  return "test" in value ? "test" : "live";
+}
+function from_candid_PurchaseIntentStatus(value) {
+  return "canceled" in value ? "canceled" : "paid" in value ? "paid" : "pending";
+}
+function from_candid_CallReservationStatus(value) {
+  return "active" in value ? "active" : "canceled" in value ? "canceled" : "finished" in value ? "finished" : "reserved";
+}
+function from_candid_PurchaseIntentPublic(value) {
+  return {
+    amountCents: value.amountCents,
+    createdAt: value.createdAt,
+    id: value.id,
+    mode: from_candid_StripeMode(value.mode),
+    packageId: value.packageId,
+    paidAt: from_candid_opt_nat(value.paidAt),
+    seconds: value.seconds,
+    status: from_candid_PurchaseIntentStatus(value.status),
+    stripeSessionId: from_candid_opt_text(value.stripeSessionId),
+    user: value.user
+  };
+}
+function from_candid_CreatePurchaseIntentResult(value) {
+  return "ok" in value ? {
+    __kind__: "ok",
+    ok: from_candid_PurchaseIntentPublic(value.ok)
+  } : {
+    __kind__: "err",
+    err: value.err
+  };
+}
+function from_candid_CallReservationPublic(value) {
+  return {
+    allowedSeconds: value.allowedSeconds,
+    billedSeconds: from_candid_opt_nat(value.billedSeconds),
+    callId: value.callId,
+    callSid: from_candid_opt_text(value.callSid),
+    callToken: from_candid_opt_text(value.callToken),
+    canceledReason: from_candid_opt_text(value.canceledReason),
+    createdAt: value.createdAt,
+    expiresAt: value.expiresAt,
+    finishedAt: from_candid_opt_nat(value.finishedAt),
+    id: value.id,
+    presetId: value.presetId,
+    recipientPhone: value.recipientPhone,
+    startedAt: from_candid_opt_nat(value.startedAt),
+    status: from_candid_CallReservationStatus(value.status),
+    transcript: from_candid_opt_text(value.transcript),
+    usedSeconds: from_candid_opt_nat(value.usedSeconds),
+    user: value.user
+  };
+}
+function from_candid_ReserveCallResult(value) {
+  return "ok" in value ? {
+    __kind__: "ok",
+    ok: from_candid_CallReservationPublic(value.ok)
+  } : {
+    __kind__: "err",
+    err: value.err
+  };
+}
+function from_candid_BillingMutationResult(value) {
+  return "ok" in value ? {
+    __kind__: "ok",
+    ok: value.ok
+  } : {
+    __kind__: "err",
+    err: value.err
+  };
 }
 function from_candid_AudioFormat_n29(_uploadFile, _downloadFile, value) {
   return from_candid_variant_n30(_uploadFile, _downloadFile, value);
@@ -36937,51 +37290,62 @@ const createLucideIcon = (iconName, iconNode) => {
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$E = [
+const __iconNode$F = [
   ["path", { d: "m12 19-7-7 7-7", key: "1l729n" }],
   ["path", { d: "M19 12H5", key: "x3x0zl" }]
 ];
-const ArrowLeft = createLucideIcon("arrow-left", __iconNode$E);
+const ArrowLeft = createLucideIcon("arrow-left", __iconNode$F);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$D = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
-const Check = createLucideIcon("check", __iconNode$D);
+const __iconNode$E = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
+const Check = createLucideIcon("check", __iconNode$E);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$C = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
-const ChevronDown = createLucideIcon("chevron-down", __iconNode$C);
+const __iconNode$D = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
+const ChevronDown = createLucideIcon("chevron-down", __iconNode$D);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$B = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
-const ChevronLeft = createLucideIcon("chevron-left", __iconNode$B);
+const __iconNode$C = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
+const ChevronLeft = createLucideIcon("chevron-left", __iconNode$C);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$A = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
-const ChevronRight = createLucideIcon("chevron-right", __iconNode$A);
+const __iconNode$B = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
+const ChevronRight = createLucideIcon("chevron-right", __iconNode$B);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$z = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
-const ChevronUp = createLucideIcon("chevron-up", __iconNode$z);
+const __iconNode$A = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
+const ChevronUp = createLucideIcon("chevron-up", __iconNode$A);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$z = [
+  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
+  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+];
+const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$z);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -36989,10 +37353,10 @@ const ChevronUp = createLucideIcon("chevron-up", __iconNode$z);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$y = [
-  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
-  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
 ];
-const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$y);
+const CircleCheck = createLucideIcon("circle-check", __iconNode$y);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37001,9 +37365,10 @@ const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$y);
  */
 const __iconNode$x = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
+  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
+  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
 ];
-const CircleCheck = createLucideIcon("circle-check", __iconNode$x);
+const CircleX = createLucideIcon("circle-x", __iconNode$x);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37012,10 +37377,9 @@ const CircleCheck = createLucideIcon("circle-check", __iconNode$x);
  */
 const __iconNode$w = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
-  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
+  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
 ];
-const CircleX = createLucideIcon("circle-x", __iconNode$w);
+const Clock = createLucideIcon("clock", __iconNode$w);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37023,10 +37387,10 @@ const CircleX = createLucideIcon("circle-x", __iconNode$w);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$v = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
+  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
+  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
 ];
-const Clock = createLucideIcon("clock", __iconNode$v);
+const Copy = createLucideIcon("copy", __iconNode$v);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37034,10 +37398,10 @@ const Clock = createLucideIcon("clock", __iconNode$v);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$u = [
-  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
-  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
+  ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2", key: "ynyp8z" }],
+  ["line", { x1: "2", x2: "22", y1: "10", y2: "10", key: "1b3vmo" }]
 ];
-const Copy = createLucideIcon("copy", __iconNode$u);
+const CreditCard = createLucideIcon("credit-card", __iconNode$u);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37901,15 +38265,39 @@ function useListMyCalls() {
     refetchInterval: 5e3
   });
 }
-function useInitiateCall() {
+function useGetMyBillingStatus() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery({
+    queryKey: ["myBillingStatus"],
+    queryFn: async () => {
+      if (!actor) return null;
+      return actor.getMyBillingStatus();
+    },
+    enabled: !!actor && !isFetching,
+    refetchInterval: 1e4
+  });
+}
+function useCreatePurchaseIntent() {
+  const { actor } = useBackendActor();
+  return useMutation({
+    mutationFn: async (packageId) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.createPurchaseIntent(packageId);
+    }
+  });
+}
+function useReserveCall() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.initiateCall(input);
+      return actor.reserveCall(input);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["myCalls"] })
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["myCalls"] });
+      qc.invalidateQueries({ queryKey: ["myBillingStatus"] });
+    }
   });
 }
 function useAdminGetSystemLogs(limit = 100n) {
@@ -44044,16 +44432,29 @@ async function postJson(path, body) {
 async function startVoiceServerCall({
   recipientPhone,
   preset,
-  callId
+  callId,
+  reservationId,
+  callToken
 }) {
   return postJson("/initiate-call", {
     recipientPhone,
     preset: serializePreset(preset),
-    callId: callId.toString()
+    callId: callId.toString(),
+    reservationId,
+    callToken
   });
 }
 async function endVoiceServerCall(callSid) {
   await postJson("/end-call", { callSid });
+}
+async function createCheckoutSession({
+  purchaseIntentId,
+  returnUrl
+}) {
+  return postJson("/billing/create-checkout-session", {
+    purchaseIntentId,
+    returnUrl
+  });
 }
 async function getVoiceServerHealth() {
   const baseUrl = await getVoiceServerUrl();
@@ -45004,7 +45405,7 @@ function useXaiVoice() {
   const startTimeRef = reactExports.useRef(0);
   const activeCallIdRef = reactExports.useRef(null);
   const activeCallSidRef = reactExports.useRef(null);
-  const initiateCall = useInitiateCall();
+  const reserveCall = useReserveCall();
   const updateCallStatus = useUpdateCallStatus();
   const { setActiveCall, clearCall } = useCallStore();
   const cleanupTimer = reactExports.useCallback(() => {
@@ -45040,27 +45441,32 @@ function useXaiVoice() {
       activeCallIdRef.current = null;
       activeCallSidRef.current = null;
       try {
-        const callResult = await initiateCall.mutateAsync({
+        const reservationResult = await reserveCall.mutateAsync({
           recipientPhone,
           presetId: preset.id
         });
-        if (callResult.__kind__ === "err") {
-          throw new Error(callResult.err);
+        if (reservationResult.__kind__ === "err") {
+          throw new Error(reservationResult.err);
         }
-        const { callId } = callResult.ok;
+        const { callId, id: reservationId, callToken, allowedSeconds } = reservationResult.ok;
+        if (!callToken) {
+          throw new Error("Reservation token was not returned by the backend.");
+        }
         activeCallIdRef.current = callId;
         setActiveCall(callId, recipientPhone, preset.id);
         setStatus("connecting");
         const serverCall = await startVoiceServerCall({
           recipientPhone,
           preset,
-          callId
+          callId,
+          reservationId,
+          callToken
         });
         activeCallSidRef.current = serverCall.callSid;
         setStatus("in_call");
         startDurationTimer();
         ue.success("Call placed", {
-          description: `Twilio SID ${serverCall.callSid}`
+          description: `${Math.floor(Number(allowedSeconds) / 60)} paid minutes reserved`
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
@@ -45079,7 +45485,7 @@ function useXaiVoice() {
       }
     },
     [
-      initiateCall,
+      reserveCall,
       setActiveCall,
       startDurationTimer,
       updateCallStatus,
@@ -52973,6 +53379,10 @@ function formatDuration$1(secs) {
   const s2 = (secs % 60).toString().padStart(2, "0");
   return `${m2}:${s2}`;
 }
+function formatMinutes(seconds) {
+  const value = Number(seconds ?? 0);
+  return `${Math.floor(value / 60)} min`;
+}
 function formatCallDuration(start, end) {
   if (!end) return "—";
   const secs = Number((end - start) / 1000000000n);
@@ -53122,9 +53532,16 @@ function DashboardPage() {
     isLoading: callsLoading,
     refetch: refetchCalls
   } = useListMyCalls();
+  const {
+    data: billingStatus,
+    isLoading: billingLoading,
+    refetch: refetchBilling
+  } = useGetMyBillingStatus();
   const deletePreset = useDeletePreset();
   const duplicatePreset = useDuplicatePreset();
+  const createPurchaseIntent = useCreatePurchaseIntent();
   const voice = useXaiVoice();
+  const [buyingPackageId, setBuyingPackageId] = reactExports.useState(null);
   const recentCalls = (calls ?? []).slice(0, 5);
   const totalCalls = (calls ?? []).length;
   const callsToday = (calls ?? []).filter((c2) => {
@@ -53133,8 +53550,19 @@ function DashboardPage() {
     return d2.getDate() === now2.getDate() && d2.getMonth() === now2.getMonth() && d2.getFullYear() === now2.getFullYear();
   }).length;
   const activePresets = (presets ?? []).length;
+  const availableSeconds = Number((billingStatus == null ? void 0 : billingStatus.availableSeconds) ?? 0n);
   const selectedPreset = (presets ?? []).find((p2) => p2.id.toString() === selectedPresetId) ?? null;
   const isCallActive = voice.status !== "idle" && voice.status !== "completed" && voice.status !== "error";
+  reactExports.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const billing = params.get("billing");
+    if (billing === "success") {
+      ue.success("Phone time purchase received");
+      refetchBilling();
+    } else if (billing === "canceled") {
+      ue.info("Checkout canceled");
+    }
+  }, [refetchBilling]);
   const handleRecipientBlur = () => {
     if (recipient && !validateE164(recipient.replace(/\s/g, ""))) {
       setRecipientError("Enter a valid E.164 number, e.g. +15551234567");
@@ -53143,6 +53571,10 @@ function DashboardPage() {
     }
   };
   const handleCall = async () => {
+    if (availableSeconds <= 0) {
+      ue.error("Add prepaid phone time before starting a call");
+      return;
+    }
     if (!recipient || !selectedPreset) {
       ue.error("Enter a recipient number and select a preset");
       return;
@@ -53154,6 +53586,26 @@ function DashboardPage() {
     }
     setRecipientError("");
     await voice.startCall(selectedPreset, cleaned);
+    refetchBilling();
+  };
+  const handleBuyPackage = async (packageId) => {
+    setBuyingPackageId(packageId);
+    try {
+      const intent = await createPurchaseIntent.mutateAsync(packageId);
+      if (intent.__kind__ === "err") {
+        throw new Error(intent.err);
+      }
+      const returnUrl = `${window.location.origin}${window.location.pathname}`;
+      const session = await createCheckoutSession({
+        purchaseIntentId: intent.ok.id,
+        returnUrl
+      });
+      window.location.assign(session.url);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      ue.error(`Unable to start checkout: ${message}`);
+      setBuyingPackageId(null);
+    }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(ProtectedRoute, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(AppLayout, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-5", "data-ocid": "dashboard.page", children: [
@@ -53177,7 +53629,7 @@ function DashboardPage() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-3 gap-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           StatCard,
           {
@@ -53206,7 +53658,67 @@ function DashboardPage() {
             color: "text-purple-400",
             loading: presetsLoading
           }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          StatCard,
+          {
+            icon: /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-4 h-4 text-green-400" }),
+            label: "Phone Time",
+            value: formatMinutes(billingStatus == null ? void 0 : billingStatus.availableSeconds),
+            color: availableSeconds > 0 ? "text-green-400" : "text-destructive",
+            loading: billingLoading
+          }
         )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(Card, { className: "bg-card border-border", "data-ocid": "dashboard.billing_card", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(CardHeader, { className: "pb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(CardTitle, { className: "text-base font-semibold flex items-center gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-4 h-4 text-green-400" }),
+            "Phone Time"
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "outline", className: "font-mono", children: [
+            formatMinutes(billingStatus == null ? void 0 : billingStatus.availableSeconds),
+            " available"
+          ] })
+        ] }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: billingLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: [1, 2, 3].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-24 w-full" }, i)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: ((billingStatus == null ? void 0 : billingStatus.packages) ?? []).map((pkg) => {
+          const isBuying = buyingPackageId === pkg.id;
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            "div",
+            {
+              className: "rounded-lg border border-border bg-muted/25 p-3",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-semibold text-foreground", children: [
+                      "$",
+                      (Number(pkg.amountCents) / 100).toFixed(0)
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: formatMinutes(pkg.seconds) })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "text-xs", children: pkg.id.replace("pack_", "$") })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  Button,
+                  {
+                    type: "button",
+                    variant: "outline",
+                    size: "sm",
+                    className: "mt-3 w-full gap-2",
+                    onClick: () => handleBuyPackage(pkg.id),
+                    disabled: isBuying,
+                    "data-ocid": `dashboard.billing.buy.${pkg.id}`,
+                    children: [
+                      isBuying ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-3.5 h-3.5 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-3.5 h-3.5" }),
+                      "Buy"
+                    ]
+                  }
+                )
+              ]
+            },
+            pkg.id
+          );
+        }) }) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(ActiveCallPanel, { voice }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-5", children: [
@@ -53306,12 +53818,12 @@ function DashboardPage() {
                   Button,
                   {
                     onClick: handleCall,
-                    disabled: isCallActive || !recipient || !selectedPresetId,
+                    disabled: isCallActive || !recipient || !selectedPresetId || availableSeconds <= 0,
                     "data-ocid": "dashboard.call.submit_button",
                     className: "w-full gap-2",
                     children: [
                       voice.status === "initiating" || voice.status === "connecting" ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-4 h-4" }),
-                      voice.status === "initiating" ? "Initiating..." : voice.status === "connecting" ? "Connecting..." : "Start Call"
+                      voice.status === "initiating" ? "Initiating..." : voice.status === "connecting" ? "Connecting..." : availableSeconds <= 0 ? "Add Phone Time" : "Start Call"
                     ]
                   }
                 )

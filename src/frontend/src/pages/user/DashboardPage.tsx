@@ -27,11 +27,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   useDeletePreset,
   useDuplicatePreset,
+  useCreatePurchaseIntent,
+  useGetMyBillingStatus,
   useListMyCalls,
   useListMyPresets,
 } from "@/hooks/use-backend";
 import type { XaiCallStatus } from "@/hooks/use-xai-voice";
 import { useXaiVoice } from "@/hooks/use-xai-voice";
+import { createCheckoutSession } from "@/lib/voice-server";
 import type { CallPreset } from "@/types";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -39,6 +42,7 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  CreditCard,
   Loader2,
   Phone,
   PhoneOff,
@@ -49,7 +53,7 @@ import {
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 function formatDuration(secs: number): string {
@@ -58,6 +62,11 @@ function formatDuration(secs: number): string {
     .padStart(2, "0");
   const s = (secs % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
+}
+
+function formatMinutes(seconds: bigint | number | undefined): string {
+  const value = Number(seconds ?? 0);
+  return `${Math.floor(value / 60)} min`;
 }
 
 function formatCallDuration(start: bigint, end?: bigint): string {
@@ -261,9 +270,16 @@ export default function DashboardPage() {
     isLoading: callsLoading,
     refetch: refetchCalls,
   } = useListMyCalls();
+  const {
+    data: billingStatus,
+    isLoading: billingLoading,
+    refetch: refetchBilling,
+  } = useGetMyBillingStatus();
   const deletePreset = useDeletePreset();
   const duplicatePreset = useDuplicatePreset();
+  const createPurchaseIntent = useCreatePurchaseIntent();
   const voice = useXaiVoice();
+  const [buyingPackageId, setBuyingPackageId] = useState<string | null>(null);
 
   const recentCalls = (calls ?? []).slice(0, 5);
   const totalCalls = (calls ?? []).length;
@@ -277,6 +293,7 @@ export default function DashboardPage() {
     );
   }).length;
   const activePresets = (presets ?? []).length;
+  const availableSeconds = Number(billingStatus?.availableSeconds ?? 0n);
 
   const selectedPreset =
     (presets ?? []).find((p) => p.id.toString() === selectedPresetId) ?? null;
@@ -285,6 +302,17 @@ export default function DashboardPage() {
     voice.status !== "idle" &&
     voice.status !== "completed" &&
     voice.status !== "error";
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const billing = params.get("billing");
+    if (billing === "success") {
+      toast.success("Phone time purchase received");
+      refetchBilling();
+    } else if (billing === "canceled") {
+      toast.info("Checkout canceled");
+    }
+  }, [refetchBilling]);
 
   const handleRecipientBlur = () => {
     if (recipient && !validateE164(recipient.replace(/\s/g, ""))) {
@@ -295,6 +323,10 @@ export default function DashboardPage() {
   };
 
   const handleCall = async () => {
+    if (availableSeconds <= 0) {
+      toast.error("Add prepaid phone time before starting a call");
+      return;
+    }
     if (!recipient || !selectedPreset) {
       toast.error("Enter a recipient number and select a preset");
       return;
@@ -306,6 +338,27 @@ export default function DashboardPage() {
     }
     setRecipientError("");
     await voice.startCall(selectedPreset, cleaned);
+    refetchBilling();
+  };
+
+  const handleBuyPackage = async (packageId: string) => {
+    setBuyingPackageId(packageId);
+    try {
+      const intent = await createPurchaseIntent.mutateAsync(packageId);
+      if (intent.__kind__ === "err") {
+        throw new Error(intent.err);
+      }
+      const returnUrl = `${window.location.origin}${window.location.pathname}`;
+      const session = await createCheckoutSession({
+        purchaseIntentId: intent.ok.id,
+        returnUrl,
+      });
+      window.location.assign(session.url);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Unable to start checkout: ${message}`);
+      setBuyingPackageId(null);
+    }
   };
 
   return (
@@ -335,7 +388,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Stat Cards */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
               icon={<Phone className="w-4 h-4 text-primary" />}
               label="Total Calls"
@@ -356,7 +409,79 @@ export default function DashboardPage() {
               color="text-purple-400"
               loading={presetsLoading}
             />
+            <StatCard
+              icon={<CreditCard className="w-4 h-4 text-green-400" />}
+              label="Phone Time"
+              value={formatMinutes(billingStatus?.availableSeconds)}
+              color={availableSeconds > 0 ? "text-green-400" : "text-destructive"}
+              loading={billingLoading}
+            />
           </div>
+
+          <Card className="bg-card border-border" data-ocid="dashboard.billing_card">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-green-400" />
+                  Phone Time
+                </CardTitle>
+                <Badge variant="outline" className="font-mono">
+                  {formatMinutes(billingStatus?.availableSeconds)} available
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {billingLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-24 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {(billingStatus?.packages ?? []).map((pkg) => {
+                    const isBuying = buyingPackageId === pkg.id;
+                    return (
+                      <div
+                        key={pkg.id}
+                        className="rounded-lg border border-border bg-muted/25 p-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">
+                              ${(Number(pkg.amountCents) / 100).toFixed(0)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatMinutes(pkg.seconds)}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {pkg.id.replace("pack_", "$")}
+                          </Badge>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="mt-3 w-full gap-2"
+                          onClick={() => handleBuyPackage(pkg.id)}
+                          disabled={isBuying}
+                          data-ocid={`dashboard.billing.buy.${pkg.id}`}
+                        >
+                          {isBuying ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CreditCard className="w-3.5 h-3.5" />
+                          )}
+                          Buy
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Active Call Panel */}
           <ActiveCallPanel voice={voice} />
@@ -467,7 +592,12 @@ export default function DashboardPage() {
 
                 <Button
                   onClick={handleCall}
-                  disabled={isCallActive || !recipient || !selectedPresetId}
+                  disabled={
+                    isCallActive ||
+                    !recipient ||
+                    !selectedPresetId ||
+                    availableSeconds <= 0
+                  }
                   data-ocid="dashboard.call.submit_button"
                   className="w-full gap-2"
                 >
@@ -481,7 +611,9 @@ export default function DashboardPage() {
                     ? "Initiating..."
                     : voice.status === "connecting"
                       ? "Connecting..."
-                      : "Start Call"}
+                      : availableSeconds <= 0
+                        ? "Add Phone Time"
+                        : "Start Call"}
                 </Button>
               </CardContent>
             </Card>

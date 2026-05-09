@@ -1,0 +1,224 @@
+import { Actor, HttpAgent } from "@dfinity/agent";
+import { IDL } from "@dfinity/candid";
+import { Ed25519KeyIdentity } from "@dfinity/identity";
+import { Principal } from "@dfinity/principal";
+
+const StripeMode = IDL.Variant({
+  test: IDL.Null,
+  live: IDL.Null,
+});
+
+const PurchaseIntentStatus = IDL.Variant({
+  pending: IDL.Null,
+  paid: IDL.Null,
+  canceled: IDL.Null,
+});
+
+const CallReservationStatus = IDL.Variant({
+  reserved: IDL.Null,
+  active: IDL.Null,
+  finished: IDL.Null,
+  canceled: IDL.Null,
+});
+
+const PurchaseIntentPublic = IDL.Record({
+  id: IDL.Text,
+  user: IDL.Principal,
+  packageId: IDL.Text,
+  amountCents: IDL.Nat,
+  seconds: IDL.Nat,
+  mode: StripeMode,
+  createdAt: IDL.Int,
+  status: PurchaseIntentStatus,
+  stripeSessionId: IDL.Opt(IDL.Text),
+  paidAt: IDL.Opt(IDL.Int),
+});
+
+const CallReservationPublic = IDL.Record({
+  id: IDL.Text,
+  callId: IDL.Nat,
+  user: IDL.Principal,
+  recipientPhone: IDL.Text,
+  presetId: IDL.Nat,
+  allowedSeconds: IDL.Nat,
+  callToken: IDL.Opt(IDL.Text),
+  createdAt: IDL.Int,
+  expiresAt: IDL.Int,
+  status: CallReservationStatus,
+  startedAt: IDL.Opt(IDL.Int),
+  finishedAt: IDL.Opt(IDL.Int),
+  usedSeconds: IDL.Opt(IDL.Nat),
+  billedSeconds: IDL.Opt(IDL.Nat),
+  callSid: IDL.Opt(IDL.Text),
+  transcript: IDL.Opt(IDL.Text),
+  canceledReason: IDL.Opt(IDL.Text),
+});
+
+const ReserveCallResult = IDL.Variant({
+  ok: CallReservationPublic,
+  err: IDL.Text,
+});
+
+const BillingMutationResult = IDL.Variant({
+  ok: IDL.Bool,
+  err: IDL.Text,
+});
+
+const idlFactory = ({ IDL }) =>
+  IDL.Service({
+    getPurchaseIntentForServer: IDL.Func(
+      [IDL.Text],
+      [IDL.Opt(PurchaseIntentPublic)],
+      ["query"],
+    ),
+    creditPaidSeconds: IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Principal, IDL.Nat, StripeMode],
+      [BillingMutationResult],
+      [],
+    ),
+    verifyCallReservation: IDL.Func(
+      [IDL.Text, IDL.Text],
+      [ReserveCallResult],
+      [],
+    ),
+    markReservationStarted: IDL.Func(
+      [IDL.Text, IDL.Text],
+      [BillingMutationResult],
+      [],
+    ),
+    finishCallAndDebit: IDL.Func(
+      [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
+      [BillingMutationResult],
+      [],
+    ),
+    cancelCallReservation: IDL.Func(
+      [IDL.Text, IDL.Text],
+      [BillingMutationResult],
+      [],
+    ),
+  });
+
+let identityCache = null;
+let actorPromise = null;
+
+function parseSecretKeyBytes(value) {
+  const trimmed = String(value || "").trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("[")) {
+    const parsed = JSON.parse(trimmed);
+    return Uint8Array.from(parsed);
+  }
+  if (/^[a-f0-9]{64}$/i.test(trimmed)) {
+    const pairs = trimmed.match(/[a-f0-9]{2}/gi) || [];
+    return Uint8Array.from(pairs.map((pair) => Number.parseInt(pair, 16)));
+  }
+  return Uint8Array.from(Buffer.from(trimmed, "base64"));
+}
+
+export function getIcpServerIdentity() {
+  if (identityCache) return identityCache;
+  const json = process.env.ICP_SERVER_IDENTITY_JSON;
+  if (json?.trim()) {
+    identityCache = Ed25519KeyIdentity.fromJSON(json.trim());
+    return identityCache;
+  }
+
+  const secretKey = parseSecretKeyBytes(process.env.ICP_SERVER_IDENTITY_SECRET_KEY);
+  if (secretKey) {
+    identityCache = Ed25519KeyIdentity.fromSecretKey(secretKey);
+    return identityCache;
+  }
+
+  throw new Error(
+    "Missing ICP server identity. Set ICP_SERVER_IDENTITY_JSON in src/server/.env.",
+  );
+}
+
+export function getIcpServerPrincipalText() {
+  try {
+    return getIcpServerIdentity().getPrincipal().toText();
+  } catch {
+    return "";
+  }
+}
+
+function getBackendConfig() {
+  const canisterId = process.env.BACKEND_CANISTER_ID;
+  if (!canisterId) {
+    throw new Error("Missing BACKEND_CANISTER_ID in the server environment.");
+  }
+  return {
+    canisterId,
+    host: process.env.BACKEND_HOST || "https://icp-api.io",
+  };
+}
+
+export async function getBackendActor() {
+  if (actorPromise) return actorPromise;
+  actorPromise = (async () => {
+    const { canisterId, host } = getBackendConfig();
+    const agent = new HttpAgent({
+      host,
+      identity: getIcpServerIdentity(),
+    });
+    if (/localhost|127\.0\.0\.1|\[::1\]/i.test(host)) {
+      await agent.fetchRootKey();
+    }
+    return Actor.createActor(idlFactory, {
+      agent,
+      canisterId,
+    });
+  })();
+  return actorPromise;
+}
+
+export function principalFromText(text) {
+  return Principal.fromText(text);
+}
+
+export function stripeModeToCandid(mode) {
+  return mode === "test" ? { test: null } : { live: null };
+}
+
+export function variantKey(value) {
+  return Object.keys(value || {})[0] || "";
+}
+
+export function unwrapOptional(value) {
+  return Array.isArray(value) && value.length > 0 ? value[0] : null;
+}
+
+export function normalizePurchaseIntent(intent) {
+  if (!intent) return null;
+  return {
+    id: intent.id,
+    user: intent.user.toText(),
+    packageId: intent.packageId,
+    amountCents: Number(intent.amountCents),
+    seconds: Number(intent.seconds),
+    mode: variantKey(intent.mode),
+    createdAt: intent.createdAt,
+    status: variantKey(intent.status),
+    stripeSessionId: unwrapOptional(intent.stripeSessionId),
+    paidAt: unwrapOptional(intent.paidAt),
+  };
+}
+
+export function normalizeReservation(reservation) {
+  return {
+    id: reservation.id,
+    callId: reservation.callId.toString(),
+    user: reservation.user.toText(),
+    recipientPhone: reservation.recipientPhone,
+    presetId: reservation.presetId.toString(),
+    allowedSeconds: Number(reservation.allowedSeconds),
+    status: variantKey(reservation.status),
+    callSid: unwrapOptional(reservation.callSid),
+  };
+}
+
+export function okOrThrow(result, message) {
+  const kind = variantKey(result);
+  if (kind === "ok") return result.ok;
+  throw new Error(result?.err || message);
+}

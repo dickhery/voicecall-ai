@@ -34,30 +34,8 @@ mixin (
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: must be logged in");
     };
-    switch (ConfigLib.getPreset(configState, input.presetId)) {
-      case null { return #err("Preset not found") };
-      case (?_preset) {};
-    };
-
-    // Create call record
-    let callRecord = CallsLib.createCallRecord(
-      callsState,
-      caller,
-      input.recipientPhone,
-      input.presetId,
-    );
-    ignore CallsLib.updateCallRecord(callsState, callRecord.id, #inProgress, null, null, null);
-    CallsLib.addSystemLog(
-      callsState,
-      #info,
-      "Prepared call " # debug_show(callRecord.id) # " for server-side Twilio bridge to " # input.recipientPhone,
-      ?callRecord.id,
-    );
-
-    #ok({
-      callId = callRecord.id;
-      callSid = "server-pending-" # debug_show(callRecord.id);
-    });
+    ignore input;
+    #err("Billing is enabled. Reserve prepaid phone time with reserveCall before starting a call.");
   };
 
   // Twilio webhook: accept TwiML callback and return XML to keep call alive

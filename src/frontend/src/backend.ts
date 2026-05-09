@@ -150,6 +150,85 @@ export type InitiateCallResult = {
     __kind__: "err";
     err: string;
 };
+export enum StripeMode {
+    live = "live",
+    test = "test"
+}
+export enum PurchaseIntentStatus {
+    canceled = "canceled",
+    paid = "paid",
+    pending = "pending"
+}
+export enum CallReservationStatus {
+    active = "active",
+    canceled = "canceled",
+    finished = "finished",
+    reserved = "reserved"
+}
+export interface BillingPackage {
+    amountCents: bigint;
+    id: string;
+    name: string;
+    seconds: bigint;
+}
+export interface BillingStatus {
+    availableSeconds: bigint;
+    balanceSeconds: bigint;
+    packages: Array<BillingPackage>;
+    reservedSeconds: bigint;
+}
+export interface PurchaseIntentPublic {
+    amountCents: bigint;
+    createdAt: bigint;
+    id: string;
+    mode: StripeMode;
+    packageId: string;
+    paidAt?: bigint;
+    seconds: bigint;
+    status: PurchaseIntentStatus;
+    stripeSessionId?: string;
+    user: Principal;
+}
+export type CreatePurchaseIntentResult = {
+    __kind__: "ok";
+    ok: PurchaseIntentPublic;
+} | {
+    __kind__: "err";
+    err: string;
+};
+export interface CallReservationPublic {
+    allowedSeconds: bigint;
+    billedSeconds?: bigint;
+    callId: bigint;
+    callSid?: string;
+    callToken?: string;
+    canceledReason?: string;
+    createdAt: bigint;
+    expiresAt: bigint;
+    finishedAt?: bigint;
+    id: string;
+    presetId: bigint;
+    recipientPhone: string;
+    startedAt?: bigint;
+    status: CallReservationStatus;
+    transcript?: string;
+    usedSeconds?: bigint;
+    user: Principal;
+}
+export type ReserveCallResult = {
+    __kind__: "ok";
+    ok: CallReservationPublic;
+} | {
+    __kind__: "err";
+    err: string;
+};
+export type BillingMutationResult = {
+    __kind__: "ok";
+    ok: boolean;
+} | {
+    __kind__: "err";
+    err: string;
+};
 export interface http_header {
     value: string;
     name: string;
@@ -224,7 +303,9 @@ export interface backendInterface {
     adminListAllCalls(): Promise<Array<CallRecordPublic>>;
     adminListUserCalls(userId: Principal): Promise<Array<CallRecordPublic>>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    cancelCallReservation(reservationId: string, reason: string): Promise<BillingMutationResult>;
     createPreset(input: CallPresetInput): Promise<CallPreset>;
+    createPurchaseIntent(packageId: string): Promise<CreatePurchaseIntentResult>;
     deletePreset(id: PresetId): Promise<boolean>;
     duplicatePreset(id: PresetId): Promise<CallPreset | null>;
     getAdminConfig(): Promise<{
@@ -233,14 +314,17 @@ export interface backendInterface {
         twilioFromNumber: string;
         twilioAccountSid: string;
     }>;
+    getBillingPackages(): Promise<Array<BillingPackage>>;
     getCallRecord(id: CallId): Promise<CallRecordPublic | null>;
     getCallerUserRole(): Promise<UserRole>;
     getEphemeralToken(presetId: PresetId): Promise<EphemeralTokenResult>;
+    getMyBillingStatus(): Promise<BillingStatus>;
     getPreset(id: PresetId): Promise<CallPreset | null>;
     initiateCall(input: InitiateCallInput): Promise<InitiateCallResult>;
     isCallerAdmin(): Promise<boolean>;
     listMyCalls(): Promise<Array<CallRecordPublic>>;
     listMyPresets(): Promise<Array<CallPreset>>;
+    reserveCall(input: InitiateCallInput): Promise<ReserveCallResult>;
     setAdminConfig(xaiApiKey: string, twilioAccountSid: string, twilioAuthToken: string, twilioFromNumber: string): Promise<void>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
     twilioWebhook(callSid: string, callStatus: string): Promise<string>;
@@ -320,6 +404,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async cancelCallReservation(arg0: string, arg1: string): Promise<BillingMutationResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.cancelCallReservation(arg0, arg1);
+                return from_candid_BillingMutationResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.cancelCallReservation(arg0, arg1);
+            return from_candid_BillingMutationResult(result);
+        }
+    }
     async createPreset(arg0: CallPresetInput): Promise<CallPreset> {
         if (this.processError) {
             try {
@@ -332,6 +430,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.createPreset(to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg0));
             return from_candid_CallPreset_n23(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async createPurchaseIntent(arg0: string): Promise<CreatePurchaseIntentResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createPurchaseIntent(arg0);
+                return from_candid_CreatePurchaseIntentResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createPurchaseIntent(arg0);
+            return from_candid_CreatePurchaseIntentResult(result);
         }
     }
     async deletePreset(arg0: PresetId): Promise<boolean> {
@@ -381,6 +493,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getBillingPackages(): Promise<Array<BillingPackage>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getBillingPackages();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getBillingPackages();
+            return result;
+        }
+    }
     async getCallRecord(arg0: CallId): Promise<CallRecordPublic | null> {
         if (this.processError) {
             try {
@@ -421,6 +547,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getEphemeralToken(arg0);
             return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getMyBillingStatus(): Promise<BillingStatus> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMyBillingStatus();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMyBillingStatus();
+            return result;
         }
     }
     async getPreset(arg0: PresetId): Promise<CallPreset | null> {
@@ -493,6 +633,20 @@ export class Backend implements backendInterface {
             return from_candid_vec_n39(this._uploadFile, this._downloadFile, result);
         }
     }
+    async reserveCall(arg0: InitiateCallInput): Promise<ReserveCallResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.reserveCall(arg0);
+                return from_candid_ReserveCallResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.reserveCall(arg0);
+            return from_candid_ReserveCallResult(result);
+        }
+    }
     async setAdminConfig(arg0: string, arg1: string, arg2: string, arg3: string): Promise<void> {
         if (this.processError) {
             try {
@@ -563,6 +717,83 @@ export class Backend implements backendInterface {
             return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
         }
     }
+}
+function from_candid_opt_text(value: [] | [string]): string | undefined {
+    return value.length === 0 ? undefined : value[0];
+}
+function from_candid_opt_nat(value: [] | [bigint]): bigint | undefined {
+    return value.length === 0 ? undefined : value[0];
+}
+function from_candid_StripeMode(value: { live: null } | { test: null }): StripeMode {
+    return "test" in value ? StripeMode.test : StripeMode.live;
+}
+function from_candid_PurchaseIntentStatus(value: { canceled: null } | { paid: null } | { pending: null }): PurchaseIntentStatus {
+    return "canceled" in value ? PurchaseIntentStatus.canceled : "paid" in value ? PurchaseIntentStatus.paid : PurchaseIntentStatus.pending;
+}
+function from_candid_CallReservationStatus(value: { active: null } | { canceled: null } | { finished: null } | { reserved: null }): CallReservationStatus {
+    return "active" in value ? CallReservationStatus.active : "canceled" in value ? CallReservationStatus.canceled : "finished" in value ? CallReservationStatus.finished : CallReservationStatus.reserved;
+}
+function from_candid_PurchaseIntentPublic(value: any): PurchaseIntentPublic {
+    return {
+        amountCents: value.amountCents,
+        createdAt: value.createdAt,
+        id: value.id,
+        mode: from_candid_StripeMode(value.mode),
+        packageId: value.packageId,
+        paidAt: from_candid_opt_nat(value.paidAt),
+        seconds: value.seconds,
+        status: from_candid_PurchaseIntentStatus(value.status),
+        stripeSessionId: from_candid_opt_text(value.stripeSessionId),
+        user: value.user
+    };
+}
+function from_candid_CreatePurchaseIntentResult(value: any): CreatePurchaseIntentResult {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_PurchaseIntentPublic(value.ok)
+    } : {
+        __kind__: "err",
+        err: value.err
+    };
+}
+function from_candid_CallReservationPublic(value: any): CallReservationPublic {
+    return {
+        allowedSeconds: value.allowedSeconds,
+        billedSeconds: from_candid_opt_nat(value.billedSeconds),
+        callId: value.callId,
+        callSid: from_candid_opt_text(value.callSid),
+        callToken: from_candid_opt_text(value.callToken),
+        canceledReason: from_candid_opt_text(value.canceledReason),
+        createdAt: value.createdAt,
+        expiresAt: value.expiresAt,
+        finishedAt: from_candid_opt_nat(value.finishedAt),
+        id: value.id,
+        presetId: value.presetId,
+        recipientPhone: value.recipientPhone,
+        startedAt: from_candid_opt_nat(value.startedAt),
+        status: from_candid_CallReservationStatus(value.status),
+        transcript: from_candid_opt_text(value.transcript),
+        usedSeconds: from_candid_opt_nat(value.usedSeconds),
+        user: value.user
+    };
+}
+function from_candid_ReserveCallResult(value: any): ReserveCallResult {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_CallReservationPublic(value.ok)
+    } : {
+        __kind__: "err",
+        err: value.err
+    };
+}
+function from_candid_BillingMutationResult(value: any): BillingMutationResult {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok
+    } : {
+        __kind__: "err",
+        err: value.err
+    };
 }
 function from_candid_AudioFormat_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AudioFormat): AudioFormat {
     return from_candid_variant_n30(_uploadFile, _downloadFile, value);

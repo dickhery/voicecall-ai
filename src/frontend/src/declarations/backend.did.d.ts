@@ -49,6 +49,44 @@ export type CallStatus = { 'pending' : null } |
   { 'completed' : null } |
   { 'inProgress' : null } |
   { 'failed' : null };
+export interface BillingPackage {
+  'amountCents' : bigint,
+  'id' : string,
+  'name' : string,
+  'seconds' : bigint,
+}
+export type BillingMutationResult = { 'ok' : boolean } | { 'err' : string };
+export interface BillingStatus {
+  'availableSeconds' : bigint,
+  'balanceSeconds' : bigint,
+  'packages' : Array<BillingPackage>,
+  'reservedSeconds' : bigint,
+}
+export type CallReservationStatus = { 'active' : null } |
+  { 'canceled' : null } |
+  { 'finished' : null } |
+  { 'reserved' : null };
+export interface CallReservationPublic {
+  'allowedSeconds' : bigint,
+  'billedSeconds' : [] | [bigint],
+  'callId' : bigint,
+  'callSid' : [] | [string],
+  'callToken' : [] | [string],
+  'canceledReason' : [] | [string],
+  'createdAt' : bigint,
+  'expiresAt' : bigint,
+  'finishedAt' : [] | [bigint],
+  'id' : string,
+  'presetId' : bigint,
+  'recipientPhone' : string,
+  'startedAt' : [] | [bigint],
+  'status' : CallReservationStatus,
+  'transcript' : [] | [string],
+  'usedSeconds' : [] | [bigint],
+  'user' : Principal,
+}
+export type CreatePurchaseIntentResult = { 'ok' : PurchaseIntentPublic } |
+  { 'err' : string };
 export type EphemeralTokenResult = {
     'ok' : { 'token' : string, 'websocketUrl' : string }
   } |
@@ -62,6 +100,23 @@ export type InitiateCallResult = {
   } |
   { 'err' : string };
 export type PresetId = bigint;
+export type PurchaseIntentStatus = { 'canceled' : null } |
+  { 'paid' : null } |
+  { 'pending' : null };
+export interface PurchaseIntentPublic {
+  'amountCents' : bigint,
+  'createdAt' : bigint,
+  'id' : string,
+  'mode' : StripeMode,
+  'packageId' : string,
+  'paidAt' : [] | [bigint],
+  'seconds' : bigint,
+  'status' : PurchaseIntentStatus,
+  'stripeSessionId' : [] | [string],
+  'user' : Principal,
+}
+export type ReserveCallResult = { 'ok' : CallReservationPublic } |
+  { 'err' : string };
 export type SampleRate = { 'hz16000' : null } |
   { 'hz32000' : null } |
   { 'hz22050' : null } |
@@ -82,6 +137,7 @@ export interface ToolsEnabled {
   'webSearch' : boolean,
   'functionCalling' : boolean,
 }
+export type StripeMode = { 'live' : null } | { 'test' : null };
 export interface TransformationInput {
   'context' : Uint8Array,
   'response' : http_request_result,
@@ -117,9 +173,19 @@ export interface _SERVICE {
   'adminListAllCalls' : ActorMethod<[], Array<CallRecordPublic>>,
   'adminListUserCalls' : ActorMethod<[Principal], Array<CallRecordPublic>>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'cancelCallReservation' : ActorMethod<[string, string], BillingMutationResult>,
   'createPreset' : ActorMethod<[CallPresetInput], CallPreset>,
+  'createPurchaseIntent' : ActorMethod<[string], CreatePurchaseIntentResult>,
+  'creditPaidSeconds' : ActorMethod<
+    [string, string, Principal, bigint, StripeMode],
+    BillingMutationResult
+  >,
   'deletePreset' : ActorMethod<[PresetId], boolean>,
   'duplicatePreset' : ActorMethod<[PresetId], [] | [CallPreset]>,
+  'finishCallAndDebit' : ActorMethod<
+    [string, bigint, [] | [string], [] | [string]],
+    BillingMutationResult
+  >,
   'getAdminConfig' : ActorMethod<
     [],
     {
@@ -129,14 +195,22 @@ export interface _SERVICE {
       'twilioAccountSid' : string,
     }
   >,
+  'getBillingPackages' : ActorMethod<[], Array<BillingPackage>>,
   'getCallRecord' : ActorMethod<[CallId], [] | [CallRecordPublic]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getEphemeralToken' : ActorMethod<[PresetId], EphemeralTokenResult>,
+  'getMyBillingStatus' : ActorMethod<[], BillingStatus>,
   'getPreset' : ActorMethod<[PresetId], [] | [CallPreset]>,
+  'getPurchaseIntentForServer' : ActorMethod<
+    [string],
+    [] | [PurchaseIntentPublic]
+  >,
   'initiateCall' : ActorMethod<[InitiateCallInput], InitiateCallResult>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listMyCalls' : ActorMethod<[], Array<CallRecordPublic>>,
   'listMyPresets' : ActorMethod<[], Array<CallPreset>>,
+  'markReservationStarted' : ActorMethod<[string, string], BillingMutationResult>,
+  'reserveCall' : ActorMethod<[InitiateCallInput], ReserveCallResult>,
   'setAdminConfig' : ActorMethod<[string, string, string, string], undefined>,
   'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
   'twilioWebhook' : ActorMethod<[string, string], string>,

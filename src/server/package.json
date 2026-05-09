@@ -8,9 +8,14 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@dfinity/agent": "~3.3.1",
+    "@dfinity/candid": "~3.3.1",
+    "@dfinity/identity": "~3.3.1",
+    "@dfinity/principal": "~3.3.1",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^4.21.2",
+    "stripe": "^22.1.1",
     "twilio": "^5.4.0",
     "ws": "^8.18.0"
   }

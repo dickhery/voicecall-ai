@@ -16,6 +16,7 @@ This version keeps the IC canister for auth, presets, and history, but moves the
 - Twilio TwiML `/twiml`
 - Twilio Media Streams WebSocket `/media`
 - xAI Realtime Voice WebSocket
+- Stripe Checkout Session creation and webhook fulfillment
 
 ## What Went Wrong In The Latest Deploy
 
@@ -51,11 +52,36 @@ References:
 ## Project Layout
 
 ```text
-src/backend      Motoko canister: auth, presets, call history
+src/backend      Motoko canister: auth, presets, call history, phone-time balances
 src/frontend     Vite frontend deployed as an IC asset canister
-src/server       Windows-friendly Node.js Twilio/xAI bridge
+src/server       Windows-friendly Node.js Twilio/xAI/Stripe bridge
 icp.yaml         icp-cli deployment config
 ```
+
+## Prepaid Phone Time
+
+The app now sells prepaid phone time and enforces it before and during calls.
+
+Packages:
+
+```text
+$5  = 45 minutes
+$10 = 90 minutes
+$20 = 180 minutes
+```
+
+Payment flow:
+
+1. The logged-in user selects a package in the dashboard.
+2. The frontend creates a `purchaseIntent` in the IC backend.
+3. The Node server creates a Stripe Checkout Session.
+4. Stripe calls the Node webhook after payment.
+5. The Node server verifies the webhook and credits seconds in the IC backend.
+6. Before a call starts, the frontend reserves paid seconds in the IC backend.
+7. `/initiate-call` refuses to dial unless the reservation token verifies.
+8. The Node server ends the Twilio call when the reserved paid time runs out.
+
+Admin users receive Stripe test-mode Checkout Sessions. Non-admin users receive live-mode Checkout Sessions.
 
 ## Where To Put Canister IDs
 
@@ -158,6 +184,12 @@ XAI_API_KEY=xai-...
 HOSTNAME=
 FRONTEND_ORIGIN=https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
 FRONTEND_CANISTER_ID=2nukr-cyaaa-aaaak-qy2ja-cai
+BACKEND_CANISTER_ID=2dwhz-ziaaa-aaaak-qy2ia-cai
+BACKEND_HOST=https://icp-api.io
+STRIPE_TEST_SECRET_KEY=sk_test_...
+STRIPE_TEST_WEBHOOK_SECRET=whsec_...
+STRIPE_LIVE_SECRET_KEY=sk_live_...
+STRIPE_LIVE_WEBHOOK_SECRET=whsec_...
 ```
 
 Leave `HOSTNAME` blank until your tunnel is running.
@@ -170,6 +202,34 @@ FRONTEND_ORIGIN=https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io/
 ```
 
 `FRONTEND_CANISTER_ID` is optional, but useful because the server will allow both `https://<id>.icp0.io` and `https://<id>.ic0.app`.
+
+Create the server identity that the Node service uses to credit payments and verify reservations:
+
+```powershell
+node src\server\scripts\create-ic-server-identity.mjs
+```
+
+Copy the printed `ICP_SERVER_IDENTITY_JSON=...` line into `src\server\.env`. Copy the printed principal too; after the backend is deployed, your admin identity must grant that principal admin access:
+
+```powershell
+icp canister call -e ic backend assignCallerUserRole '(principal "SERVER_PRINCIPAL_HERE", variant { admin })'
+```
+
+In Stripe, create two webhook endpoints:
+
+```text
+https://voicecall.richardhery.com/stripe/webhook/test
+https://voicecall.richardhery.com/stripe/webhook/live
+```
+
+Add these webhook events:
+
+```text
+checkout.session.completed
+checkout.session.async_payment_succeeded
+```
+
+Put each endpoint's signing secret into the matching `STRIPE_TEST_WEBHOOK_SECRET` or `STRIPE_LIVE_WEBHOOK_SECRET` value.
 
 ### 4. Start a Cloudflare Tunnel
 
@@ -282,7 +342,7 @@ Invoke-WebRequest `
 The JSON should include:
 
 ```text
-serverVersion: 2026-05-09-cors-origin-normalization
+serverVersion: 2026-05-09-stripe-prepaid-minutes
 ```
 
 ## Configure the Frontend
@@ -394,16 +454,17 @@ If Chrome shows a certificate warning on `*.icp-api.io`, you are on the wrong ho
 3. Open the IC frontend.
 4. Sign in with Internet Identity.
 5. Create a preset with `PCMU` and `8,000 Hz`.
-6. Enter a recipient phone number in E.164 format, for example `+17753794797`.
-7. Start the call.
+6. Buy phone time from the dashboard.
+7. Enter a recipient phone number in E.164 format, for example `+17753794797`.
+8. Start the call.
 
-The frontend creates an IC history record, then calls:
+The frontend reserves paid seconds in the IC backend, then calls:
 
 ```text
 POST <voice_server_url>/initiate-call
 ```
 
-The server calls Twilio. Twilio then calls:
+The server verifies the paid reservation and calls Twilio. Twilio then calls:
 
 ```text
 POST https://<HOSTNAME>/twiml

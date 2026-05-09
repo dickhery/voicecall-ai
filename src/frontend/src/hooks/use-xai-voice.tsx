@@ -10,7 +10,7 @@
  */
 
 import { CallStatus } from "@/backend";
-import { useInitiateCall, useUpdateCallStatus } from "@/hooks/use-backend";
+import { useReserveCall, useUpdateCallStatus } from "@/hooks/use-backend";
 import { endVoiceServerCall, startVoiceServerCall } from "@/lib/voice-server";
 import { useCallStore } from "@/stores/call-store";
 import type { CallPreset } from "@/types";
@@ -59,7 +59,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const activeCallIdRef = useRef<bigint | null>(null);
   const activeCallSidRef = useRef<string | null>(null);
 
-  const initiateCall = useInitiateCall();
+  const reserveCall = useReserveCall();
   const updateCallStatus = useUpdateCallStatus();
   const { setActiveCall, clearCall } = useCallStore();
 
@@ -100,15 +100,19 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       activeCallSidRef.current = null;
 
       try {
-        const callResult = await initiateCall.mutateAsync({
+        const reservationResult = await reserveCall.mutateAsync({
           recipientPhone,
           presetId: preset.id,
         });
-        if (callResult.__kind__ === "err") {
-          throw new Error(callResult.err);
+        if (reservationResult.__kind__ === "err") {
+          throw new Error(reservationResult.err);
         }
 
-        const { callId } = callResult.ok;
+        const { callId, id: reservationId, callToken, allowedSeconds } =
+          reservationResult.ok;
+        if (!callToken) {
+          throw new Error("Reservation token was not returned by the backend.");
+        }
         activeCallIdRef.current = callId;
         setActiveCall(callId, recipientPhone, preset.id);
 
@@ -117,13 +121,15 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
           recipientPhone,
           preset,
           callId,
+          reservationId,
+          callToken,
         });
 
         activeCallSidRef.current = serverCall.callSid;
         setStatus("in_call");
         startDurationTimer();
         toast.success("Call placed", {
-          description: `Twilio SID ${serverCall.callSid}`,
+          description: `${Math.floor(Number(allowedSeconds) / 60)} paid minutes reserved`,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
@@ -144,7 +150,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       }
     },
     [
-      initiateCall,
+      reserveCall,
       setActiveCall,
       startDurationTimer,
       updateCallStatus,

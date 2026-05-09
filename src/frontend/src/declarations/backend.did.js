@@ -106,6 +106,76 @@ export const InitiateCallResult = IDL.Variant({
   'ok' : IDL.Record({ 'callSid' : IDL.Text, 'callId' : IDL.Nat }),
   'err' : IDL.Text,
 });
+export const StripeMode = IDL.Variant({
+  'live' : IDL.Null,
+  'test' : IDL.Null,
+});
+export const PurchaseIntentStatus = IDL.Variant({
+  'canceled' : IDL.Null,
+  'paid' : IDL.Null,
+  'pending' : IDL.Null,
+});
+export const PurchaseIntentPublic = IDL.Record({
+  'amountCents' : IDL.Nat,
+  'createdAt' : IDL.Int,
+  'id' : IDL.Text,
+  'mode' : StripeMode,
+  'packageId' : IDL.Text,
+  'paidAt' : IDL.Opt(IDL.Int),
+  'seconds' : IDL.Nat,
+  'status' : PurchaseIntentStatus,
+  'stripeSessionId' : IDL.Opt(IDL.Text),
+  'user' : IDL.Principal,
+});
+export const CreatePurchaseIntentResult = IDL.Variant({
+  'ok' : PurchaseIntentPublic,
+  'err' : IDL.Text,
+});
+export const CallReservationStatus = IDL.Variant({
+  'active' : IDL.Null,
+  'canceled' : IDL.Null,
+  'finished' : IDL.Null,
+  'reserved' : IDL.Null,
+});
+export const CallReservationPublic = IDL.Record({
+  'allowedSeconds' : IDL.Nat,
+  'billedSeconds' : IDL.Opt(IDL.Nat),
+  'callId' : IDL.Nat,
+  'callSid' : IDL.Opt(IDL.Text),
+  'callToken' : IDL.Opt(IDL.Text),
+  'canceledReason' : IDL.Opt(IDL.Text),
+  'createdAt' : IDL.Int,
+  'expiresAt' : IDL.Int,
+  'finishedAt' : IDL.Opt(IDL.Int),
+  'id' : IDL.Text,
+  'presetId' : IDL.Nat,
+  'recipientPhone' : IDL.Text,
+  'startedAt' : IDL.Opt(IDL.Int),
+  'status' : CallReservationStatus,
+  'transcript' : IDL.Opt(IDL.Text),
+  'usedSeconds' : IDL.Opt(IDL.Nat),
+  'user' : IDL.Principal,
+});
+export const ReserveCallResult = IDL.Variant({
+  'ok' : CallReservationPublic,
+  'err' : IDL.Text,
+});
+export const BillingPackage = IDL.Record({
+  'amountCents' : IDL.Nat,
+  'id' : IDL.Text,
+  'name' : IDL.Text,
+  'seconds' : IDL.Nat,
+});
+export const BillingStatus = IDL.Record({
+  'availableSeconds' : IDL.Nat,
+  'balanceSeconds' : IDL.Nat,
+  'packages' : IDL.Vec(BillingPackage),
+  'reservedSeconds' : IDL.Nat,
+});
+export const BillingMutationResult = IDL.Variant({
+  'ok' : IDL.Bool,
+  'err' : IDL.Text,
+});
 export const http_header = IDL.Record({
   'value' : IDL.Text,
   'name' : IDL.Text,
@@ -135,9 +205,29 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'cancelCallReservation' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [BillingMutationResult],
+      [],
+    ),
   'createPreset' : IDL.Func([CallPresetInput], [CallPreset], []),
+  'createPurchaseIntent' : IDL.Func(
+      [IDL.Text],
+      [CreatePurchaseIntentResult],
+      [],
+    ),
+  'creditPaidSeconds' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Principal, IDL.Nat, StripeMode],
+      [BillingMutationResult],
+      [],
+    ),
   'deletePreset' : IDL.Func([PresetId], [IDL.Bool], []),
   'duplicatePreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], []),
+  'finishCallAndDebit' : IDL.Func(
+      [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
+      [BillingMutationResult],
+      [],
+    ),
   'getAdminConfig' : IDL.Func(
       [],
       [
@@ -151,13 +241,26 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getCallRecord' : IDL.Func([CallId], [IDL.Opt(CallRecordPublic)], ['query']),
+  'getBillingPackages' : IDL.Func([], [IDL.Vec(BillingPackage)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getEphemeralToken' : IDL.Func([PresetId], [EphemeralTokenResult], []),
+  'getMyBillingStatus' : IDL.Func([], [BillingStatus], ['query']),
   'getPreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], ['query']),
+  'getPurchaseIntentForServer' : IDL.Func(
+      [IDL.Text],
+      [IDL.Opt(PurchaseIntentPublic)],
+      ['query'],
+    ),
   'initiateCall' : IDL.Func([InitiateCallInput], [InitiateCallResult], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listMyCalls' : IDL.Func([], [IDL.Vec(CallRecordPublic)], ['query']),
   'listMyPresets' : IDL.Func([], [IDL.Vec(CallPreset)], ['query']),
+  'markReservationStarted' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [BillingMutationResult],
+      [],
+    ),
+  'reserveCall' : IDL.Func([InitiateCallInput], [ReserveCallResult], []),
   'setAdminConfig' : IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text], [], []),
   'transform' : IDL.Func(
       [TransformationInput],
@@ -278,6 +381,76 @@ export const idlFactory = ({ IDL }) => {
     'ok' : IDL.Record({ 'callSid' : IDL.Text, 'callId' : IDL.Nat }),
     'err' : IDL.Text,
   });
+  const StripeMode = IDL.Variant({
+    'live' : IDL.Null,
+    'test' : IDL.Null,
+  });
+  const PurchaseIntentStatus = IDL.Variant({
+    'canceled' : IDL.Null,
+    'paid' : IDL.Null,
+    'pending' : IDL.Null,
+  });
+  const PurchaseIntentPublic = IDL.Record({
+    'amountCents' : IDL.Nat,
+    'createdAt' : IDL.Int,
+    'id' : IDL.Text,
+    'mode' : StripeMode,
+    'packageId' : IDL.Text,
+    'paidAt' : IDL.Opt(IDL.Int),
+    'seconds' : IDL.Nat,
+    'status' : PurchaseIntentStatus,
+    'stripeSessionId' : IDL.Opt(IDL.Text),
+    'user' : IDL.Principal,
+  });
+  const CreatePurchaseIntentResult = IDL.Variant({
+    'ok' : PurchaseIntentPublic,
+    'err' : IDL.Text,
+  });
+  const CallReservationStatus = IDL.Variant({
+    'active' : IDL.Null,
+    'canceled' : IDL.Null,
+    'finished' : IDL.Null,
+    'reserved' : IDL.Null,
+  });
+  const CallReservationPublic = IDL.Record({
+    'allowedSeconds' : IDL.Nat,
+    'billedSeconds' : IDL.Opt(IDL.Nat),
+    'callId' : IDL.Nat,
+    'callSid' : IDL.Opt(IDL.Text),
+    'callToken' : IDL.Opt(IDL.Text),
+    'canceledReason' : IDL.Opt(IDL.Text),
+    'createdAt' : IDL.Int,
+    'expiresAt' : IDL.Int,
+    'finishedAt' : IDL.Opt(IDL.Int),
+    'id' : IDL.Text,
+    'presetId' : IDL.Nat,
+    'recipientPhone' : IDL.Text,
+    'startedAt' : IDL.Opt(IDL.Int),
+    'status' : CallReservationStatus,
+    'transcript' : IDL.Opt(IDL.Text),
+    'usedSeconds' : IDL.Opt(IDL.Nat),
+    'user' : IDL.Principal,
+  });
+  const ReserveCallResult = IDL.Variant({
+    'ok' : CallReservationPublic,
+    'err' : IDL.Text,
+  });
+  const BillingPackage = IDL.Record({
+    'amountCents' : IDL.Nat,
+    'id' : IDL.Text,
+    'name' : IDL.Text,
+    'seconds' : IDL.Nat,
+  });
+  const BillingStatus = IDL.Record({
+    'availableSeconds' : IDL.Nat,
+    'balanceSeconds' : IDL.Nat,
+    'packages' : IDL.Vec(BillingPackage),
+    'reservedSeconds' : IDL.Nat,
+  });
+  const BillingMutationResult = IDL.Variant({
+    'ok' : IDL.Bool,
+    'err' : IDL.Text,
+  });
   const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
   const http_request_result = IDL.Record({
     'status' : IDL.Nat,
@@ -304,9 +477,29 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'cancelCallReservation' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [BillingMutationResult],
+        [],
+      ),
     'createPreset' : IDL.Func([CallPresetInput], [CallPreset], []),
+    'createPurchaseIntent' : IDL.Func(
+        [IDL.Text],
+        [CreatePurchaseIntentResult],
+        [],
+      ),
+    'creditPaidSeconds' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Principal, IDL.Nat, StripeMode],
+        [BillingMutationResult],
+        [],
+      ),
     'deletePreset' : IDL.Func([PresetId], [IDL.Bool], []),
     'duplicatePreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], []),
+    'finishCallAndDebit' : IDL.Func(
+        [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
+        [BillingMutationResult],
+        [],
+      ),
     'getAdminConfig' : IDL.Func(
         [],
         [
@@ -324,13 +517,26 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(CallRecordPublic)],
         ['query'],
       ),
+    'getBillingPackages' : IDL.Func([], [IDL.Vec(BillingPackage)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getEphemeralToken' : IDL.Func([PresetId], [EphemeralTokenResult], []),
+    'getMyBillingStatus' : IDL.Func([], [BillingStatus], ['query']),
     'getPreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], ['query']),
+    'getPurchaseIntentForServer' : IDL.Func(
+        [IDL.Text],
+        [IDL.Opt(PurchaseIntentPublic)],
+        ['query'],
+      ),
     'initiateCall' : IDL.Func([InitiateCallInput], [InitiateCallResult], []),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listMyCalls' : IDL.Func([], [IDL.Vec(CallRecordPublic)], ['query']),
     'listMyPresets' : IDL.Func([], [IDL.Vec(CallPreset)], ['query']),
+    'markReservationStarted' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [BillingMutationResult],
+        [],
+      ),
+    'reserveCall' : IDL.Func([InitiateCallInput], [ReserveCallResult], []),
     'setAdminConfig' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
         [],
