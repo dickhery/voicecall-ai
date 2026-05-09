@@ -156,16 +156,20 @@ TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_PHONE_NUMBER=+13366098857
 XAI_API_KEY=xai-...
 HOSTNAME=
-FRONTEND_ORIGIN=*
+FRONTEND_ORIGIN=https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+FRONTEND_CANISTER_ID=2nukr-cyaaa-aaaak-qy2ja-cai
 ```
 
 Leave `HOSTNAME` blank until your tunnel is running.
 
-For production, replace `FRONTEND_ORIGIN=*` with your IC frontend origin after the frontend canister exists:
+For local-only testing, you may temporarily use `FRONTEND_ORIGIN=*`. For production, keep it restricted to your IC frontend. The server normalizes trailing slashes, so both of these work:
 
 ```text
 FRONTEND_ORIGIN=https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+FRONTEND_ORIGIN=https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io/
 ```
+
+`FRONTEND_CANISTER_ID` is optional, but useful because the server will allow both `https://<id>.icp0.io` and `https://<id>.ic0.app`.
 
 ### 4. Start a Cloudflare Tunnel
 
@@ -225,8 +229,21 @@ Expected:
 ```text
 ok                : True
 publicHost        : your-tunnel-host
+cors.allowedOrigins includes https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
 twilioConfigured  : True
 xaiConfigured     : True
+```
+
+From the MacBook, test the public CORS path after the Windows server is restarted:
+
+```bash
+curl -i -H "Origin: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io" https://voicecall.richardhery.com/health
+```
+
+The response headers must include:
+
+```text
+Access-Control-Allow-Origin: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
 ```
 
 ## Configure the Frontend
@@ -372,6 +389,17 @@ src/frontend/public/.ic-assets.json5
 ```
 
 If `voice_server_url` changes, add the new origin to the `connect-src` directive before redeploying the frontend. The build checks this now, so a mismatched CSP fails locally instead of letting the deployed browser block `/health` or `/initiate-call`.
+
+## CORS Notes
+
+The Windows Node server also enforces CORS. If the browser console says `No 'Access-Control-Allow-Origin' header`, check `src/server/.env` on the Windows PC:
+
+```text
+FRONTEND_ORIGIN=https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+FRONTEND_CANISTER_ID=2nukr-cyaaa-aaaak-qy2ja-cai
+```
+
+Restart the server after changing `.env` or pulling new server code. The `/health` response includes the active CORS allow list.
 
 ## Useful Commands
 

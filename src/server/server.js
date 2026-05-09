@@ -14,20 +14,74 @@ const STREAM_MARK_PREFIX = "xai-audio";
 const app = express();
 app.set("trust proxy", true);
 
-const allowOrigins = (process.env.FRONTEND_ORIGIN || "*")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
-const allowAllOrigins = allowOrigins.length === 0 || allowOrigins.includes("*");
+function normalizeOrigin(value) {
+  const trimmed = String(value || "").trim().replace(/\/+$/, "");
+  if (!trimmed || trimmed === "*") return trimmed;
+  const withProtocol = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+  try {
+    return new URL(withProtocol).origin;
+  } catch {
+    return trimmed;
+  }
+}
+
+function expandIcGatewayOrigins(origin) {
+  const origins = [origin];
+  try {
+    const url = new URL(origin);
+    if (url.protocol !== "https:") return origins;
+    if (url.hostname.endsWith(".icp0.io")) {
+      origins.push(`https://${url.hostname.replace(/\.icp0\.io$/i, ".ic0.app")}`);
+    } else if (url.hostname.endsWith(".ic0.app")) {
+      origins.push(`https://${url.hostname.replace(/\.ic0\.app$/i, ".icp0.io")}`);
+    }
+  } catch {
+    return origins;
+  }
+  return origins;
+}
+
+function buildAllowedOrigins() {
+  const configuredOrigins = (process.env.FRONTEND_ORIGIN || "*")
+    .split(",")
+    .map(normalizeOrigin)
+    .filter(Boolean);
+  const configuredCanisterIds = (process.env.FRONTEND_CANISTER_ID || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean)
+    .flatMap((id) => [`https://${id}.icp0.io`, `https://${id}.ic0.app`]);
+
+  return new Set(
+    [...configuredOrigins, ...configuredCanisterIds]
+      .flatMap(expandIcGatewayOrigins)
+      .map(normalizeOrigin)
+      .filter(Boolean),
+  );
+}
+
+const allowOrigins = buildAllowedOrigins();
+const allowAllOrigins = allowOrigins.size === 0 || allowOrigins.has("*");
+
+function isOriginAllowed(origin) {
+  if (!origin || allowAllOrigins) return true;
+  return allowOrigins.has(normalizeOrigin(origin));
+}
 
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowAllOrigins || allowOrigins.includes(origin)) {
+      if (isOriginAllowed(origin)) {
         callback(null, true);
         return;
       }
-      callback(new Error(`Origin not allowed by CORS: ${origin}`));
+      log("warn", "Origin not allowed by CORS", {
+        origin,
+        allowedOrigins: Array.from(allowOrigins),
+      });
+      callback(null, false);
     },
   }),
 );
@@ -198,6 +252,10 @@ app.get("/health", (_req, res) => {
   res.json({
     ok: true,
     publicHost: getPublicHost(),
+    cors: {
+      allowAllOrigins,
+      allowedOrigins: Array.from(allowOrigins),
+    },
     twilioConfigured: Boolean(
       process.env.TWILIO_ACCOUNT_SID &&
         process.env.TWILIO_AUTH_TOKEN &&
