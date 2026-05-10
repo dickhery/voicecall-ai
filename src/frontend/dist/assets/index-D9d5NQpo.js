@@ -28106,11 +28106,11 @@ function createRandomKey() {
 function last(arr) {
   return arr[arr.length - 1];
 }
-function isFunction$2(d2) {
+function isFunction$3(d2) {
   return typeof d2 === "function";
 }
 function functionalUpdate(updater, previous) {
-  if (isFunction$2(updater)) {
+  if (isFunction$3(updater)) {
     return updater(previous);
   }
   return updater;
@@ -33183,6 +33183,11 @@ const TransformationOutput = Record({
 });
 Service({
   "_initializeAccessControl": Func([], [], []),
+  "adminAddPromoMinutes": Func(
+    [Principal2, Nat],
+    [BillingMutationResult],
+    []
+  ),
   "adminGetSystemLogs": Func([Nat], [Vec(SystemLog)], ["query"]),
   "adminListAllCalls": Func([], [Vec(CallRecordPublic)], ["query"]),
   "adminListUserCalls": Func(
@@ -33451,6 +33456,11 @@ const idlFactory = ({ IDL: IDL2 }) => {
   });
   return IDL2.Service({
     "_initializeAccessControl": IDL2.Func([], [], []),
+    "adminAddPromoMinutes": IDL2.Func(
+      [IDL2.Principal, IDL2.Nat],
+      [BillingMutationResult2],
+      []
+    ),
     "adminGetSystemLogs": IDL2.Func([IDL2.Nat], [IDL2.Vec(SystemLog2)], ["query"]),
     "adminListAllCalls": IDL2.Func([], [IDL2.Vec(CallRecordPublic2)], ["query"]),
     "adminListUserCalls": IDL2.Func(
@@ -33615,6 +33625,20 @@ class Backend {
     } else {
       const result = await this.actor._initializeAccessControl();
       return result;
+    }
+  }
+  async adminAddPromoMinutes(arg0, arg1) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.adminAddPromoMinutes(arg0, arg1);
+        return from_candid_BillingMutationResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.adminAddPromoMinutes(arg0, arg1);
+      return from_candid_BillingMutationResult(result);
     }
   }
   async adminGetSystemLogs(arg0) {
@@ -37290,51 +37314,96 @@ const createLucideIcon = (iconName, iconNode) => {
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$F = [
+const __iconNode$J = [
   ["path", { d: "m12 19-7-7 7-7", key: "1l729n" }],
   ["path", { d: "M19 12H5", key: "x3x0zl" }]
 ];
-const ArrowLeft = createLucideIcon("arrow-left", __iconNode$F);
+const ArrowLeft = createLucideIcon("arrow-left", __iconNode$J);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$E = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
-const Check = createLucideIcon("check", __iconNode$E);
+const __iconNode$I = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
+const Check = createLucideIcon("check", __iconNode$I);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$D = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
-const ChevronDown = createLucideIcon("chevron-down", __iconNode$D);
+const __iconNode$H = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
+const ChevronDown = createLucideIcon("chevron-down", __iconNode$H);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$C = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
-const ChevronLeft = createLucideIcon("chevron-left", __iconNode$C);
+const __iconNode$G = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
+const ChevronLeft = createLucideIcon("chevron-left", __iconNode$G);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$B = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
-const ChevronRight = createLucideIcon("chevron-right", __iconNode$B);
+const __iconNode$F = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
+const ChevronRight = createLucideIcon("chevron-right", __iconNode$F);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$A = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
-const ChevronUp = createLucideIcon("chevron-up", __iconNode$A);
+const __iconNode$E = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
+const ChevronUp = createLucideIcon("chevron-up", __iconNode$E);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$D = [
+  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
+  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+];
+const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$D);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$C = [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
+];
+const CircleCheck = createLucideIcon("circle-check", __iconNode$C);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$B = [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
+  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
+];
+const CircleX = createLucideIcon("circle-x", __iconNode$B);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$A = [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
+];
+const Clock = createLucideIcon("clock", __iconNode$A);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37342,10 +37411,10 @@ const ChevronUp = createLucideIcon("chevron-up", __iconNode$A);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$z = [
-  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
-  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
+  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
 ];
-const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$z);
+const Copy = createLucideIcon("copy", __iconNode$z);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37353,10 +37422,10 @@ const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$z);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$y = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
+  ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2", key: "ynyp8z" }],
+  ["line", { x1: "2", x2: "22", y1: "10", y2: "10", key: "1b3vmo" }]
 ];
-const CircleCheck = createLucideIcon("circle-check", __iconNode$y);
+const CreditCard = createLucideIcon("credit-card", __iconNode$y);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37364,11 +37433,11 @@ const CircleCheck = createLucideIcon("circle-check", __iconNode$y);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$x = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
-  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
+  ["path", { d: "M12 15V3", key: "m9g1x1" }],
+  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
+  ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
 ];
-const CircleX = createLucideIcon("circle-x", __iconNode$x);
+const Download = createLucideIcon("download", __iconNode$x);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37376,51 +37445,6 @@ const CircleX = createLucideIcon("circle-x", __iconNode$x);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$w = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
-];
-const Clock = createLucideIcon("clock", __iconNode$w);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$v = [
-  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
-  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
-];
-const Copy = createLucideIcon("copy", __iconNode$v);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$u = [
-  ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2", key: "ynyp8z" }],
-  ["line", { x1: "2", x2: "22", y1: "10", y2: "10", key: "1b3vmo" }]
-];
-const CreditCard = createLucideIcon("credit-card", __iconNode$u);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$t = [
-  ["path", { d: "M12 15V3", key: "m9g1x1" }],
-  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
-  ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
-];
-const Download = createLucideIcon("download", __iconNode$t);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$s = [
   [
     "path",
     {
@@ -37438,7 +37462,69 @@ const __iconNode$s = [
   ],
   ["path", { d: "m2 2 20 20", key: "1ooewy" }]
 ];
-const EyeOff = createLucideIcon("eye-off", __iconNode$s);
+const EyeOff = createLucideIcon("eye-off", __iconNode$w);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$v = [
+  [
+    "path",
+    {
+      d: "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0",
+      key: "1nclc0"
+    }
+  ],
+  ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
+];
+const Eye = createLucideIcon("eye", __iconNode$v);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$u = [
+  ["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", key: "1rqfz7" }],
+  ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4", key: "tnqrlb" }],
+  ["path", { d: "M10 9H8", key: "b1mrlr" }],
+  ["path", { d: "M16 13H8", key: "t4e002" }],
+  ["path", { d: "M16 17H8", key: "z1uh3a" }]
+];
+const FileText = createLucideIcon("file-text", __iconNode$u);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$t = [
+  ["rect", { x: "3", y: "8", width: "18", height: "4", rx: "1", key: "bkv52" }],
+  ["path", { d: "M12 8v13", key: "1c76mn" }],
+  ["path", { d: "M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7", key: "6wjy6b" }],
+  [
+    "path",
+    {
+      d: "M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5",
+      key: "1ihvrl"
+    }
+  ]
+];
+const Gift = createLucideIcon("gift", __iconNode$t);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$s = [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "M12 16v-4", key: "1dtifu" }],
+  ["path", { d: "M12 8h.01", key: "e9boi3" }]
+];
+const Info = createLucideIcon("info", __iconNode$s);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37449,13 +37535,13 @@ const __iconNode$r = [
   [
     "path",
     {
-      d: "M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0",
-      key: "1nclc0"
+      d: "M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z",
+      key: "1s6t7t"
     }
   ],
-  ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
+  ["circle", { cx: "16.5", cy: "7.5", r: ".5", fill: "currentColor", key: "w0ekpg" }]
 ];
-const Eye = createLucideIcon("eye", __iconNode$r);
+const KeyRound = createLucideIcon("key-round", __iconNode$r);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37463,28 +37549,20 @@ const Eye = createLucideIcon("eye", __iconNode$r);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$q = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "M12 16v-4", key: "1dtifu" }],
-  ["path", { d: "M12 8h.01", key: "e9boi3" }]
+  ["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1", key: "10lvy0" }],
+  ["rect", { width: "7", height: "5", x: "14", y: "3", rx: "1", key: "16une8" }],
+  ["rect", { width: "7", height: "9", x: "14", y: "12", rx: "1", key: "1hutg5" }],
+  ["rect", { width: "7", height: "5", x: "3", y: "16", rx: "1", key: "ldoo1y" }]
 ];
-const Info = createLucideIcon("info", __iconNode$q);
+const LayoutDashboard = createLucideIcon("layout-dashboard", __iconNode$q);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$p = [
-  [
-    "path",
-    {
-      d: "M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z",
-      key: "1s6t7t"
-    }
-  ],
-  ["circle", { cx: "16.5", cy: "7.5", r: ".5", fill: "currentColor", key: "w0ekpg" }]
-];
-const KeyRound = createLucideIcon("key-round", __iconNode$p);
+const __iconNode$p = [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]];
+const LoaderCircle = createLucideIcon("loader-circle", __iconNode$p);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37492,20 +37570,23 @@ const KeyRound = createLucideIcon("key-round", __iconNode$p);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$o = [
-  ["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1", key: "10lvy0" }],
-  ["rect", { width: "7", height: "5", x: "14", y: "3", rx: "1", key: "16une8" }],
-  ["rect", { width: "7", height: "9", x: "14", y: "12", rx: "1", key: "1hutg5" }],
-  ["rect", { width: "7", height: "5", x: "3", y: "16", rx: "1", key: "ldoo1y" }]
+  ["path", { d: "m16 17 5-5-5-5", key: "1bji2h" }],
+  ["path", { d: "M21 12H9", key: "dn1m92" }],
+  ["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", key: "1uf3rs" }]
 ];
-const LayoutDashboard = createLucideIcon("layout-dashboard", __iconNode$o);
+const LogOut = createLucideIcon("log-out", __iconNode$o);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$n = [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]];
-const LoaderCircle = createLucideIcon("loader-circle", __iconNode$n);
+const __iconNode$n = [
+  ["path", { d: "M4 12h16", key: "1lakjw" }],
+  ["path", { d: "M4 18h16", key: "19g7jn" }],
+  ["path", { d: "M4 6h16", key: "1o0s65" }]
+];
+const Menu = createLucideIcon("menu", __iconNode$n);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37513,11 +37594,11 @@ const LoaderCircle = createLucideIcon("loader-circle", __iconNode$n);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$m = [
-  ["path", { d: "m16 17 5-5-5-5", key: "1bji2h" }],
-  ["path", { d: "M21 12H9", key: "dn1m92" }],
-  ["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", key: "1uf3rs" }]
+  ["path", { d: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z", key: "131961" }],
+  ["path", { d: "M19 10v2a7 7 0 0 1-14 0v-2", key: "1vc78b" }],
+  ["line", { x1: "12", x2: "12", y1: "19", y2: "22", key: "x3vr5v" }]
 ];
-const LogOut = createLucideIcon("log-out", __iconNode$m);
+const Mic = createLucideIcon("mic", __iconNode$m);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37525,30 +37606,6 @@ const LogOut = createLucideIcon("log-out", __iconNode$m);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$l = [
-  ["path", { d: "M4 12h16", key: "1lakjw" }],
-  ["path", { d: "M4 18h16", key: "19g7jn" }],
-  ["path", { d: "M4 6h16", key: "1o0s65" }]
-];
-const Menu = createLucideIcon("menu", __iconNode$l);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$k = [
-  ["path", { d: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z", key: "131961" }],
-  ["path", { d: "M19 10v2a7 7 0 0 1-14 0v-2", key: "1vc78b" }],
-  ["line", { x1: "12", x2: "12", y1: "19", y2: "22", key: "x3vr5v" }]
-];
-const Mic = createLucideIcon("mic", __iconNode$k);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$j = [
   [
     "path",
     {
@@ -37565,14 +37622,14 @@ const __iconNode$j = [
     }
   ]
 ];
-const PhoneOff = createLucideIcon("phone-off", __iconNode$j);
+const PhoneOff = createLucideIcon("phone-off", __iconNode$l);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$i = [
+const __iconNode$k = [
   [
     "path",
     {
@@ -37581,7 +37638,32 @@ const __iconNode$i = [
     }
   ]
 ];
-const Phone = createLucideIcon("phone", __iconNode$i);
+const Phone = createLucideIcon("phone", __iconNode$k);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$j = [
+  ["path", { d: "M5 12h14", key: "1ays0h" }],
+  ["path", { d: "M12 5v14", key: "s699le" }]
+];
+const Plus = createLucideIcon("plus", __iconNode$j);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$i = [
+  ["path", { d: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9", key: "1vaf9d" }],
+  ["path", { d: "M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5", key: "u1ii0m" }],
+  ["circle", { cx: "12", cy: "12", r: "2", key: "1c9p78" }],
+  ["path", { d: "M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5", key: "1j5fej" }],
+  ["path", { d: "M19.1 4.9C23 8.8 23 15.1 19.1 19", key: "10b0cb" }]
+];
+const Radio = createLucideIcon("radio", __iconNode$i);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37589,10 +37671,12 @@ const Phone = createLucideIcon("phone", __iconNode$i);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$h = [
-  ["path", { d: "M5 12h14", key: "1ays0h" }],
-  ["path", { d: "M12 5v14", key: "s699le" }]
+  ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
+  ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
+  ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
+  ["path", { d: "M8 16H3v5", key: "1cv678" }]
 ];
-const Plus = createLucideIcon("plus", __iconNode$h);
+const RefreshCw = createLucideIcon("refresh-cw", __iconNode$h);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37600,33 +37684,6 @@ const Plus = createLucideIcon("plus", __iconNode$h);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$g = [
-  ["path", { d: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9", key: "1vaf9d" }],
-  ["path", { d: "M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5", key: "u1ii0m" }],
-  ["circle", { cx: "12", cy: "12", r: "2", key: "1c9p78" }],
-  ["path", { d: "M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5", key: "1j5fej" }],
-  ["path", { d: "M19.1 4.9C23 8.8 23 15.1 19.1 19", key: "10b0cb" }]
-];
-const Radio = createLucideIcon("radio", __iconNode$g);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$f = [
-  ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
-  ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
-  ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
-  ["path", { d: "M8 16H3v5", key: "1cv678" }]
-];
-const RefreshCw = createLucideIcon("refresh-cw", __iconNode$f);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$e = [
   [
     "path",
     {
@@ -37637,14 +37694,14 @@ const __iconNode$e = [
   ["path", { d: "M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7", key: "1ydtos" }],
   ["path", { d: "M7 3v4a1 1 0 0 0 1 1h7", key: "t51u73" }]
 ];
-const Save = createLucideIcon("save", __iconNode$e);
+const Save = createLucideIcon("save", __iconNode$g);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$d = [
+const __iconNode$f = [
   ["path", { d: "M15 12h-5", key: "r7krc0" }],
   ["path", { d: "M15 8h-5", key: "1khuty" }],
   ["path", { d: "M19 17V5a2 2 0 0 0-2-2H4", key: "zz82l3" }],
@@ -37656,7 +37713,31 @@ const __iconNode$d = [
     }
   ]
 ];
-const ScrollText = createLucideIcon("scroll-text", __iconNode$d);
+const ScrollText = createLucideIcon("scroll-text", __iconNode$f);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$e = [
+  ["path", { d: "m21 21-4.34-4.34", key: "14j7rj" }],
+  ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }]
+];
+const Search = createLucideIcon("search", __iconNode$e);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$d = [
+  ["path", { d: "M20 7h-9", key: "3s1dr2" }],
+  ["path", { d: "M14 17H5", key: "gfn3mx" }],
+  ["circle", { cx: "17", cy: "17", r: "3", key: "18b49y" }],
+  ["circle", { cx: "7", cy: "7", r: "3", key: "dfmy0x" }]
+];
+const Settings2 = createLucideIcon("settings-2", __iconNode$d);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37664,10 +37745,16 @@ const ScrollText = createLucideIcon("scroll-text", __iconNode$d);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$c = [
-  ["path", { d: "m21 21-4.34-4.34", key: "14j7rj" }],
-  ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }]
+  [
+    "path",
+    {
+      d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z",
+      key: "1qme2f"
+    }
+  ],
+  ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
 ];
-const Search = createLucideIcon("search", __iconNode$c);
+const Settings = createLucideIcon("settings", __iconNode$c);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37675,12 +37762,16 @@ const Search = createLucideIcon("search", __iconNode$c);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$b = [
-  ["path", { d: "M20 7h-9", key: "3s1dr2" }],
-  ["path", { d: "M14 17H5", key: "gfn3mx" }],
-  ["circle", { cx: "17", cy: "17", r: "3", key: "18b49y" }],
-  ["circle", { cx: "7", cy: "7", r: "3", key: "dfmy0x" }]
+  [
+    "path",
+    {
+      d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
+      key: "oel41y"
+    }
+  ],
+  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
 ];
-const Settings2 = createLucideIcon("settings-2", __iconNode$b);
+const ShieldCheck = createLucideIcon("shield-check", __iconNode$b);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37691,13 +37782,12 @@ const __iconNode$a = [
   [
     "path",
     {
-      d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z",
-      key: "1qme2f"
+      d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
+      key: "oel41y"
     }
-  ],
-  ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
+  ]
 ];
-const Settings = createLucideIcon("settings", __iconNode$a);
+const Shield = createLucideIcon("shield", __iconNode$a);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37705,16 +37795,13 @@ const Settings = createLucideIcon("settings", __iconNode$a);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$9 = [
-  [
-    "path",
-    {
-      d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
-      key: "oel41y"
-    }
-  ],
-  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
+  ["path", { d: "M3 6h18", key: "d0wm0j" }],
+  ["path", { d: "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6", key: "4alrt4" }],
+  ["path", { d: "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2", key: "v07s0e" }],
+  ["line", { x1: "10", x2: "10", y1: "11", y2: "17", key: "1uufr5" }],
+  ["line", { x1: "14", x2: "14", y1: "11", y2: "17", key: "xtxkd" }]
 ];
-const ShieldCheck = createLucideIcon("shield-check", __iconNode$9);
+const Trash2 = createLucideIcon("trash-2", __iconNode$9);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37725,36 +37812,6 @@ const __iconNode$8 = [
   [
     "path",
     {
-      d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
-      key: "oel41y"
-    }
-  ]
-];
-const Shield = createLucideIcon("shield", __iconNode$8);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$7 = [
-  ["path", { d: "M3 6h18", key: "d0wm0j" }],
-  ["path", { d: "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6", key: "4alrt4" }],
-  ["path", { d: "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2", key: "v07s0e" }],
-  ["line", { x1: "10", x2: "10", y1: "11", y2: "17", key: "1uufr5" }],
-  ["line", { x1: "14", x2: "14", y1: "11", y2: "17", key: "xtxkd" }]
-];
-const Trash2 = createLucideIcon("trash-2", __iconNode$7);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$6 = [
-  [
-    "path",
-    {
       d: "m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3",
       key: "wmoenq"
     }
@@ -37762,7 +37819,31 @@ const __iconNode$6 = [
   ["path", { d: "M12 9v4", key: "juzpu7" }],
   ["path", { d: "M12 17h.01", key: "p32p05" }]
 ];
-const TriangleAlert = createLucideIcon("triangle-alert", __iconNode$6);
+const TriangleAlert = createLucideIcon("triangle-alert", __iconNode$8);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$7 = [
+  ["path", { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2", key: "975kel" }],
+  ["circle", { cx: "12", cy: "7", r: "4", key: "17ys0d" }]
+];
+const User = createLucideIcon("user", __iconNode$7);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$6 = [
+  ["path", { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", key: "1yyitq" }],
+  ["path", { d: "M16 3.128a4 4 0 0 1 0 7.744", key: "16gr8j" }],
+  ["path", { d: "M22 21v-2a4 4 0 0 0-3-3.87", key: "kshegd" }],
+  ["circle", { cx: "9", cy: "7", r: "4", key: "nufk8" }]
+];
+const Users = createLucideIcon("users", __iconNode$6);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37770,10 +37851,17 @@ const TriangleAlert = createLucideIcon("triangle-alert", __iconNode$6);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$5 = [
-  ["path", { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2", key: "975kel" }],
-  ["circle", { cx: "12", cy: "7", r: "4", key: "17ys0d" }]
+  [
+    "path",
+    {
+      d: "M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z",
+      key: "uqj9uw"
+    }
+  ],
+  ["path", { d: "M16 9a5 5 0 0 1 0 6", key: "1q6k2b" }],
+  ["path", { d: "M19.364 18.364a9 9 0 0 0 0-12.728", key: "ijwkga" }]
 ];
-const User = createLucideIcon("user", __iconNode$5);
+const Volume2 = createLucideIcon("volume-2", __iconNode$5);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37781,12 +37869,17 @@ const User = createLucideIcon("user", __iconNode$5);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$4 = [
-  ["path", { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", key: "1yyitq" }],
-  ["path", { d: "M16 3.128a4 4 0 0 1 0 7.744", key: "16gr8j" }],
-  ["path", { d: "M22 21v-2a4 4 0 0 0-3-3.87", key: "kshegd" }],
-  ["circle", { cx: "9", cy: "7", r: "4", key: "nufk8" }]
+  [
+    "path",
+    {
+      d: "M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z",
+      key: "uqj9uw"
+    }
+  ],
+  ["line", { x1: "22", x2: "16", y1: "9", y2: "15", key: "1ewh16" }],
+  ["line", { x1: "16", x2: "22", y1: "9", y2: "15", key: "5ykzw1" }]
 ];
-const Users = createLucideIcon("users", __iconNode$4);
+const VolumeX = createLucideIcon("volume-x", __iconNode$4);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38390,6 +38483,20 @@ function useAssignUserRole() {
     }
   });
 }
+function useAdminAddPromoMinutes() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ user, minutes }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.adminAddPromoMinutes(user, minutes);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["myBillingStatus"] });
+      qc.invalidateQueries({ queryKey: ["adminLogs"] });
+    }
+  });
+}
 let runtimeEnvPromise = null;
 async function loadRuntimeEnv() {
   if (!runtimeEnvPromise) {
@@ -38452,14 +38559,16 @@ async function startVoiceServerCall({
   preset,
   callId,
   reservationId,
-  callToken
+  callToken,
+  captureOptions
 }) {
   return postJson("/initiate-call", {
     recipientPhone,
     preset: serializePreset(preset),
     callId: callId.toString(),
     reservationId,
-    callToken
+    callToken,
+    captureOptions
   });
 }
 async function endVoiceServerCall(callSid) {
@@ -38481,6 +38590,19 @@ async function getVoiceServerHealth() {
     throw new Error(`Voice server health check failed (${response.status})`);
   }
   return response.json();
+}
+async function getLiveAudioMonitorUrl({
+  sessionId,
+  monitorToken
+}) {
+  const baseUrl = await getVoiceServerUrl();
+  const url = new URL(baseUrl);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.pathname = "/monitor";
+  url.search = "";
+  url.searchParams.set("sessionId", sessionId);
+  url.searchParams.set("token", monitorToken);
+  return url.toString();
 }
 function InputWithReveal({
   id: id2,
@@ -38549,6 +38671,7 @@ function AdminDashboardPage() {
   const { data: allCalls, isLoading: callsLoading } = useAdminListAllCalls();
   const setConfig = useSetAdminConfig();
   const assignRole = useAssignUserRole();
+  const addPromoMinutes = useAdminAddPromoMinutes();
   const voiceServerQuery = useQuery({
     queryKey: ["voiceServerHealth"],
     queryFn: getVoiceServerHealth,
@@ -38562,6 +38685,8 @@ function AdminDashboardPage() {
   const [twilioSaving, setTwilioSaving] = reactExports.useState(false);
   const [twilioTesting, setTwilioTesting] = reactExports.useState(false);
   const [fromError, setFromError] = reactExports.useState("");
+  const [promoUserId, setPromoUserId] = reactExports.useState("");
+  const [promoMinutes, setPromoMinutes] = reactExports.useState("");
   const handleSaveXai = async () => {
     if (!xaiKey.trim()) {
       ue.error("Enter an xAI API key");
@@ -38647,6 +38772,46 @@ function AdminDashboardPage() {
       ue.success("Payment server authorized");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to authorize server";
+      ue.error(message);
+    }
+  };
+  const handleAddPromoMinutes = async (event) => {
+    event.preventDefault();
+    const trimmedUserId = promoUserId.trim();
+    const trimmedMinutes = promoMinutes.trim();
+    if (!trimmedUserId) {
+      ue.error("Enter a User ID");
+      return;
+    }
+    if (!/^\d+$/.test(trimmedMinutes)) {
+      ue.error("Enter whole promo minutes");
+      return;
+    }
+    const minutes = BigInt(trimmedMinutes);
+    if (minutes === 0n) {
+      ue.error("Promo minutes must be greater than zero");
+      return;
+    }
+    let user;
+    try {
+      user = Principal$1.fromText(trimmedUserId);
+    } catch {
+      ue.error("Enter a valid User ID");
+      return;
+    }
+    try {
+      const result = await addPromoMinutes.mutateAsync({ user, minutes });
+      if (result.__kind__ === "err") {
+        ue.error(result.err);
+        return;
+      }
+      ue.success(
+        `Added ${minutes.toString()} promo minute${minutes === 1n ? "" : "s"}`
+      );
+      setPromoUserId("");
+      setPromoMinutes("");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to add promo minutes";
       ue.error(message);
     }
   };
@@ -38894,6 +39059,96 @@ function AdminDashboardPage() {
                 }
               )
             ] })
+          ]
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Gift, { className: "w-4 h-4 text-primary" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-sm font-semibold text-foreground uppercase tracking-widest", children: "Promo Minutes" })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        Card,
+        {
+          className: "bg-card border-border max-w-3xl",
+          "data-ocid": "admin.promo_minutes.card",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(CardHeader, { className: "pb-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(CardTitle, { className: "text-base flex items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Gift, { className: "w-4 h-4 text-primary" }),
+                "Add Promo Minutes"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { children: "Top up a user balance with admin-issued phone time" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "form",
+              {
+                onSubmit: handleAddPromoMinutes,
+                className: "grid gap-4 md:grid-cols-[minmax(0,1fr)_160px_auto] md:items-end",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      Label,
+                      {
+                        htmlFor: "promo-user-id",
+                        className: "text-xs font-medium text-muted-foreground",
+                        children: "User ID"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      Input,
+                      {
+                        id: "promo-user-id",
+                        value: promoUserId,
+                        onChange: (e) => setPromoUserId(e.target.value),
+                        placeholder: "aaaaa-aa",
+                        "data-ocid": "admin.promo_minutes.user_id.input",
+                        className: "font-mono text-sm"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      Label,
+                      {
+                        htmlFor: "promo-minutes",
+                        className: "text-xs font-medium text-muted-foreground",
+                        children: "Minutes"
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      Input,
+                      {
+                        id: "promo-minutes",
+                        type: "number",
+                        min: 1,
+                        step: 1,
+                        inputMode: "numeric",
+                        value: promoMinutes,
+                        onChange: (e) => setPromoMinutes(e.target.value),
+                        placeholder: "30",
+                        "data-ocid": "admin.promo_minutes.minutes.input",
+                        className: "font-mono text-sm"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    Button,
+                    {
+                      type: "submit",
+                      disabled: addPromoMinutes.isPending,
+                      "data-ocid": "admin.promo_minutes.submit_button",
+                      className: "gap-2",
+                      children: [
+                        addPromoMinutes.isPending ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Gift, { className: "w-4 h-4" }),
+                        addPromoMinutes.isPending ? "Adding..." : "Add Minutes"
+                      ]
+                    }
+                  )
+                ]
+              }
+            ) })
           ]
         }
       )
@@ -41967,7 +42222,7 @@ function useControllableState({
     (nextValue) => {
       var _a3;
       if (isControlled) {
-        const value2 = isFunction$1(nextValue) ? nextValue(prop) : nextValue;
+        const value2 = isFunction$2(nextValue) ? nextValue(prop) : nextValue;
         if (value2 !== prop) {
           (_a3 = onChangeRef.current) == null ? void 0 : _a3.call(onChangeRef, value2);
         }
@@ -41998,7 +42253,7 @@ function useUncontrolledState({
   }, [value, prevValueRef]);
   return [value, setValue, onChangeRef];
 }
-function isFunction$1(value) {
+function isFunction$2(value) {
   return typeof value === "function";
 }
 function usePrevious(value) {
@@ -42927,12 +43182,12 @@ var Select$1 = (props) => {
   ) });
 };
 Select$1.displayName = SELECT_NAME;
-var TRIGGER_NAME$2 = "SelectTrigger";
+var TRIGGER_NAME$3 = "SelectTrigger";
 var SelectTrigger$1 = reactExports.forwardRef(
   (props, forwardedRef) => {
     const { __scopeSelect, disabled = false, ...triggerProps } = props;
     const popperScope = usePopperScope(__scopeSelect);
-    const context = useSelectContext(TRIGGER_NAME$2, __scopeSelect);
+    const context = useSelectContext(TRIGGER_NAME$3, __scopeSelect);
     const isDisabled = context.disabled || disabled;
     const composedRefs = useComposedRefs(forwardedRef, context.onTriggerChange);
     const getItems = useCollection$1(__scopeSelect);
@@ -43004,7 +43259,7 @@ var SelectTrigger$1 = reactExports.forwardRef(
     ) });
   }
 );
-SelectTrigger$1.displayName = TRIGGER_NAME$2;
+SelectTrigger$1.displayName = TRIGGER_NAME$3;
 var VALUE_NAME = "SelectValue";
 var SelectValue$1 = reactExports.forwardRef(
   (props, forwardedRef) => {
@@ -43868,7 +44123,7 @@ var SelectArrow = reactExports.forwardRef(
   }
 );
 SelectArrow.displayName = ARROW_NAME;
-var BUBBLE_INPUT_NAME$2 = "SelectBubbleInput";
+var BUBBLE_INPUT_NAME$3 = "SelectBubbleInput";
 var SelectBubbleInput = reactExports.forwardRef(
   ({ __scopeSelect, value, ...props }, forwardedRef) => {
     const ref = reactExports.useRef(null);
@@ -43900,7 +44155,7 @@ var SelectBubbleInput = reactExports.forwardRef(
     );
   }
 );
-SelectBubbleInput.displayName = BUBBLE_INPUT_NAME$2;
+SelectBubbleInput.displayName = BUBBLE_INPUT_NAME$3;
 function shouldShowPlaceholder(value) {
   return value === "" || value === void 0;
 }
@@ -44950,11 +45205,11 @@ var Dialog = (props) => {
   );
 };
 Dialog.displayName = DIALOG_NAME;
-var TRIGGER_NAME$1 = "DialogTrigger";
+var TRIGGER_NAME$2 = "DialogTrigger";
 var DialogTrigger = reactExports.forwardRef(
   (props, forwardedRef) => {
     const { __scopeDialog, ...triggerProps } = props;
-    const context = useDialogContext(TRIGGER_NAME$1, __scopeDialog);
+    const context = useDialogContext(TRIGGER_NAME$2, __scopeDialog);
     const composedTriggerRef = useComposedRefs(forwardedRef, context.triggerRef);
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       Primitive.button,
@@ -44963,7 +45218,7 @@ var DialogTrigger = reactExports.forwardRef(
         "aria-haspopup": "dialog",
         "aria-expanded": context.open,
         "aria-controls": context.contentId,
-        "data-state": getState$1(context.open),
+        "data-state": getState$2(context.open),
         ...triggerProps,
         ref: composedTriggerRef,
         onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
@@ -44971,7 +45226,7 @@ var DialogTrigger = reactExports.forwardRef(
     );
   }
 );
-DialogTrigger.displayName = TRIGGER_NAME$1;
+DialogTrigger.displayName = TRIGGER_NAME$2;
 var PORTAL_NAME$1 = "DialogPortal";
 var [PortalProvider, usePortalContext] = createDialogContext(PORTAL_NAME$1, {
   forceMount: void 0
@@ -45003,7 +45258,7 @@ var DialogOverlayImpl = reactExports.forwardRef(
       /* @__PURE__ */ jsxRuntimeExports.jsx(ReactRemoveScroll, { as: Slot, allowPinchZoom: true, shards: [context.contentRef], children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         Primitive.div,
         {
-          "data-state": getState$1(context.open),
+          "data-state": getState$2(context.open),
           ...overlayProps,
           ref: forwardedRef,
           style: { pointerEvents: "auto", ...overlayProps.style }
@@ -45122,7 +45377,7 @@ var DialogContentImpl = reactExports.forwardRef(
               id: context.contentId,
               "aria-describedby": context.descriptionId,
               "aria-labelledby": context.titleId,
-              "data-state": getState$1(context.open),
+              "data-state": getState$2(context.open),
               ...contentProps,
               ref: composedRefs,
               onDismiss: () => context.onOpenChange(false)
@@ -45172,7 +45427,7 @@ var DialogClose = reactExports.forwardRef(
   }
 );
 DialogClose.displayName = CLOSE_NAME;
-function getState$1(open) {
+function getState$2(open) {
   return open ? "open" : "closed";
 }
 var TITLE_WARNING_NAME = "DialogTitleWarning";
@@ -45229,7 +45484,7 @@ var AlertDialog$1 = (props) => {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(Root$2, { ...dialogScope, ...alertDialogProps, modal: true });
 };
 AlertDialog$1.displayName = ROOT_NAME;
-var TRIGGER_NAME = "AlertDialogTrigger";
+var TRIGGER_NAME$1 = "AlertDialogTrigger";
 var AlertDialogTrigger = reactExports.forwardRef(
   (props, forwardedRef) => {
     const { __scopeAlertDialog, ...triggerProps } = props;
@@ -45237,7 +45492,7 @@ var AlertDialogTrigger = reactExports.forwardRef(
     return /* @__PURE__ */ jsxRuntimeExports.jsx(Trigger, { ...dialogScope, ...triggerProps, ref: forwardedRef });
   }
 );
-AlertDialogTrigger.displayName = TRIGGER_NAME;
+AlertDialogTrigger.displayName = TRIGGER_NAME$1;
 var PORTAL_NAME = "AlertDialogPortal";
 var AlertDialogPortal$1 = (props) => {
   const { __scopeAlertDialog, ...portalProps } = props;
@@ -45480,7 +45735,471 @@ function AlertDialogCancel({
     }
   );
 }
+var CHECKBOX_NAME = "Checkbox";
+var [createCheckboxContext] = createContextScope(CHECKBOX_NAME);
+var [CheckboxProviderImpl, useCheckboxContext] = createCheckboxContext(CHECKBOX_NAME);
+function CheckboxProvider(props) {
+  const {
+    __scopeCheckbox,
+    checked: checkedProp,
+    children,
+    defaultChecked,
+    disabled,
+    form,
+    name,
+    onCheckedChange,
+    required,
+    value = "on",
+    // @ts-expect-error
+    internal_do_not_use_render
+  } = props;
+  const [checked, setChecked] = useControllableState({
+    prop: checkedProp,
+    defaultProp: defaultChecked ?? false,
+    onChange: onCheckedChange,
+    caller: CHECKBOX_NAME
+  });
+  const [control, setControl] = reactExports.useState(null);
+  const [bubbleInput, setBubbleInput] = reactExports.useState(null);
+  const hasConsumerStoppedPropagationRef = reactExports.useRef(false);
+  const isFormControl = control ? !!form || !!control.closest("form") : (
+    // We set this to true by default so that events bubble to forms without JS (SSR)
+    true
+  );
+  const context = {
+    checked,
+    disabled,
+    setChecked,
+    control,
+    setControl,
+    name,
+    form,
+    value,
+    hasConsumerStoppedPropagationRef,
+    required,
+    defaultChecked: isIndeterminate(defaultChecked) ? false : defaultChecked,
+    isFormControl,
+    bubbleInput,
+    setBubbleInput
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    CheckboxProviderImpl,
+    {
+      scope: __scopeCheckbox,
+      ...context,
+      children: isFunction$1(internal_do_not_use_render) ? internal_do_not_use_render(context) : children
+    }
+  );
+}
+var TRIGGER_NAME = "CheckboxTrigger";
+var CheckboxTrigger = reactExports.forwardRef(
+  ({ __scopeCheckbox, onKeyDown, onClick, ...checkboxProps }, forwardedRef) => {
+    const {
+      control,
+      value,
+      disabled,
+      checked,
+      required,
+      setControl,
+      setChecked,
+      hasConsumerStoppedPropagationRef,
+      isFormControl,
+      bubbleInput
+    } = useCheckboxContext(TRIGGER_NAME, __scopeCheckbox);
+    const composedRefs = useComposedRefs(forwardedRef, setControl);
+    const initialCheckedStateRef = reactExports.useRef(checked);
+    reactExports.useEffect(() => {
+      const form = control == null ? void 0 : control.form;
+      if (form) {
+        const reset = () => setChecked(initialCheckedStateRef.current);
+        form.addEventListener("reset", reset);
+        return () => form.removeEventListener("reset", reset);
+      }
+    }, [control, setChecked]);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.button,
+      {
+        type: "button",
+        role: "checkbox",
+        "aria-checked": isIndeterminate(checked) ? "mixed" : checked,
+        "aria-required": required,
+        "data-state": getState$1(checked),
+        "data-disabled": disabled ? "" : void 0,
+        disabled,
+        value,
+        ...checkboxProps,
+        ref: composedRefs,
+        onKeyDown: composeEventHandlers(onKeyDown, (event) => {
+          if (event.key === "Enter") event.preventDefault();
+        }),
+        onClick: composeEventHandlers(onClick, (event) => {
+          setChecked((prevChecked) => isIndeterminate(prevChecked) ? true : !prevChecked);
+          if (bubbleInput && isFormControl) {
+            hasConsumerStoppedPropagationRef.current = event.isPropagationStopped();
+            if (!hasConsumerStoppedPropagationRef.current) event.stopPropagation();
+          }
+        })
+      }
+    );
+  }
+);
+CheckboxTrigger.displayName = TRIGGER_NAME;
+var Checkbox$1 = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const {
+      __scopeCheckbox,
+      name,
+      checked,
+      defaultChecked,
+      required,
+      disabled,
+      value,
+      onCheckedChange,
+      form,
+      ...checkboxProps
+    } = props;
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      CheckboxProvider,
+      {
+        __scopeCheckbox,
+        checked,
+        defaultChecked,
+        disabled,
+        required,
+        onCheckedChange,
+        name,
+        form,
+        value,
+        internal_do_not_use_render: ({ isFormControl }) => /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            CheckboxTrigger,
+            {
+              ...checkboxProps,
+              ref: forwardedRef,
+              __scopeCheckbox
+            }
+          ),
+          isFormControl && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            CheckboxBubbleInput,
+            {
+              __scopeCheckbox
+            }
+          )
+        ] })
+      }
+    );
+  }
+);
+Checkbox$1.displayName = CHECKBOX_NAME;
+var INDICATOR_NAME = "CheckboxIndicator";
+var CheckboxIndicator = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeCheckbox, forceMount, ...indicatorProps } = props;
+    const context = useCheckboxContext(INDICATOR_NAME, __scopeCheckbox);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Presence,
+      {
+        present: forceMount || isIndeterminate(context.checked) || context.checked === true,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Primitive.span,
+          {
+            "data-state": getState$1(context.checked),
+            "data-disabled": context.disabled ? "" : void 0,
+            ...indicatorProps,
+            ref: forwardedRef,
+            style: { pointerEvents: "none", ...props.style }
+          }
+        )
+      }
+    );
+  }
+);
+CheckboxIndicator.displayName = INDICATOR_NAME;
+var BUBBLE_INPUT_NAME$2 = "CheckboxBubbleInput";
+var CheckboxBubbleInput = reactExports.forwardRef(
+  ({ __scopeCheckbox, ...props }, forwardedRef) => {
+    const {
+      control,
+      hasConsumerStoppedPropagationRef,
+      checked,
+      defaultChecked,
+      required,
+      disabled,
+      name,
+      value,
+      form,
+      bubbleInput,
+      setBubbleInput
+    } = useCheckboxContext(BUBBLE_INPUT_NAME$2, __scopeCheckbox);
+    const composedRefs = useComposedRefs(forwardedRef, setBubbleInput);
+    const prevChecked = usePrevious(checked);
+    const controlSize = useSize(control);
+    reactExports.useEffect(() => {
+      const input = bubbleInput;
+      if (!input) return;
+      const inputProto = window.HTMLInputElement.prototype;
+      const descriptor = Object.getOwnPropertyDescriptor(
+        inputProto,
+        "checked"
+      );
+      const setChecked = descriptor.set;
+      const bubbles = !hasConsumerStoppedPropagationRef.current;
+      if (prevChecked !== checked && setChecked) {
+        const event = new Event("click", { bubbles });
+        input.indeterminate = isIndeterminate(checked);
+        setChecked.call(input, isIndeterminate(checked) ? false : checked);
+        input.dispatchEvent(event);
+      }
+    }, [bubbleInput, prevChecked, checked, hasConsumerStoppedPropagationRef]);
+    const defaultCheckedRef = reactExports.useRef(isIndeterminate(checked) ? false : checked);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.input,
+      {
+        type: "checkbox",
+        "aria-hidden": true,
+        defaultChecked: defaultChecked ?? defaultCheckedRef.current,
+        required,
+        disabled,
+        name,
+        value,
+        form,
+        ...props,
+        tabIndex: -1,
+        ref: composedRefs,
+        style: {
+          ...props.style,
+          ...controlSize,
+          position: "absolute",
+          pointerEvents: "none",
+          opacity: 0,
+          margin: 0,
+          // We transform because the input is absolutely positioned but we have
+          // rendered it **after** the button. This pulls it back to sit on top
+          // of the button.
+          transform: "translateX(-100%)"
+        }
+      }
+    );
+  }
+);
+CheckboxBubbleInput.displayName = BUBBLE_INPUT_NAME$2;
+function isFunction$1(value) {
+  return typeof value === "function";
+}
+function isIndeterminate(checked) {
+  return checked === "indeterminate";
+}
+function getState$1(checked) {
+  return isIndeterminate(checked) ? "indeterminate" : checked ? "checked" : "unchecked";
+}
+function Checkbox({
+  className,
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Checkbox$1,
+    {
+      "data-slot": "checkbox",
+      className: cn(
+        "peer border-input dark:bg-input/30 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground dark:data-[state=checked]:bg-primary data-[state=checked]:border-primary focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive size-4 shrink-0 rounded-[4px] border shadow-xs transition-shadow outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      ),
+      ...props,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        CheckboxIndicator,
+        {
+          "data-slot": "checkbox-indicator",
+          className: "flex items-center justify-center text-current transition-none",
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { className: "size-3.5" })
+        }
+      )
+    }
+  );
+}
+var SWITCH_NAME = "Switch";
+var [createSwitchContext] = createContextScope(SWITCH_NAME);
+var [SwitchProvider, useSwitchContext] = createSwitchContext(SWITCH_NAME);
+var Switch$1 = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const {
+      __scopeSwitch,
+      name,
+      checked: checkedProp,
+      defaultChecked,
+      required,
+      disabled,
+      value = "on",
+      onCheckedChange,
+      form,
+      ...switchProps
+    } = props;
+    const [button, setButton] = reactExports.useState(null);
+    const composedRefs = useComposedRefs(forwardedRef, (node) => setButton(node));
+    const hasConsumerStoppedPropagationRef = reactExports.useRef(false);
+    const isFormControl = button ? form || !!button.closest("form") : true;
+    const [checked, setChecked] = useControllableState({
+      prop: checkedProp,
+      defaultProp: defaultChecked ?? false,
+      onChange: onCheckedChange,
+      caller: SWITCH_NAME
+    });
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(SwitchProvider, { scope: __scopeSwitch, checked, disabled, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Primitive.button,
+        {
+          type: "button",
+          role: "switch",
+          "aria-checked": checked,
+          "aria-required": required,
+          "data-state": getState(checked),
+          "data-disabled": disabled ? "" : void 0,
+          disabled,
+          value,
+          ...switchProps,
+          ref: composedRefs,
+          onClick: composeEventHandlers(props.onClick, (event) => {
+            setChecked((prevChecked) => !prevChecked);
+            if (isFormControl) {
+              hasConsumerStoppedPropagationRef.current = event.isPropagationStopped();
+              if (!hasConsumerStoppedPropagationRef.current) event.stopPropagation();
+            }
+          })
+        }
+      ),
+      isFormControl && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SwitchBubbleInput,
+        {
+          control: button,
+          bubbles: !hasConsumerStoppedPropagationRef.current,
+          name,
+          value,
+          checked,
+          required,
+          disabled,
+          form,
+          style: { transform: "translateX(-100%)" }
+        }
+      )
+    ] });
+  }
+);
+Switch$1.displayName = SWITCH_NAME;
+var THUMB_NAME$1 = "SwitchThumb";
+var SwitchThumb = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeSwitch, ...thumbProps } = props;
+    const context = useSwitchContext(THUMB_NAME$1, __scopeSwitch);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.span,
+      {
+        "data-state": getState(context.checked),
+        "data-disabled": context.disabled ? "" : void 0,
+        ...thumbProps,
+        ref: forwardedRef
+      }
+    );
+  }
+);
+SwitchThumb.displayName = THUMB_NAME$1;
+var BUBBLE_INPUT_NAME$1 = "SwitchBubbleInput";
+var SwitchBubbleInput = reactExports.forwardRef(
+  ({
+    __scopeSwitch,
+    control,
+    checked,
+    bubbles = true,
+    ...props
+  }, forwardedRef) => {
+    const ref = reactExports.useRef(null);
+    const composedRefs = useComposedRefs(ref, forwardedRef);
+    const prevChecked = usePrevious(checked);
+    const controlSize = useSize(control);
+    reactExports.useEffect(() => {
+      const input = ref.current;
+      if (!input) return;
+      const inputProto = window.HTMLInputElement.prototype;
+      const descriptor = Object.getOwnPropertyDescriptor(
+        inputProto,
+        "checked"
+      );
+      const setChecked = descriptor.set;
+      if (prevChecked !== checked && setChecked) {
+        const event = new Event("click", { bubbles });
+        setChecked.call(input, checked);
+        input.dispatchEvent(event);
+      }
+    }, [prevChecked, checked, bubbles]);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        type: "checkbox",
+        "aria-hidden": true,
+        defaultChecked: checked,
+        ...props,
+        tabIndex: -1,
+        ref: composedRefs,
+        style: {
+          ...props.style,
+          ...controlSize,
+          position: "absolute",
+          pointerEvents: "none",
+          opacity: 0,
+          margin: 0
+        }
+      }
+    );
+  }
+);
+SwitchBubbleInput.displayName = BUBBLE_INPUT_NAME$1;
+function getState(checked) {
+  return checked ? "checked" : "unchecked";
+}
+var Root$1 = Switch$1;
+var Thumb$1 = SwitchThumb;
+function Switch({
+  className,
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Root$1,
+    {
+      "data-slot": "switch",
+      className: cn(
+        "peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      ),
+      ...props,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Thumb$1,
+        {
+          "data-slot": "switch-thumb",
+          className: cn(
+            "bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0"
+          )
+        }
+      )
+    }
+  );
+}
 const WAVEFORM_BARS = 20;
+function decodeBase64Payload(payload) {
+  const binary = window.atob(payload);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+function decodeMuLawSample(value) {
+  const sample = ~value & 255;
+  const sign = sample & 128;
+  const exponent = sample >> 4 & 7;
+  const mantissa = sample & 15;
+  let magnitude = (mantissa << 4) + 8 << exponent;
+  magnitude -= 132;
+  const pcm = sign ? -magnitude : magnitude;
+  return Math.max(-1, Math.min(1, pcm / 32768));
+}
 function useXaiVoice() {
   const [status, setStatus] = reactExports.useState("idle");
   const [recipient, setRecipient] = reactExports.useState("");
@@ -45491,10 +46210,22 @@ function useXaiVoice() {
   const [audioLevels, setAudioLevels] = reactExports.useState(
     Array(WAVEFORM_BARS).fill(0)
   );
+  const [liveAudioAvailable, setLiveAudioAvailable] = reactExports.useState(false);
+  const [isListeningLive, setIsListeningLive] = reactExports.useState(false);
+  const [liveAudioError, setLiveAudioError] = reactExports.useState(null);
   const timerRef = reactExports.useRef(null);
   const startTimeRef = reactExports.useRef(0);
   const activeCallIdRef = reactExports.useRef(null);
   const activeCallSidRef = reactExports.useRef(null);
+  const activeSessionIdRef = reactExports.useRef(null);
+  const monitorTokenRef = reactExports.useRef(null);
+  const monitorWsRef = reactExports.useRef(null);
+  const audioContextRef = reactExports.useRef(null);
+  const gainNodeRef = reactExports.useRef(null);
+  const nextPlaybackTimeRef = reactExports.useRef({
+    caller: 0,
+    assistant: 0
+  });
   const reserveCall = useReserveCall();
   const updateCallStatus = useUpdateCallStatus();
   const { setActiveCall, clearCall } = useCallStore();
@@ -45505,6 +46236,106 @@ function useXaiVoice() {
     }
     setAudioLevels(Array(WAVEFORM_BARS).fill(0));
   }, []);
+  const stopLiveAudio = reactExports.useCallback(() => {
+    if (monitorWsRef.current) {
+      monitorWsRef.current.close();
+      monitorWsRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      void audioContextRef.current.close();
+    }
+    audioContextRef.current = null;
+    gainNodeRef.current = null;
+    nextPlaybackTimeRef.current = { caller: 0, assistant: 0 };
+    setIsListeningLive(false);
+  }, []);
+  const playMonitorAudio = reactExports.useCallback(
+    (payload, channel = "assistant") => {
+      const audioContext = audioContextRef.current;
+      const gainNode = gainNodeRef.current;
+      if (!audioContext || audioContext.state === "closed" || !gainNode) return;
+      const bytes = decodeBase64Payload(payload);
+      if (bytes.length === 0) return;
+      const buffer = audioContext.createBuffer(1, bytes.length, 8e3);
+      const samples = buffer.getChannelData(0);
+      for (let i = 0; i < bytes.length; i += 1) {
+        samples[i] = decodeMuLawSample(bytes[i]);
+      }
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(gainNode);
+      const nextByChannel = nextPlaybackTimeRef.current;
+      const startAt = Math.max(
+        audioContext.currentTime + 0.025,
+        nextByChannel[channel] || 0
+      );
+      source.start(startAt);
+      nextByChannel[channel] = startAt + buffer.duration;
+      setAudioLevels((levels) => {
+        const peak = bytes.reduce((max2, byte) => Math.max(max2, byte), 0) / 255;
+        return [...levels.slice(1), peak];
+      });
+    },
+    []
+  );
+  const startLiveAudio = reactExports.useCallback(async () => {
+    var _a3;
+    const sessionId = activeSessionIdRef.current;
+    const monitorToken = monitorTokenRef.current;
+    if (!sessionId || !monitorToken) {
+      ue.error("Live audio is not available for this call");
+      return;
+    }
+    if (((_a3 = monitorWsRef.current) == null ? void 0 : _a3.readyState) === WebSocket.OPEN) return;
+    const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextCtor) {
+      ue.error("Live audio is not supported in this browser");
+      return;
+    }
+    const audioContext = new AudioContextCtor();
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = 0.9;
+    gainNode.connect(audioContext.destination);
+    audioContextRef.current = audioContext;
+    gainNodeRef.current = gainNode;
+    nextPlaybackTimeRef.current = {
+      caller: audioContext.currentTime + 0.05,
+      assistant: audioContext.currentTime + 0.05
+    };
+    await audioContext.resume();
+    const ws = new WebSocket(
+      await getLiveAudioMonitorUrl({ sessionId, monitorToken })
+    );
+    monitorWsRef.current = ws;
+    setLiveAudioError(null);
+    ws.onopen = () => {
+      setIsListeningLive(true);
+      ue.success("Live audio on");
+    };
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(String(event.data));
+        if (message.type === "audio" && message.payload) {
+          playMonitorAudio(message.payload, message.channel || "assistant");
+        } else if (message.type === "ended") {
+          stopLiveAudio();
+        } else if (message.type === "error") {
+          throw new Error(message.error || "Live audio failed.");
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Live audio failed.";
+        setLiveAudioError(message);
+      }
+    };
+    ws.onerror = () => {
+      setLiveAudioError("Live audio connection failed.");
+      ue.error("Live audio connection failed");
+    };
+    ws.onclose = () => {
+      monitorWsRef.current = null;
+      setIsListeningLive(false);
+    };
+  }, [playMonitorAudio, stopLiveAudio]);
   const resetAfterDelay = reactExports.useCallback(() => {
     setTimeout(() => {
       setStatus("idle");
@@ -45513,6 +46344,8 @@ function useXaiVoice() {
       setPresetName("");
       setErrorMessage(null);
       setIsMuted(false);
+      setLiveAudioAvailable(false);
+      setLiveAudioError(null);
     }, 3e3);
   }, []);
   const startDurationTimer = reactExports.useCallback(() => {
@@ -45523,13 +46356,18 @@ function useXaiVoice() {
     }, 1e3);
   }, []);
   const startCall = reactExports.useCallback(
-    async (preset, recipientPhone) => {
+    async (preset, recipientPhone, captureOptions) => {
+      stopLiveAudio();
       setStatus("initiating");
       setRecipient(recipientPhone);
       setPresetName(preset.name);
       setErrorMessage(null);
+      setLiveAudioAvailable(false);
+      setLiveAudioError(null);
       activeCallIdRef.current = null;
       activeCallSidRef.current = null;
+      activeSessionIdRef.current = null;
+      monitorTokenRef.current = null;
       try {
         const reservationResult = await reserveCall.mutateAsync({
           recipientPhone,
@@ -45538,7 +46376,12 @@ function useXaiVoice() {
         if (reservationResult.__kind__ === "err") {
           throw new Error(reservationResult.err);
         }
-        const { callId, id: reservationId, callToken, allowedSeconds } = reservationResult.ok;
+        const {
+          callId,
+          id: reservationId,
+          callToken,
+          allowedSeconds
+        } = reservationResult.ok;
         if (!callToken) {
           throw new Error("Reservation token was not returned by the backend.");
         }
@@ -45550,9 +46393,13 @@ function useXaiVoice() {
           preset,
           callId,
           reservationId,
-          callToken
+          callToken,
+          captureOptions
         });
         activeCallSidRef.current = serverCall.callSid;
+        activeSessionIdRef.current = serverCall.sessionId;
+        monitorTokenRef.current = serverCall.monitorToken || null;
+        setLiveAudioAvailable(Boolean(serverCall.monitorToken));
         setStatus("in_call");
         startDurationTimer();
         ue.success("Call placed", {
@@ -45571,6 +46418,8 @@ function useXaiVoice() {
           });
         }
         cleanupTimer();
+        stopLiveAudio();
+        setLiveAudioAvailable(false);
         clearCall();
       }
     },
@@ -45580,12 +46429,15 @@ function useXaiVoice() {
       startDurationTimer,
       updateCallStatus,
       cleanupTimer,
+      stopLiveAudio,
       clearCall
     ]
   );
   const endCall = reactExports.useCallback(() => {
     setStatus("completed");
     cleanupTimer();
+    stopLiveAudio();
+    setLiveAudioAvailable(false);
     const callSid = activeCallSidRef.current;
     if (callSid) {
       endVoiceServerCall(callSid).catch((err) => {
@@ -45593,25 +46445,31 @@ function useXaiVoice() {
         ue.error(`Unable to end Twilio call: ${message}`);
       });
     }
-    if (activeCallIdRef.current !== null) {
-      updateCallStatus.mutate({
-        callId: activeCallIdRef.current,
-        status: CallStatus.completed,
-        transcript: null
-      });
-    }
     activeCallIdRef.current = null;
     activeCallSidRef.current = null;
+    activeSessionIdRef.current = null;
+    monitorTokenRef.current = null;
     clearCall();
     resetAfterDelay();
-  }, [cleanupTimer, updateCallStatus, clearCall, resetAfterDelay]);
+  }, [cleanupTimer, stopLiveAudio, clearCall, resetAfterDelay]);
   const toggleMute = reactExports.useCallback(() => {
     setIsMuted((value) => !value);
     ue.info("Use the phone keypad or handset mute for live call audio.");
   }, []);
+  const toggleLiveAudio = reactExports.useCallback(async () => {
+    if (isListeningLive) {
+      stopLiveAudio();
+      ue.info("Live audio off");
+      return;
+    }
+    await startLiveAudio();
+  }, [isListeningLive, startLiveAudio, stopLiveAudio]);
   reactExports.useEffect(() => {
-    return () => cleanupTimer();
-  }, [cleanupTimer]);
+    return () => {
+      cleanupTimer();
+      stopLiveAudio();
+    };
+  }, [cleanupTimer, stopLiveAudio]);
   return {
     status,
     recipient,
@@ -45620,9 +46478,14 @@ function useXaiVoice() {
     isMuted,
     errorMessage,
     audioLevels,
+    liveAudioAvailable,
+    isListeningLive,
+    liveAudioError,
     startCall,
     endCall,
-    toggleMute
+    toggleMute,
+    toggleLiveAudio,
+    stopLiveAudio
   };
 }
 const LayoutGroupContext = reactExports.createContext({});
@@ -53521,7 +54384,18 @@ function StatCard({
 function ActiveCallPanel({
   voice
 }) {
-  const { status, recipient, presetName, durationSecs, errorMessage, endCall } = voice;
+  const {
+    status,
+    recipient,
+    presetName,
+    durationSecs,
+    errorMessage,
+    liveAudioAvailable,
+    isListeningLive,
+    liveAudioError,
+    endCall,
+    toggleLiveAudio
+  } = voice;
   const isActive = status === "in_call" || status === "connecting" || status === "initiating";
   if (status === "idle") return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -53588,21 +54462,46 @@ function ActiveCallPanel({
                   children: "Twilio Media Stream"
                 }
               ),
-              status === "error" && errorMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-destructive flex-1", children: errorMessage }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2 ml-auto shrink-0", children: isActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                Button,
+              isListeningLive && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Badge,
                 {
-                  variant: "destructive",
-                  size: "sm",
-                  onClick: endCall,
-                  "data-ocid": "dashboard.active_call.end_button",
-                  className: "gap-1.5 h-8 text-xs",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(PhoneOff, { className: "w-3.5 h-3.5" }),
-                    "End Call"
-                  ]
+                  variant: "outline",
+                  className: "text-xs border-green-500/40 text-green-400",
+                  children: "Live Audio"
                 }
-              ) })
+              ),
+              status === "error" && errorMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-destructive flex-1", children: errorMessage }),
+              liveAudioError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-yellow-500 flex-1", children: liveAudioError }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 ml-auto shrink-0", children: [
+                isActive && liveAudioAvailable && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  Button,
+                  {
+                    variant: isListeningLive ? "secondary" : "outline",
+                    size: "sm",
+                    onClick: () => void toggleLiveAudio(),
+                    "data-ocid": "dashboard.active_call.listen_button",
+                    className: "gap-1.5 h-8 text-xs",
+                    children: [
+                      isListeningLive ? /* @__PURE__ */ jsxRuntimeExports.jsx(VolumeX, { className: "w-3.5 h-3.5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Volume2, { className: "w-3.5 h-3.5" }),
+                      isListeningLive ? "Stop Audio" : "Listen Live"
+                    ]
+                  }
+                ),
+                isActive && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  Button,
+                  {
+                    variant: "destructive",
+                    size: "sm",
+                    onClick: endCall,
+                    "data-ocid": "dashboard.active_call.end_button",
+                    className: "gap-1.5 h-8 text-xs",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(PhoneOff, { className: "w-3.5 h-3.5" }),
+                      "End Call"
+                    ]
+                  }
+                )
+              ] })
             ] }) })
           ]
         }
@@ -53616,6 +54515,9 @@ function DashboardPage() {
   const [recipientError, setRecipientError] = reactExports.useState("");
   const [selectedPresetId, setSelectedPresetId] = reactExports.useState("");
   const [deletePresetId, setDeletePresetId] = reactExports.useState(null);
+  const [saveTranscript, setSaveTranscript] = reactExports.useState(false);
+  const [recordAudio, setRecordAudio] = reactExports.useState(false);
+  const [capturePermissionConfirmed, setCapturePermissionConfirmed] = reactExports.useState(false);
   const { data: presets, isLoading: presetsLoading } = useListMyPresets();
   const {
     data: calls,
@@ -53643,6 +54545,7 @@ function DashboardPage() {
   const availableSeconds = Number((billingStatus == null ? void 0 : billingStatus.availableSeconds) ?? 0n);
   const selectedPreset = (presets ?? []).find((p2) => p2.id.toString() === selectedPresetId) ?? null;
   const isCallActive = voice.status !== "idle" && voice.status !== "completed" && voice.status !== "error";
+  const savesCallArtifacts = saveTranscript || recordAudio;
   reactExports.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const billing = params.get("billing");
@@ -53674,8 +54577,16 @@ function DashboardPage() {
       setRecipientError("Enter a valid E.164 number, e.g. +15551234567");
       return;
     }
+    if (savesCallArtifacts && !capturePermissionConfirmed) {
+      ue.error("Confirm permission before saving call artifacts");
+      return;
+    }
     setRecipientError("");
-    await voice.startCall(selectedPreset, cleaned);
+    await voice.startCall(selectedPreset, cleaned, {
+      saveTranscript,
+      recordAudio,
+      permissionConfirmed: capturePermissionConfirmed
+    });
     refetchBilling();
   };
   const handleBuyPackage = async (packageId) => {
@@ -53760,56 +54671,63 @@ function DashboardPage() {
           }
         )
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(Card, { className: "bg-card border-border", "data-ocid": "dashboard.billing_card", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(CardHeader, { className: "pb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(CardTitle, { className: "text-base font-semibold flex items-center gap-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-4 h-4 text-green-400" }),
-            "Phone Time"
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "outline", className: "font-mono", children: [
-            formatMinutes(billingStatus == null ? void 0 : billingStatus.availableSeconds),
-            " available"
-          ] })
-        ] }) }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: billingLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: [1, 2, 3].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-24 w-full" }, i)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: ((billingStatus == null ? void 0 : billingStatus.packages) ?? []).map((pkg) => {
-          const isBuying = buyingPackageId === pkg.id;
-          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "div",
-            {
-              className: "rounded-lg border border-border bg-muted/25 p-3",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-semibold text-foreground", children: [
-                      "$",
-                      (Number(pkg.amountCents) / 100).toFixed(0)
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        Card,
+        {
+          className: "bg-card border-border",
+          "data-ocid": "dashboard.billing_card",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CardHeader, { className: "pb-4", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(CardTitle, { className: "text-base font-semibold flex items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-4 h-4 text-green-400" }),
+                "Phone Time"
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Badge, { variant: "outline", className: "font-mono", children: [
+                formatMinutes(billingStatus == null ? void 0 : billingStatus.availableSeconds),
+                " available"
+              ] })
+            ] }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: billingLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: [1, 2, 3].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-24 w-full" }, i)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: ((billingStatus == null ? void 0 : billingStatus.packages) ?? []).map((pkg) => {
+              const isBuying = buyingPackageId === pkg.id;
+              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  className: "rounded-lg border border-border bg-muted/25 p-3",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-semibold text-foreground", children: [
+                          "$",
+                          (Number(pkg.amountCents) / 100).toFixed(0)
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: formatMinutes(pkg.seconds) })
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "text-xs", children: pkg.id.replace("pack_", "$") })
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: formatMinutes(pkg.seconds) })
-                  ] }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "text-xs", children: pkg.id.replace("pack_", "$") })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  Button,
-                  {
-                    type: "button",
-                    variant: "outline",
-                    size: "sm",
-                    className: "mt-3 w-full gap-2",
-                    onClick: () => handleBuyPackage(pkg.id),
-                    disabled: isBuying,
-                    "data-ocid": `dashboard.billing.buy.${pkg.id}`,
-                    children: [
-                      isBuying ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-3.5 h-3.5 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-3.5 h-3.5" }),
-                      "Buy"
-                    ]
-                  }
-                )
-              ]
-            },
-            pkg.id
-          );
-        }) }) })
-      ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      Button,
+                      {
+                        type: "button",
+                        variant: "outline",
+                        size: "sm",
+                        className: "mt-3 w-full gap-2",
+                        onClick: () => handleBuyPackage(pkg.id),
+                        disabled: isBuying,
+                        "data-ocid": `dashboard.billing.buy.${pkg.id}`,
+                        children: [
+                          isBuying ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-3.5 h-3.5 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-3.5 h-3.5" }),
+                          "Buy"
+                        ]
+                      }
+                    )
+                  ]
+                },
+                pkg.id
+              );
+            }) }) })
+          ]
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsx(ActiveCallPanel, { voice }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -53905,10 +54823,74 @@ function DashboardPage() {
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "rounded-lg bg-muted/20 border border-border p-3 space-y-3",
+                    "data-ocid": "dashboard.call_artifacts.options",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 text-xs font-medium text-foreground", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(FileText, { className: "w-3.5 h-3.5 text-primary" }),
+                        "Call Artifacts"
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-foreground", children: "Save transcript" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-muted-foreground", children: "Store the call text in history" })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          Switch,
+                          {
+                            checked: saveTranscript,
+                            onCheckedChange: setSaveTranscript,
+                            disabled: isCallActive,
+                            "data-ocid": "dashboard.call_artifacts.transcript_switch"
+                          }
+                        )
+                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-foreground", children: "Record audio" }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-muted-foreground", children: "Save a call recording link" })
+                        ] }),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          Switch,
+                          {
+                            checked: recordAudio,
+                            onCheckedChange: setRecordAudio,
+                            disabled: isCallActive,
+                            "data-ocid": "dashboard.call_artifacts.recording_switch"
+                          }
+                        )
+                      ] }),
+                      savesCallArtifacts && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-2 rounded-md bg-background/60 border border-border p-2 text-[11px] leading-relaxed text-muted-foreground", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          Checkbox,
+                          {
+                            id: "call-artifacts-permission",
+                            checked: capturePermissionConfirmed,
+                            onCheckedChange: (checked) => setCapturePermissionConfirmed(checked === true),
+                            disabled: isCallActive,
+                            "data-ocid": "dashboard.call_artifacts.permission_checkbox",
+                            className: "mt-0.5"
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          Label,
+                          {
+                            htmlFor: "call-artifacts-permission",
+                            className: "text-[11px] leading-relaxed text-muted-foreground",
+                            children: "I confirm I have permission to record or save this conversation, or that consent is not required where it takes place."
+                          }
+                        )
+                      ] })
+                    ]
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   Button,
                   {
                     onClick: handleCall,
-                    disabled: isCallActive || !recipient || !selectedPresetId || availableSeconds <= 0,
+                    disabled: isCallActive || !recipient || !selectedPresetId || availableSeconds <= 0 || savesCallArtifacts && !capturePermissionConfirmed,
                     "data-ocid": "dashboard.call.submit_button",
                     className: "w-full gap-2",
                     children: [
@@ -54184,6 +55166,39 @@ function exportCsv(calls, presetMap) {
   a2.click();
   URL.revokeObjectURL(url);
 }
+function downloadTextFile(filename, text) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a2 = document.createElement("a");
+  a2.href = url;
+  a2.download = filename;
+  a2.click();
+  URL.revokeObjectURL(url);
+}
+function parseCallArtifacts(text) {
+  var _a3, _b3;
+  const source = text ?? "";
+  const recordingUrlMatch = source.match(/^Recording URL:\s*(.+)$/im);
+  const recordingSidMatch = source.match(/^Recording SID:\s*(.+)$/im);
+  const rawRecordingUrl = ((_a3 = recordingUrlMatch == null ? void 0 : recordingUrlMatch[1]) == null ? void 0 : _a3.trim()) ?? "";
+  const recordingUrl = rawRecordingUrl && rawRecordingUrl.toLowerCase() !== "pending" ? rawRecordingUrl : null;
+  const transcript = source.replace(/^Recording:\s*.*$/gim, "").replace(/^Recording URL:\s*.*$/gim, "").replace(/^Recording SID:\s*.*$/gim, "").trim();
+  return {
+    transcript,
+    recordingUrl,
+    recordingSid: ((_b3 = recordingSidMatch == null ? void 0 : recordingSidMatch[1]) == null ? void 0 : _b3.trim()) ?? null,
+    recordingPending: rawRecordingUrl.toLowerCase() === "pending"
+  };
+}
+function toCaptionDataUrl(transcript) {
+  const captionText = transcript.trim() || "No saved transcript is available for this recording.";
+  const vtt = `WEBVTT
+
+00:00:00.000 --> 99:59:59.000
+${captionText}
+`;
+  return `data:text/vtt;charset=utf-8,${encodeURIComponent(vtt)}`;
+}
 const ALL_STATUSES = [
   { value: "all", label: "All Statuses" },
   { value: CallStatus.pending, label: "Pending" },
@@ -54453,6 +55468,8 @@ function CallRow({
   expanded,
   onToggle
 }) {
+  const artifacts = parseCallArtifacts(call.transcript);
+  const captionSrc = toCaptionDataUrl(artifacts.transcript);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-ocid": `history.call.item.${idx}`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "button",
@@ -54501,10 +55518,67 @@ function CallRow({
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-mono text-foreground text-[10px] break-all", children: call.id.toString() })
         ] })
       ] }),
-      call.transcript ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium text-muted-foreground mb-2", children: "Transcript" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-background rounded-lg border border-border p-4 max-h-48 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-foreground leading-relaxed whitespace-pre-wrap", children: call.transcript }) })
-      ] }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground/60 italic", children: "No transcript available for this call." })
+      artifacts.recordingUrl && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 mb-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium text-muted-foreground", children: "Audio Recording" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Button,
+            {
+              asChild: true,
+              variant: "outline",
+              size: "sm",
+              className: "h-7 gap-1.5 text-xs",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("a", { href: artifacts.recordingUrl, download: true, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Download, { className: "w-3.5 h-3.5" }),
+                "Save audio"
+              ] })
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "audio",
+          {
+            controls: true,
+            src: artifacts.recordingUrl,
+            className: "w-full h-9",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "track",
+              {
+                kind: "captions",
+                srcLang: "en",
+                label: "Transcript",
+                src: captionSrc,
+                default: true
+              }
+            )
+          }
+        ),
+        artifacts.recordingSid && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground mt-1 font-mono break-all", children: artifacts.recordingSid })
+      ] }),
+      artifacts.recordingPending && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground/70 mb-4", children: "Recording requested. The recording link has not been returned yet." }),
+      artifacts.transcript ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 mb-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium text-muted-foreground", children: "Transcript" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            Button,
+            {
+              type: "button",
+              variant: "outline",
+              size: "sm",
+              className: "h-7 gap-1.5 text-xs",
+              onClick: () => downloadTextFile(
+                `voicecall-transcript-${call.id.toString()}.txt`,
+                artifacts.transcript
+              ),
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Download, { className: "w-3.5 h-3.5" }),
+                "Save text"
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-background rounded-lg border border-border p-4 max-h-48 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-foreground leading-relaxed whitespace-pre-wrap", children: artifacts.transcript }) })
+      ] }) : !artifacts.recordingUrl && !artifacts.recordingPending ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground/60 italic", children: "No transcript available for this call." }) : null
     ] })
   ] });
 }
@@ -54921,7 +55995,7 @@ var SliderRange = reactExports.forwardRef(
   }
 );
 SliderRange.displayName = RANGE_NAME;
-var THUMB_NAME$1 = "SliderThumb";
+var THUMB_NAME = "SliderThumb";
 var SliderThumb = reactExports.forwardRef(
   (props, forwardedRef) => {
     const getItems = useCollection(props.__scopeSlider);
@@ -54937,8 +56011,8 @@ var SliderThumb = reactExports.forwardRef(
 var SliderThumbImpl = reactExports.forwardRef(
   (props, forwardedRef) => {
     const { __scopeSlider, index: index2, name, ...thumbProps } = props;
-    const context = useSliderContext(THUMB_NAME$1, __scopeSlider);
-    const orientation = useSliderOrientationContext(THUMB_NAME$1, __scopeSlider);
+    const context = useSliderContext(THUMB_NAME, __scopeSlider);
+    const orientation = useSliderOrientationContext(THUMB_NAME, __scopeSlider);
     const [thumb, setThumb] = reactExports.useState(null);
     const composedRefs = useComposedRefs(forwardedRef, (node) => setThumb(node));
     const isFormControl = thumb ? context.form || !!thumb.closest("form") : true;
@@ -54999,8 +56073,8 @@ var SliderThumbImpl = reactExports.forwardRef(
     );
   }
 );
-SliderThumb.displayName = THUMB_NAME$1;
-var BUBBLE_INPUT_NAME$1 = "RadioBubbleInput";
+SliderThumb.displayName = THUMB_NAME;
+var BUBBLE_INPUT_NAME = "RadioBubbleInput";
 var SliderBubbleInput = reactExports.forwardRef(
   ({ __scopeSlider, value, ...props }, forwardedRef) => {
     const ref = reactExports.useRef(null);
@@ -55029,7 +56103,7 @@ var SliderBubbleInput = reactExports.forwardRef(
     );
   }
 );
-SliderBubbleInput.displayName = BUBBLE_INPUT_NAME$1;
+SliderBubbleInput.displayName = BUBBLE_INPUT_NAME;
 function getNextSortedValues(prevValues = [], nextValue, atIndex) {
   const nextValues = [...prevValues];
   nextValues[atIndex] = nextValue;
@@ -55087,10 +56161,10 @@ function roundValue(value, decimalCount) {
   const rounder = Math.pow(10, decimalCount);
   return Math.round(value * rounder) / rounder;
 }
-var Root$1 = Slider$1;
+var Root = Slider$1;
 var Track = SliderTrack;
 var Range = SliderRange;
-var Thumb$1 = SliderThumb;
+var Thumb = SliderThumb;
 function Slider({
   className,
   defaultValue,
@@ -55104,7 +56178,7 @@ function Slider({
     [value, defaultValue, min2, max2]
   );
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    Root$1,
+    Root,
     {
       "data-slot": "slider",
       defaultValue,
@@ -55136,7 +56210,7 @@ function Slider({
           }
         ),
         Array.from({ length: _values.length }, (value2, _2) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Thumb$1,
+          Thumb,
           {
             "data-slot": "slider-thumb",
             className: "border-primary bg-background ring-ring/50 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
@@ -55144,171 +56218,6 @@ function Slider({
           `${value2}`
         ))
       ]
-    }
-  );
-}
-var SWITCH_NAME = "Switch";
-var [createSwitchContext] = createContextScope(SWITCH_NAME);
-var [SwitchProvider, useSwitchContext] = createSwitchContext(SWITCH_NAME);
-var Switch$1 = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const {
-      __scopeSwitch,
-      name,
-      checked: checkedProp,
-      defaultChecked,
-      required,
-      disabled,
-      value = "on",
-      onCheckedChange,
-      form,
-      ...switchProps
-    } = props;
-    const [button, setButton] = reactExports.useState(null);
-    const composedRefs = useComposedRefs(forwardedRef, (node) => setButton(node));
-    const hasConsumerStoppedPropagationRef = reactExports.useRef(false);
-    const isFormControl = button ? form || !!button.closest("form") : true;
-    const [checked, setChecked] = useControllableState({
-      prop: checkedProp,
-      defaultProp: defaultChecked ?? false,
-      onChange: onCheckedChange,
-      caller: SWITCH_NAME
-    });
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(SwitchProvider, { scope: __scopeSwitch, checked, disabled, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Primitive.button,
-        {
-          type: "button",
-          role: "switch",
-          "aria-checked": checked,
-          "aria-required": required,
-          "data-state": getState(checked),
-          "data-disabled": disabled ? "" : void 0,
-          disabled,
-          value,
-          ...switchProps,
-          ref: composedRefs,
-          onClick: composeEventHandlers(props.onClick, (event) => {
-            setChecked((prevChecked) => !prevChecked);
-            if (isFormControl) {
-              hasConsumerStoppedPropagationRef.current = event.isPropagationStopped();
-              if (!hasConsumerStoppedPropagationRef.current) event.stopPropagation();
-            }
-          })
-        }
-      ),
-      isFormControl && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        SwitchBubbleInput,
-        {
-          control: button,
-          bubbles: !hasConsumerStoppedPropagationRef.current,
-          name,
-          value,
-          checked,
-          required,
-          disabled,
-          form,
-          style: { transform: "translateX(-100%)" }
-        }
-      )
-    ] });
-  }
-);
-Switch$1.displayName = SWITCH_NAME;
-var THUMB_NAME = "SwitchThumb";
-var SwitchThumb = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeSwitch, ...thumbProps } = props;
-    const context = useSwitchContext(THUMB_NAME, __scopeSwitch);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.span,
-      {
-        "data-state": getState(context.checked),
-        "data-disabled": context.disabled ? "" : void 0,
-        ...thumbProps,
-        ref: forwardedRef
-      }
-    );
-  }
-);
-SwitchThumb.displayName = THUMB_NAME;
-var BUBBLE_INPUT_NAME = "SwitchBubbleInput";
-var SwitchBubbleInput = reactExports.forwardRef(
-  ({
-    __scopeSwitch,
-    control,
-    checked,
-    bubbles = true,
-    ...props
-  }, forwardedRef) => {
-    const ref = reactExports.useRef(null);
-    const composedRefs = useComposedRefs(ref, forwardedRef);
-    const prevChecked = usePrevious(checked);
-    const controlSize = useSize(control);
-    reactExports.useEffect(() => {
-      const input = ref.current;
-      if (!input) return;
-      const inputProto = window.HTMLInputElement.prototype;
-      const descriptor = Object.getOwnPropertyDescriptor(
-        inputProto,
-        "checked"
-      );
-      const setChecked = descriptor.set;
-      if (prevChecked !== checked && setChecked) {
-        const event = new Event("click", { bubbles });
-        setChecked.call(input, checked);
-        input.dispatchEvent(event);
-      }
-    }, [prevChecked, checked, bubbles]);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "input",
-      {
-        type: "checkbox",
-        "aria-hidden": true,
-        defaultChecked: checked,
-        ...props,
-        tabIndex: -1,
-        ref: composedRefs,
-        style: {
-          ...props.style,
-          ...controlSize,
-          position: "absolute",
-          pointerEvents: "none",
-          opacity: 0,
-          margin: 0
-        }
-      }
-    );
-  }
-);
-SwitchBubbleInput.displayName = BUBBLE_INPUT_NAME;
-function getState(checked) {
-  return checked ? "checked" : "unchecked";
-}
-var Root = Switch$1;
-var Thumb = SwitchThumb;
-function Switch({
-  className,
-  ...props
-}) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    Root,
-    {
-      "data-slot": "switch",
-      className: cn(
-        "peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      ),
-      ...props,
-      children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Thumb,
-        {
-          "data-slot": "switch-thumb",
-          className: cn(
-            "bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0"
-          )
-        }
-      )
     }
   );
 }
@@ -55324,6 +56233,41 @@ function Textarea({ className, ...props }) {
       ...props
     }
   );
+}
+async function copyTextToClipboard(text) {
+  var _a3;
+  if (!text) return false;
+  if (((_a3 = navigator.clipboard) == null ? void 0 : _a3.writeText) && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+    }
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  textarea.style.top = "0";
+  textarea.style.opacity = "0";
+  const selection = document.getSelection();
+  const selectedRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, text.length);
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    document.body.removeChild(textarea);
+    if (selection && selectedRange) {
+      selection.removeAllRanges();
+      selection.addRange(selectedRange);
+    }
+  }
 }
 var isCheckBoxInput = (element) => element.type === "checkbox";
 var isDateObject = (value) => value instanceof Date;
@@ -57360,6 +58304,7 @@ function SettingsPage() {
   const deletePreset = useDeletePreset();
   const duplicatePreset = useDuplicatePreset();
   const { principal, logout, isAdmin } = useAuth();
+  const userId = (principal == null ? void 0 : principal.toString()) ?? "";
   const [expandedPreset, setExpandedPreset] = reactExports.useState(null);
   const [showNewForm, setShowNewForm] = reactExports.useState(false);
   const handleCreate = async (input) => {
@@ -57379,6 +58324,23 @@ function SettingsPage() {
   const handleDuplicate = async (id2) => {
     await duplicatePreset.mutateAsync(id2);
     ue.success("Preset duplicated");
+  };
+  const handleCopyUserId = async () => {
+    if (!userId) {
+      ue.error("User ID is not available");
+      return;
+    }
+    try {
+      const copied = await copyTextToClipboard(userId);
+      if (!copied) {
+        throw new Error("Copy command was rejected.");
+      }
+      ue.success("User ID copied");
+    } catch {
+      ue.error("Unable to copy User ID", {
+        description: "Select the User ID text and copy it manually."
+      });
+    }
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsx(ProtectedRoute, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppLayout, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-8 max-w-3xl", "data-ocid": "settings.page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -57400,16 +58362,33 @@ function SettingsPage() {
           ] }) }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs(CardContent, { className: "space-y-3 pt-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-1", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Principal ID" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-2", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-                "code",
-                {
-                  className: "flex-1 text-xs font-mono bg-muted/40 rounded-md px-3 py-2 text-foreground truncate",
-                  "data-ocid": "settings.profile.principal_id",
-                  title: (principal == null ? void 0 : principal.toString()) ?? "Not connected",
-                  children: (principal == null ? void 0 : principal.toString()) ?? "Not connected"
-                }
-              ) })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "User ID" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "code",
+                  {
+                    className: "flex-1 text-xs font-mono bg-muted/40 rounded-md px-3 py-2 text-foreground truncate",
+                    "data-ocid": "settings.profile.user_id",
+                    title: userId || "Not connected",
+                    children: userId || "Not connected"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Button,
+                  {
+                    type: "button",
+                    variant: "ghost",
+                    size: "icon",
+                    onClick: handleCopyUserId,
+                    disabled: !userId,
+                    className: "h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground",
+                    "data-ocid": "settings.profile.copy_user_id_button",
+                    title: "Copy User ID",
+                    "aria-label": "Copy User ID",
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(Copy, { className: "w-3.5 h-3.5" })
+                  }
+                )
+              ] })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs(
               Button,

@@ -21,7 +21,9 @@ const PORT = Number(process.env.PORT || 3000);
 const XAI_MODEL = process.env.XAI_MODEL || "grok-voice-think-fast-1.0";
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
-const SERVER_VERSION = "2026-05-09-stripe-prepaid-minutes";
+const TRANSCRIPT_FINISH_GRACE_MS = 2_500;
+const RECORDING_FINISH_GRACE_MS = 10_000;
+const SERVER_VERSION = "2026-05-10-live-audio-artifacts";
 const SERVER_STARTED_AT = new Date().toISOString();
 
 const BILLING_PACKAGES = {
@@ -271,6 +273,14 @@ function getPublicWsUrl() {
   return host ? `wss://${host}/media` : "";
 }
 
+function getPublicRecordingStatusUrl(sessionId) {
+  const publicBaseUrl = getPublicBaseUrl();
+  if (!publicBaseUrl) return "";
+  const url = new URL("/recording-status", publicBaseUrl);
+  url.searchParams.set("sessionId", sessionId);
+  return url.toString();
+}
+
 function requireServerConfig() {
   const missing = requiredEnv.filter((key) => !process.env[key]);
   if (!process.env.BACKEND_CANISTER_ID) missing.push("BACKEND_CANISTER_ID");
@@ -319,6 +329,18 @@ function toPlainPreset(input = {}) {
       functionCalling: Boolean(toolsEnabled.functionCalling),
     },
   };
+}
+
+function normalizeCaptureOptions(input = {}) {
+  const saveTranscript = Boolean(input.saveTranscript);
+  const recordAudio = Boolean(input.recordAudio);
+  const permissionConfirmed = Boolean(input.permissionConfirmed);
+  if ((saveTranscript || recordAudio) && !permissionConfirmed) {
+    throw new Error(
+      "Confirm permission before saving call transcripts or recordings.",
+    );
+  }
+  return { saveTranscript, recordAudio, permissionConfirmed };
 }
 
 function clamp(value, min, max) {
@@ -374,6 +396,64 @@ function makeErrorTwiML(message) {
   response.say({ voice: "alice" }, message);
   response.hangup();
   return response.toString();
+}
+
+function appendTranscript(session, speaker, text) {
+  const cleanText = String(text || "");
+  if (!session || !cleanText) return;
+  const last = session.transcript[session.transcript.length - 1];
+  if (last?.speaker === speaker) {
+    last.text += cleanText;
+    return;
+  }
+  session.transcript.push({ speaker, text: cleanText });
+}
+
+function normalizeRecordingUrl(recordingUrl) {
+  const url = String(recordingUrl || "").trim();
+  if (!url) return "";
+  if (/\.(mp3|wav)$/i.test(url)) return url;
+  return `${url}.mp3`;
+}
+
+function updateSessionRecordingFromBody(session, body = {}) {
+  if (!session?.recordAudio) return;
+  const recordingUrl = normalizeRecordingUrl(body.RecordingUrl);
+  const recordingSid = String(body.RecordingSid || "").trim();
+  const recordingStatus = String(body.RecordingStatus || "").trim();
+  if (!recordingUrl && !recordingSid && !recordingStatus) return;
+  session.recording = {
+    sid: recordingSid || session.recording?.sid || null,
+    url: recordingUrl || session.recording?.url || null,
+    status: recordingStatus || session.recording?.status || null,
+    duration: body.RecordingDuration
+      ? String(body.RecordingDuration)
+      : session.recording?.duration || null,
+  };
+}
+
+function broadcastMonitorEvent(session, payload) {
+  if (!session?.monitorClients?.size) return;
+  const message = JSON.stringify(payload);
+  for (const client of session.monitorClients) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    } else {
+      session.monitorClients.delete(client);
+    }
+  }
+}
+
+function broadcastMonitorAudio(session, channel, payload) {
+  if (!payload) return;
+  broadcastMonitorEvent(session, {
+    type: "audio",
+    channel,
+    codec: "audio/pcmu",
+    sampleRate: 8000,
+    payload,
+    at: Date.now(),
+  });
 }
 
 function getSessionFromRequest(req) {
@@ -530,26 +610,55 @@ function stripeWebhookHandler(mode) {
   };
 }
 
-function transcriptToText(session) {
-  if (!session?.transcript?.length) return null;
-  return session.transcript
-    .map((entry) => `${entry.speaker}: ${entry.text}`)
-    .join("")
-    .slice(0, 20_000);
+function callArtifactsToText(session) {
+  if (!session) return null;
+  const sections = [];
+  if (session.saveTranscript && session.permissionConfirmed && session.transcript?.length) {
+    const transcript = session.transcript
+      .map((entry) => {
+        const text = String(entry.text || "").trim();
+        return text ? `${entry.speaker}: ${text}` : "";
+      })
+      .filter(Boolean)
+      .join("\n");
+    if (transcript) sections.push(transcript);
+  }
+
+  if (session.recordAudio && session.permissionConfirmed) {
+    const recordingLines = ["Recording: enabled"];
+    if (session.recording?.url) {
+      recordingLines.push(`Recording URL: ${session.recording.url}`);
+    }
+    if (session.recording?.sid) {
+      recordingLines.push(`Recording SID: ${session.recording.sid}`);
+    }
+    if (!session.recording?.url) {
+      recordingLines.push("Recording URL: pending");
+    }
+    sections.push(recordingLines.join("\n"));
+  }
+
+  const text = sections.join("\n\n").trim();
+  return text ? text.slice(0, 20_000) : null;
 }
 
 async function finishPaidSession(session, reason = "completed") {
   if (!session || session.finished) return;
   session.finished = true;
-  session.billingFinishedAt = Date.now();
+  session.billingFinishedAt = session.billingStoppedAt || Date.now();
   if (session.cutoffTimer) {
     clearTimeout(session.cutoffTimer);
     session.cutoffTimer = null;
+  }
+  if (session.finishTimer) {
+    clearTimeout(session.finishTimer);
+    session.finishTimer = null;
   }
 
   const usedSeconds = session.billingStartedAt
     ? Math.ceil((session.billingFinishedAt - session.billingStartedAt) / 1000)
     : 0;
+  const artifactsText = callArtifactsToText(session);
 
   if (session.reservationId) {
     try {
@@ -559,7 +668,7 @@ async function finishPaidSession(session, reason = "completed") {
           session.reservationId,
           BigInt(Math.max(0, usedSeconds)),
           session.callSid ? [session.callSid] : [],
-          transcriptToText(session) ? [transcriptToText(session)] : [],
+          artifactsText ? [artifactsText] : [],
         ),
         "Unable to finish and debit paid call.",
       );
@@ -579,8 +688,36 @@ async function finishPaidSession(session, reason = "completed") {
     }
   }
 
+  broadcastMonitorEvent(session, { type: "ended", reason });
+  for (const client of session.monitorClients || []) {
+    if (client.readyState === WebSocket.OPEN) client.close(1000, "Call ended");
+  }
   callSessions.delete(session.id);
   if (session.callSid) callsBySid.delete(session.callSid);
+}
+
+function scheduleFinishPaidSession(session, reason = "completed") {
+  if (!session || session.finished) return;
+  session.billingStoppedAt ||= Date.now();
+  const recordingStatus = String(session.recording?.status || "").toLowerCase();
+  const waitingForRecording =
+    session.recordAudio &&
+    session.permissionConfirmed &&
+    !session.recording?.url &&
+    !["completed", "absent"].includes(recordingStatus);
+  const waitingForTranscript =
+    session.saveTranscript && session.permissionConfirmed && session.awaitingCallerTranscript;
+  if (waitingForRecording || waitingForTranscript) {
+    if (!session.finishTimer) {
+      session.deferredFinishReason = reason;
+      session.finishTimer = setTimeout(() => {
+        finishPaidSession(session, session.deferredFinishReason || reason);
+      }, waitingForRecording ? RECORDING_FINISH_GRACE_MS : TRANSCRIPT_FINISH_GRACE_MS);
+      session.finishTimer.unref?.();
+    }
+    return;
+  }
+  finishPaidSession(session, reason);
 }
 
 function startBillingTimer(session, closeBoth) {
@@ -604,6 +741,7 @@ function startBillingTimer(session, closeBoth) {
         error: error.message,
       });
     }
+    session.billingStoppedAt ||= Date.now();
     closeBoth();
     await finishPaidSession(session, "paid_time_exhausted");
   }, allowedSeconds * 1000);
@@ -691,32 +829,43 @@ app.post("/initiate-call", async (req, res) => {
       throw new Error("Call ID does not match the paid reservation.");
     }
     const sessionId = crypto.randomUUID();
+    const monitorToken = crypto.randomBytes(24).toString("base64url");
     const publicBaseUrl = getPublicBaseUrl();
     const twimlUrl = new URL("/twiml", publicBaseUrl);
     twimlUrl.searchParams.set("sessionId", sessionId);
 
     const statusCallbackUrl = new URL("/call-status", publicBaseUrl);
     statusCallbackUrl.searchParams.set("sessionId", sessionId);
+    const captureOptions = normalizeCaptureOptions(req.body.captureOptions || {});
 
     const session = {
       id: sessionId,
+      monitorToken,
       callId,
       reservationId,
       allowedSeconds: reservation.allowedSeconds,
       recipientPhone,
       preset,
+      saveTranscript: captureOptions.saveTranscript,
+      recordAudio: captureOptions.recordAudio,
+      permissionConfirmed: captureOptions.permissionConfirmed,
       createdAt: Date.now(),
       billingStartedAt: null,
       billingFinishedAt: null,
+      billingStoppedAt: null,
       cutoffTimer: null,
+      finishTimer: null,
       finished: false,
       callSid: null,
       streamSid: null,
       transcript: [],
+      awaitingCallerTranscript: false,
+      recording: null,
+      monitorClients: new Set(),
     };
     callSessions.set(sessionId, session);
 
-    const call = await twilioClient.calls.create({
+    const callCreateOptions = {
       to: recipientPhone,
       from: process.env.TWILIO_PHONE_NUMBER,
       url: twimlUrl.toString(),
@@ -724,7 +873,21 @@ app.post("/initiate-call", async (req, res) => {
       statusCallback: statusCallbackUrl.toString(),
       statusCallbackMethod: "POST",
       statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-    });
+    };
+    if (captureOptions.recordAudio) {
+      callCreateOptions.record = true;
+      callCreateOptions.recordingTrack = "both";
+      callCreateOptions.recordingChannels = "dual";
+      callCreateOptions.recordingStatusCallback = getPublicRecordingStatusUrl(sessionId);
+      callCreateOptions.recordingStatusCallbackMethod = "POST";
+      callCreateOptions.recordingStatusCallbackEvent = [
+        "in-progress",
+        "completed",
+        "absent",
+      ];
+    }
+
+    const call = await twilioClient.calls.create(callCreateOptions);
 
     session.callSid = call.sid;
     twilioCallSid = call.sid;
@@ -739,8 +902,13 @@ app.post("/initiate-call", async (req, res) => {
       ok: true,
       callSid: call.sid,
       sessionId,
+      monitorToken,
       status: call.status,
       allowedSeconds: reservation.allowedSeconds,
+      liveAudio: {
+        codec: "audio/pcmu",
+        sampleRate: 8000,
+      },
     });
   } catch (error) {
     log("error", "Failed to initiate call", { error: error.message });
@@ -782,7 +950,8 @@ app.post("/end-call", async (req, res) => {
       const session = callSessions.get(sessionId);
       if (session) {
         session.endedAt = Date.now();
-        await finishPaidSession(session, "user_requested_end");
+        session.billingStoppedAt ||= session.endedAt;
+        scheduleFinishPaidSession(session, "user_requested_end_fallback");
       }
     }
     res.json({ ok: true });
@@ -839,8 +1008,10 @@ app.post("/call-status", async (req, res) => {
   if (session) {
     session.lastStatus = req.body.CallStatus;
     session.lastStatusAt = Date.now();
+    updateSessionRecordingFromBody(session, req.body);
     if (isTerminalTwilioStatus(req.body.CallStatus)) {
-      await finishPaidSession(session, `twilio_${req.body.CallStatus}`);
+      session.billingStoppedAt ||= Date.now();
+      scheduleFinishPaidSession(session, `twilio_${req.body.CallStatus}`);
     }
   }
   log("info", "Twilio status callback", {
@@ -851,22 +1022,105 @@ app.post("/call-status", async (req, res) => {
   res.sendStatus(204);
 });
 
+app.post("/recording-status", async (req, res) => {
+  if (!validateTwilioRequest(req)) {
+    log("warn", "Rejected recording callback with invalid signature");
+    res.sendStatus(403);
+    return;
+  }
+
+  const { sessionId, session } = getSessionFromRequest(req);
+  if (session) {
+    updateSessionRecordingFromBody(session, req.body);
+    log("info", "Twilio recording callback", {
+      sessionId,
+      callSid: req.body.CallSid,
+      recordingSid: req.body.RecordingSid,
+      recordingStatus: req.body.RecordingStatus,
+    });
+    if (
+      session.finishTimer &&
+      !session.awaitingCallerTranscript &&
+      ["completed", "absent"].includes(
+        String(req.body.RecordingStatus || "").toLowerCase(),
+      )
+    ) {
+      await finishPaidSession(
+        session,
+        `twilio_recording_${String(req.body.RecordingStatus || "done").toLowerCase()}`,
+      );
+    }
+  } else {
+    log("info", "Recording callback without active session", {
+      sessionId,
+      callSid: req.body.CallSid,
+      recordingSid: req.body.RecordingSid,
+      recordingStatus: req.body.RecordingStatus,
+    });
+  }
+  res.sendStatus(204);
+});
+
 const server = http.createServer(app);
 const mediaWss = new WebSocketServer({ noServer: true });
+const monitorWss = new WebSocketServer({ noServer: true });
 
 server.on("upgrade", (request, socket, head) => {
   const url = new URL(request.url || "/", "http://localhost");
+  if (url.pathname === "/media") {
+    mediaWss.handleUpgrade(request, socket, head, (ws) => {
+      mediaWss.emit("connection", ws, request);
+    });
+    return;
+  }
+  if (url.pathname === "/monitor") {
+    const origin = request.headers.origin;
+    if (!isOriginAllowed(origin)) {
+      socket.destroy();
+      return;
+    }
+    monitorWss.handleUpgrade(request, socket, head, (ws) => {
+      monitorWss.emit("connection", ws, request);
+    });
+    return;
+  }
   if (url.pathname !== "/media") {
     socket.destroy();
     return;
   }
-  mediaWss.handleUpgrade(request, socket, head, (ws) => {
-    mediaWss.emit("connection", ws, request);
-  });
+});
+
+monitorWss.on("connection", (ws, request) => {
+  const url = new URL(request.url || "/", "http://localhost");
+  const sessionId = url.searchParams.get("sessionId") || "";
+  const token = url.searchParams.get("token") || "";
+  const session = callSessions.get(sessionId);
+  if (!session || session.finished || token !== session.monitorToken) {
+    ws.send(JSON.stringify({ type: "error", error: "Live audio is not available." }));
+    ws.close(1008, "Invalid live audio session");
+    return;
+  }
+  session.monitorClients.add(ws);
+  ws.send(
+    JSON.stringify({
+      type: "ready",
+      sessionId,
+      codec: "audio/pcmu",
+      sampleRate: 8000,
+    }),
+  );
+  ws.on("close", () => session.monitorClients.delete(ws));
+  ws.on("error", () => session.monitorClients.delete(ws));
 });
 
 mediaWss.on("connection", (twilioWs, request) => {
   let xaiWs = null;
+  let sttWs = null;
+  let sttReady = false;
+  let sttDoneRequested = false;
+  let sttDoneSent = false;
+  const pendingSttAudio = [];
+  const callerTranscriptSegments = [];
   let session = null;
   let streamSid = null;
   let markCounter = 0;
@@ -877,6 +1131,7 @@ mediaWss.on("connection", (twilioWs, request) => {
     closed = true;
     if (xaiWs && xaiWs.readyState === WebSocket.OPEN) xaiWs.close();
     if (twilioWs.readyState === WebSocket.OPEN) twilioWs.close();
+    finishCallerTranscription();
   }
 
   function sendToTwilio(payload) {
@@ -899,6 +1154,122 @@ mediaWss.on("connection", (twilioWs, request) => {
       }),
     );
     xaiWs.send(JSON.stringify({ type: "response.create" }));
+  }
+
+  function appendCallerTranscript(text) {
+    const cleanText = String(text || "").trim();
+    if (!cleanText) return;
+    if (callerTranscriptSegments[callerTranscriptSegments.length - 1] === cleanText) {
+      return;
+    }
+    callerTranscriptSegments.push(cleanText);
+    appendTranscript(session, "caller", `${cleanText}\n`);
+  }
+
+  function flushPendingSttAudio() {
+    if (!sttWs || sttWs.readyState !== WebSocket.OPEN || !sttReady) return;
+    while (pendingSttAudio.length > 0) {
+      sttWs.send(pendingSttAudio.shift());
+    }
+  }
+
+  function connectToStt() {
+    if (!session?.saveTranscript || !session.permissionConfirmed) return;
+    session.awaitingCallerTranscript = true;
+    sttWs = new WebSocket(
+      "wss://api.x.ai/v1/stt?sample_rate=8000&encoding=mulaw&language=en&endpointing=500",
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.XAI_API_KEY}`,
+        },
+      },
+    );
+
+    sttWs.on("message", (raw) => {
+      let event;
+      try {
+        event = JSON.parse(raw.toString());
+      } catch {
+        return;
+      }
+
+      if (event.type === "transcript.created") {
+        sttReady = true;
+        flushPendingSttAudio();
+        if (sttDoneRequested) finishCallerTranscription();
+        return;
+      }
+
+      if (event.type === "transcript.partial" && event.text && event.is_final) {
+        appendCallerTranscript(event.text);
+        return;
+      }
+
+      if (event.type === "transcript.done") {
+        if (callerTranscriptSegments.length === 0 && event.text) {
+          appendCallerTranscript(event.text);
+        }
+        session.awaitingCallerTranscript = false;
+        if (sttWs?.readyState === WebSocket.OPEN) sttWs.close();
+        const recordingStatus = String(session.recording?.status || "").toLowerCase();
+        const waitingForRecording =
+          session.recordAudio &&
+          !session.recording?.url &&
+          !["completed", "absent"].includes(recordingStatus);
+        if (session.finishTimer && !waitingForRecording) {
+          finishPaidSession(session, "xai_stt_completed");
+        }
+        return;
+      }
+
+      if (event.type === "error") {
+        log("error", "xAI STT error", {
+          sessionId: session?.id,
+          error: event.message || event.error?.message || JSON.stringify(event),
+        });
+        session.awaitingCallerTranscript = false;
+      }
+    });
+
+    sttWs.on("error", (error) => {
+      log("error", "xAI STT WebSocket error", {
+        sessionId: session?.id,
+        error: error.message,
+      });
+      if (session) session.awaitingCallerTranscript = false;
+    });
+
+    sttWs.on("close", () => {
+      sttReady = false;
+      if (session?.awaitingCallerTranscript && sttDoneSent) {
+        session.awaitingCallerTranscript = false;
+      }
+    });
+  }
+
+  function sendCallerAudioToStt(payload) {
+    if (!sttWs || sttDoneRequested || sttDoneSent || !payload) return;
+    const frame = Buffer.from(payload, "base64");
+    if (sttWs.readyState === WebSocket.OPEN && sttReady) {
+      sttWs.send(frame);
+      return;
+    }
+    if (pendingSttAudio.length < 250) {
+      pendingSttAudio.push(frame);
+    }
+  }
+
+  function finishCallerTranscription() {
+    if (!sttWs || sttDoneSent) return;
+    sttDoneRequested = true;
+    if (sttWs.readyState === WebSocket.OPEN && sttReady) {
+      sttWs.send(JSON.stringify({ type: "audio.done" }));
+      sttDoneSent = true;
+    } else if (sttWs.readyState === WebSocket.OPEN) {
+      return;
+    } else if (session) {
+      session.awaitingCallerTranscript = false;
+    }
   }
 
   function connectToXai() {
@@ -936,6 +1307,7 @@ mediaWss.on("connection", (twilioWs, request) => {
           streamSid,
           media: { payload: event.delta },
         });
+        broadcastMonitorAudio(session, "assistant", event.delta);
         markCounter += 1;
         sendToTwilio({
           event: "mark",
@@ -951,7 +1323,15 @@ mediaWss.on("connection", (twilioWs, request) => {
       }
 
       if (event.type === "response.output_audio_transcript.delta" && event.delta) {
-        session.transcript.push({ speaker: "assistant", text: event.delta });
+        appendTranscript(session, "assistant", event.delta);
+        return;
+      }
+
+      if (
+        event.type === "conversation.item.input_audio_transcription.completed" &&
+        (event.transcript || event.text)
+      ) {
+        appendTranscript(session, "caller", event.transcript || event.text);
         return;
       }
 
@@ -1002,11 +1382,16 @@ mediaWss.on("connection", (twilioWs, request) => {
       }
       session.streamSid = streamSid;
       startBillingTimer(session, closeBoth);
+      connectToStt();
       connectToXai();
       return;
     }
 
     if (data.event === "media") {
+      if (data.media?.payload) {
+        broadcastMonitorAudio(session, "caller", data.media.payload);
+        sendCallerAudioToStt(data.media.payload);
+      }
       if (xaiWs && xaiWs.readyState === WebSocket.OPEN && data.media?.payload) {
         xaiWs.send(
           JSON.stringify({
@@ -1023,14 +1408,18 @@ mediaWss.on("connection", (twilioWs, request) => {
         sessionId: session?.id,
         streamSid,
       });
+      if (session) session.billingStoppedAt ||= Date.now();
+      finishCallerTranscription();
       closeBoth();
-      finishPaidSession(session, "twilio_media_stop");
+      scheduleFinishPaidSession(session, "twilio_media_stop");
     }
   });
 
   twilioWs.on("close", () => {
     if (xaiWs && xaiWs.readyState === WebSocket.OPEN) xaiWs.close();
-    finishPaidSession(session, "twilio_ws_close");
+    if (session) session.billingStoppedAt ||= Date.now();
+    finishCallerTranscription();
+    scheduleFinishPaidSession(session, "twilio_ws_close");
   });
 
   twilioWs.on("error", (error) => {

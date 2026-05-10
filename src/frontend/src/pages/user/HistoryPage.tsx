@@ -80,6 +80,46 @@ function exportCsv(calls: CallRecordPublic[], presetMap: Map<string, string>) {
   URL.revokeObjectURL(url);
 }
 
+function downloadTextFile(filename: string, text: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function parseCallArtifacts(text?: string) {
+  const source = text ?? "";
+  const recordingUrlMatch = source.match(/^Recording URL:\s*(.+)$/im);
+  const recordingSidMatch = source.match(/^Recording SID:\s*(.+)$/im);
+  const rawRecordingUrl = recordingUrlMatch?.[1]?.trim() ?? "";
+  const recordingUrl =
+    rawRecordingUrl && rawRecordingUrl.toLowerCase() !== "pending"
+      ? rawRecordingUrl
+      : null;
+  const transcript = source
+    .replace(/^Recording:\s*.*$/gim, "")
+    .replace(/^Recording URL:\s*.*$/gim, "")
+    .replace(/^Recording SID:\s*.*$/gim, "")
+    .trim();
+
+  return {
+    transcript,
+    recordingUrl,
+    recordingSid: recordingSidMatch?.[1]?.trim() ?? null,
+    recordingPending: rawRecordingUrl.toLowerCase() === "pending",
+  };
+}
+
+function toCaptionDataUrl(transcript: string) {
+  const captionText =
+    transcript.trim() || "No saved transcript is available for this recording.";
+  const vtt = `WEBVTT\n\n00:00:00.000 --> 99:59:59.000\n${captionText}\n`;
+  return `data:text/vtt;charset=utf-8,${encodeURIComponent(vtt)}`;
+}
+
 const ALL_STATUSES: Array<{ value: CallStatus | "all"; label: string }> = [
   { value: "all", label: "All Statuses" },
   { value: CallStatus.pending, label: "Pending" },
@@ -372,6 +412,9 @@ function CallRow({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const artifacts = parseCallArtifacts(call.transcript);
+  const captionSrc = toCaptionDataUrl(artifacts.transcript);
+
   return (
     <div data-ocid={`history.call.item.${idx}`}>
       <button
@@ -457,22 +500,82 @@ function CallRow({
               </p>
             </div>
           </div>
-          {call.transcript ? (
+          {artifacts.recordingUrl && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Audio Recording
+                </p>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
+                >
+                  <a href={artifacts.recordingUrl} download>
+                    <Download className="w-3.5 h-3.5" />
+                    Save audio
+                  </a>
+                </Button>
+              </div>
+              <audio
+                controls
+                src={artifacts.recordingUrl}
+                className="w-full h-9"
+              >
+                <track
+                  kind="captions"
+                  srcLang="en"
+                  label="Transcript"
+                  src={captionSrc}
+                  default
+                />
+              </audio>
+              {artifacts.recordingSid && (
+                <p className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
+                  {artifacts.recordingSid}
+                </p>
+              )}
+            </div>
+          )}
+          {artifacts.recordingPending && (
+            <p className="text-xs text-muted-foreground/70 mb-4">
+              Recording requested. The recording link has not been returned yet.
+            </p>
+          )}
+          {artifacts.transcript ? (
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-2">
-                Transcript
-              </p>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Transcript
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={() =>
+                    downloadTextFile(
+                      `voicecall-transcript-${call.id.toString()}.txt`,
+                      artifacts.transcript,
+                    )
+                  }
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Save text
+                </Button>
+              </div>
               <div className="bg-background rounded-lg border border-border p-4 max-h-48 overflow-y-auto">
                 <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">
-                  {call.transcript}
+                  {artifacts.transcript}
                 </p>
               </div>
             </div>
-          ) : (
+          ) : !artifacts.recordingUrl && !artifacts.recordingPending ? (
             <p className="text-xs text-muted-foreground/60 italic">
               No transcript available for this call.
             </p>
-          )}
+          ) : null}
         </div>
       )}
     </div>

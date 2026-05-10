@@ -7,8 +7,19 @@ interface RuntimeEnv {
 export interface VoiceServerCall {
   callSid: string;
   sessionId: string;
+  monitorToken?: string;
   status?: string;
   allowedSeconds?: number;
+  liveAudio?: {
+    codec: "audio/pcmu";
+    sampleRate: 8000;
+  };
+}
+
+export interface CallCaptureOptions {
+  saveTranscript: boolean;
+  recordAudio: boolean;
+  permissionConfirmed: boolean;
 }
 
 export interface VoiceServerHealth {
@@ -113,12 +124,14 @@ export async function startVoiceServerCall({
   callId,
   reservationId,
   callToken,
+  captureOptions,
 }: {
   recipientPhone: string;
   preset: CallPreset;
   callId: bigint;
   reservationId: string;
   callToken: string;
+  captureOptions?: CallCaptureOptions;
 }): Promise<VoiceServerCall> {
   return postJson<VoiceServerCall>("/initiate-call", {
     recipientPhone,
@@ -126,6 +139,7 @@ export async function startVoiceServerCall({
     callId: callId.toString(),
     reservationId,
     callToken,
+    captureOptions,
   });
 }
 
@@ -153,4 +167,21 @@ export async function getVoiceServerHealth(): Promise<VoiceServerHealth> {
     throw new Error(`Voice server health check failed (${response.status})`);
   }
   return response.json();
+}
+
+export async function getLiveAudioMonitorUrl({
+  sessionId,
+  monitorToken,
+}: {
+  sessionId: string;
+  monitorToken: string;
+}): Promise<string> {
+  const baseUrl = await getVoiceServerUrl();
+  const url = new URL(baseUrl);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.pathname = "/monitor";
+  url.search = "";
+  url.searchParams.set("sessionId", sessionId);
+  url.searchParams.set("token", monitorToken);
+  return url.toString();
 }

@@ -11,7 +11,12 @@
 
 import { CallStatus } from "@/backend";
 import { useReserveCall, useUpdateCallStatus } from "@/hooks/use-backend";
-import { endVoiceServerCall, startVoiceServerCall } from "@/lib/voice-server";
+import {
+  endVoiceServerCall,
+  getLiveAudioMonitorUrl,
+  startVoiceServerCall,
+} from "@/lib/voice-server";
+import type { CallCaptureOptions } from "@/lib/voice-server";
 import { useCallStore } from "@/stores/call-store";
 import type { CallPreset } from "@/types";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -33,15 +38,52 @@ export interface XaiVoiceState {
   isMuted: boolean;
   errorMessage: string | null;
   audioLevels: number[];
+  liveAudioAvailable: boolean;
+  isListeningLive: boolean;
+  liveAudioError: string | null;
 }
 
 export interface XaiVoiceControls {
-  startCall: (preset: CallPreset, recipient: string) => Promise<void>;
+  startCall: (
+    preset: CallPreset,
+    recipient: string,
+    captureOptions?: CallCaptureOptions,
+  ) => Promise<void>;
   endCall: () => void;
   toggleMute: () => void;
+  toggleLiveAudio: () => Promise<void>;
+  stopLiveAudio: () => void;
 }
 
 const WAVEFORM_BARS = 20;
+
+type MonitorChannel = "caller" | "assistant";
+
+interface MonitorAudioMessage {
+  type: "audio";
+  channel?: MonitorChannel;
+  payload?: string;
+}
+
+function decodeBase64Payload(payload: string): Uint8Array {
+  const binary = window.atob(payload);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function decodeMuLawSample(value: number): number {
+  const sample = ~value & 0xff;
+  const sign = sample & 0x80;
+  const exponent = (sample >> 4) & 0x07;
+  const mantissa = sample & 0x0f;
+  let magnitude = ((mantissa << 4) + 0x08) << exponent;
+  magnitude -= 0x84;
+  const pcm = sign ? -magnitude : magnitude;
+  return Math.max(-1, Math.min(1, pcm / 32768));
+}
 
 export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const [status, setStatus] = useState<XaiCallStatus>("idle");
@@ -53,11 +95,23 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const [audioLevels, setAudioLevels] = useState<number[]>(
     Array(WAVEFORM_BARS).fill(0),
   );
+  const [liveAudioAvailable, setLiveAudioAvailable] = useState(false);
+  const [isListeningLive, setIsListeningLive] = useState(false);
+  const [liveAudioError, setLiveAudioError] = useState<string | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
   const activeCallIdRef = useRef<bigint | null>(null);
   const activeCallSidRef = useRef<string | null>(null);
+  const activeSessionIdRef = useRef<string | null>(null);
+  const monitorTokenRef = useRef<string | null>(null);
+  const monitorWsRef = useRef<WebSocket | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const nextPlaybackTimeRef = useRef<Record<MonitorChannel, number>>({
+    caller: 0,
+    assistant: 0,
+  });
 
   const reserveCall = useReserveCall();
   const updateCallStatus = useUpdateCallStatus();
@@ -71,6 +125,123 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     setAudioLevels(Array(WAVEFORM_BARS).fill(0));
   }, []);
 
+  const stopLiveAudio = useCallback(() => {
+    if (monitorWsRef.current) {
+      monitorWsRef.current.close();
+      monitorWsRef.current = null;
+    }
+    if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+      void audioContextRef.current.close();
+    }
+    audioContextRef.current = null;
+    gainNodeRef.current = null;
+    nextPlaybackTimeRef.current = { caller: 0, assistant: 0 };
+    setIsListeningLive(false);
+  }, []);
+
+  const playMonitorAudio = useCallback(
+    (payload: string, channel: MonitorChannel = "assistant") => {
+      const audioContext = audioContextRef.current;
+      const gainNode = gainNodeRef.current;
+      if (!audioContext || audioContext.state === "closed" || !gainNode) return;
+
+      const bytes = decodeBase64Payload(payload);
+      if (bytes.length === 0) return;
+
+      const buffer = audioContext.createBuffer(1, bytes.length, 8000);
+      const samples = buffer.getChannelData(0);
+      for (let i = 0; i < bytes.length; i += 1) {
+        samples[i] = decodeMuLawSample(bytes[i]);
+      }
+
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(gainNode);
+
+      const nextByChannel = nextPlaybackTimeRef.current;
+      const startAt = Math.max(
+        audioContext.currentTime + 0.025,
+        nextByChannel[channel] || 0,
+      );
+      source.start(startAt);
+      nextByChannel[channel] = startAt + buffer.duration;
+
+      setAudioLevels((levels) => {
+        const peak = bytes.reduce((max, byte) => Math.max(max, byte), 0) / 255;
+        return [...levels.slice(1), peak];
+      });
+    },
+    [],
+  );
+
+  const startLiveAudio = useCallback(async () => {
+    const sessionId = activeSessionIdRef.current;
+    const monitorToken = monitorTokenRef.current;
+    if (!sessionId || !monitorToken) {
+      toast.error("Live audio is not available for this call");
+      return;
+    }
+    if (monitorWsRef.current?.readyState === WebSocket.OPEN) return;
+
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AudioContextCtor) {
+      toast.error("Live audio is not supported in this browser");
+      return;
+    }
+
+    const audioContext = new AudioContextCtor();
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = 0.9;
+    gainNode.connect(audioContext.destination);
+    audioContextRef.current = audioContext;
+    gainNodeRef.current = gainNode;
+    nextPlaybackTimeRef.current = {
+      caller: audioContext.currentTime + 0.05,
+      assistant: audioContext.currentTime + 0.05,
+    };
+    await audioContext.resume();
+
+    const ws = new WebSocket(
+      await getLiveAudioMonitorUrl({ sessionId, monitorToken }),
+    );
+    monitorWsRef.current = ws;
+    setLiveAudioError(null);
+
+    ws.onopen = () => {
+      setIsListeningLive(true);
+      toast.success("Live audio on");
+    };
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(String(event.data)) as
+          | MonitorAudioMessage
+          | { type: "ended" | "error"; error?: string };
+        if (message.type === "audio" && message.payload) {
+          playMonitorAudio(message.payload, message.channel || "assistant");
+        } else if (message.type === "ended") {
+          stopLiveAudio();
+        } else if (message.type === "error") {
+          throw new Error(message.error || "Live audio failed.");
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Live audio failed.";
+        setLiveAudioError(message);
+      }
+    };
+    ws.onerror = () => {
+      setLiveAudioError("Live audio connection failed.");
+      toast.error("Live audio connection failed");
+    };
+    ws.onclose = () => {
+      monitorWsRef.current = null;
+      setIsListeningLive(false);
+    };
+  }, [playMonitorAudio, stopLiveAudio]);
+
   const resetAfterDelay = useCallback(() => {
     setTimeout(() => {
       setStatus("idle");
@@ -79,6 +250,8 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       setPresetName("");
       setErrorMessage(null);
       setIsMuted(false);
+      setLiveAudioAvailable(false);
+      setLiveAudioError(null);
     }, 3000);
   }, []);
 
@@ -91,13 +264,22 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   }, []);
 
   const startCall = useCallback(
-    async (preset: CallPreset, recipientPhone: string) => {
+    async (
+      preset: CallPreset,
+      recipientPhone: string,
+      captureOptions?: CallCaptureOptions,
+    ) => {
+      stopLiveAudio();
       setStatus("initiating");
       setRecipient(recipientPhone);
       setPresetName(preset.name);
       setErrorMessage(null);
+      setLiveAudioAvailable(false);
+      setLiveAudioError(null);
       activeCallIdRef.current = null;
       activeCallSidRef.current = null;
+      activeSessionIdRef.current = null;
+      monitorTokenRef.current = null;
 
       try {
         const reservationResult = await reserveCall.mutateAsync({
@@ -108,8 +290,12 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
           throw new Error(reservationResult.err);
         }
 
-        const { callId, id: reservationId, callToken, allowedSeconds } =
-          reservationResult.ok;
+        const {
+          callId,
+          id: reservationId,
+          callToken,
+          allowedSeconds,
+        } = reservationResult.ok;
         if (!callToken) {
           throw new Error("Reservation token was not returned by the backend.");
         }
@@ -123,9 +309,13 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
           callId,
           reservationId,
           callToken,
+          captureOptions,
         });
 
         activeCallSidRef.current = serverCall.callSid;
+        activeSessionIdRef.current = serverCall.sessionId;
+        monitorTokenRef.current = serverCall.monitorToken || null;
+        setLiveAudioAvailable(Boolean(serverCall.monitorToken));
         setStatus("in_call");
         startDurationTimer();
         toast.success("Call placed", {
@@ -146,6 +336,8 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
         }
 
         cleanupTimer();
+        stopLiveAudio();
+        setLiveAudioAvailable(false);
         clearCall();
       }
     },
@@ -155,6 +347,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       startDurationTimer,
       updateCallStatus,
       cleanupTimer,
+      stopLiveAudio,
       clearCall,
     ],
   );
@@ -162,6 +355,8 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const endCall = useCallback(() => {
     setStatus("completed");
     cleanupTimer();
+    stopLiveAudio();
+    setLiveAudioAvailable(false);
 
     const callSid = activeCallSidRef.current;
     if (callSid) {
@@ -171,28 +366,34 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       });
     }
 
-    if (activeCallIdRef.current !== null) {
-      updateCallStatus.mutate({
-        callId: activeCallIdRef.current,
-        status: CallStatus.completed,
-        transcript: null,
-      });
-    }
-
     activeCallIdRef.current = null;
     activeCallSidRef.current = null;
+    activeSessionIdRef.current = null;
+    monitorTokenRef.current = null;
     clearCall();
     resetAfterDelay();
-  }, [cleanupTimer, updateCallStatus, clearCall, resetAfterDelay]);
+  }, [cleanupTimer, stopLiveAudio, clearCall, resetAfterDelay]);
 
   const toggleMute = useCallback(() => {
     setIsMuted((value) => !value);
     toast.info("Use the phone keypad or handset mute for live call audio.");
   }, []);
 
+  const toggleLiveAudio = useCallback(async () => {
+    if (isListeningLive) {
+      stopLiveAudio();
+      toast.info("Live audio off");
+      return;
+    }
+    await startLiveAudio();
+  }, [isListeningLive, startLiveAudio, stopLiveAudio]);
+
   useEffect(() => {
-    return () => cleanupTimer();
-  }, [cleanupTimer]);
+    return () => {
+      cleanupTimer();
+      stopLiveAudio();
+    };
+  }, [cleanupTimer, stopLiveAudio]);
 
   return {
     status,
@@ -202,8 +403,13 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     isMuted,
     errorMessage,
     audioLevels,
+    liveAudioAvailable,
+    isListeningLive,
+    liveAudioError,
     startCall,
     endCall,
     toggleMute,
+    toggleLiveAudio,
+    stopLiveAudio,
   };
 }

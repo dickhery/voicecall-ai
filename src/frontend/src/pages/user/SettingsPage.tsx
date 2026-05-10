@@ -30,6 +30,7 @@ import {
   useListMyPresets,
   useUpdatePreset,
 } from "@/hooks/use-backend";
+import { copyTextToClipboard } from "@/lib/clipboard";
 import type { CallPreset, CallPresetInput } from "@/types";
 import {
   ChevronDown,
@@ -466,10 +467,15 @@ export default function SettingsPage() {
       return;
     }
     try {
-      await navigator.clipboard.writeText(userId);
+      const copied = await copyTextToClipboard(userId);
+      if (!copied) {
+        throw new Error("Copy command was rejected.");
+      }
       toast.success("User ID copied");
     } catch {
-      toast.error("Unable to copy User ID");
+      toast.error("Unable to copy User ID", {
+        description: "Select the User ID text and copy it manually.",
+      });
     }
   };
 

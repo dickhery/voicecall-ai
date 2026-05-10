@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -24,10 +25,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
+  useCreatePurchaseIntent,
   useDeletePreset,
   useDuplicatePreset,
-  useCreatePurchaseIntent,
   useGetMyBillingStatus,
   useListMyCalls,
   useListMyPresets,
@@ -43,6 +45,7 @@ import {
   Clock,
   Copy,
   CreditCard,
+  FileText,
   Loader2,
   Phone,
   PhoneOff,
@@ -50,6 +53,8 @@ import {
   RefreshCw,
   Settings2,
   Trash2,
+  Volume2,
+  VolumeX,
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -140,8 +145,18 @@ function ActiveCallPanel({
 }: {
   voice: ReturnType<typeof useXaiVoice>;
 }) {
-  const { status, recipient, presetName, durationSecs, errorMessage, endCall } =
-    voice;
+  const {
+    status,
+    recipient,
+    presetName,
+    durationSecs,
+    errorMessage,
+    liveAudioAvailable,
+    isListeningLive,
+    liveAudioError,
+    endCall,
+    toggleLiveAudio,
+  } = voice;
   const isActive =
     status === "in_call" || status === "connecting" || status === "initiating";
 
@@ -229,14 +244,41 @@ function ActiveCallPanel({
                 Twilio Media Stream
               </Badge>
             )}
+            {isListeningLive && (
+              <Badge
+                variant="outline"
+                className="text-xs border-green-500/40 text-green-400"
+              >
+                Live Audio
+              </Badge>
+            )}
 
             {/* Error message */}
             {status === "error" && errorMessage && (
               <p className="text-xs text-destructive flex-1">{errorMessage}</p>
             )}
+            {liveAudioError && (
+              <p className="text-xs text-yellow-500 flex-1">{liveAudioError}</p>
+            )}
 
             {/* Controls */}
             <div className="flex items-center gap-2 ml-auto shrink-0">
+              {isActive && liveAudioAvailable && (
+                <Button
+                  variant={isListeningLive ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={() => void toggleLiveAudio()}
+                  data-ocid="dashboard.active_call.listen_button"
+                  className="gap-1.5 h-8 text-xs"
+                >
+                  {isListeningLive ? (
+                    <VolumeX className="w-3.5 h-3.5" />
+                  ) : (
+                    <Volume2 className="w-3.5 h-3.5" />
+                  )}
+                  {isListeningLive ? "Stop Audio" : "Listen Live"}
+                </Button>
+              )}
               {isActive && (
                 <Button
                   variant="destructive"
@@ -263,6 +305,10 @@ export default function DashboardPage() {
   const [recipientError, setRecipientError] = useState("");
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
   const [deletePresetId, setDeletePresetId] = useState<bigint | null>(null);
+  const [saveTranscript, setSaveTranscript] = useState(false);
+  const [recordAudio, setRecordAudio] = useState(false);
+  const [capturePermissionConfirmed, setCapturePermissionConfirmed] =
+    useState(false);
 
   const { data: presets, isLoading: presetsLoading } = useListMyPresets();
   const {
@@ -302,6 +348,7 @@ export default function DashboardPage() {
     voice.status !== "idle" &&
     voice.status !== "completed" &&
     voice.status !== "error";
+  const savesCallArtifacts = saveTranscript || recordAudio;
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -336,8 +383,16 @@ export default function DashboardPage() {
       setRecipientError("Enter a valid E.164 number, e.g. +15551234567");
       return;
     }
+    if (savesCallArtifacts && !capturePermissionConfirmed) {
+      toast.error("Confirm permission before saving call artifacts");
+      return;
+    }
     setRecipientError("");
-    await voice.startCall(selectedPreset, cleaned);
+    await voice.startCall(selectedPreset, cleaned, {
+      saveTranscript,
+      recordAudio,
+      permissionConfirmed: capturePermissionConfirmed,
+    });
     refetchBilling();
   };
 
@@ -413,12 +468,17 @@ export default function DashboardPage() {
               icon={<CreditCard className="w-4 h-4 text-green-400" />}
               label="Phone Time"
               value={formatMinutes(billingStatus?.availableSeconds)}
-              color={availableSeconds > 0 ? "text-green-400" : "text-destructive"}
+              color={
+                availableSeconds > 0 ? "text-green-400" : "text-destructive"
+              }
               loading={billingLoading}
             />
           </div>
 
-          <Card className="bg-card border-border" data-ocid="dashboard.billing_card">
+          <Card
+            className="bg-card border-border"
+            data-ocid="dashboard.billing_card"
+          >
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between gap-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
@@ -590,13 +650,78 @@ export default function DashboardPage() {
                   </div>
                 )}
 
+                <div
+                  className="rounded-lg bg-muted/20 border border-border p-3 space-y-3"
+                  data-ocid="dashboard.call_artifacts.options"
+                >
+                  <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                    <FileText className="w-3.5 h-3.5 text-primary" />
+                    Call Artifacts
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <Label className="text-xs text-foreground">
+                        Save transcript
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Store the call text in history
+                      </p>
+                    </div>
+                    <Switch
+                      checked={saveTranscript}
+                      onCheckedChange={setSaveTranscript}
+                      disabled={isCallActive}
+                      data-ocid="dashboard.call_artifacts.transcript_switch"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <Label className="text-xs text-foreground">
+                        Record audio
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Save a call recording link
+                      </p>
+                    </div>
+                    <Switch
+                      checked={recordAudio}
+                      onCheckedChange={setRecordAudio}
+                      disabled={isCallActive}
+                      data-ocid="dashboard.call_artifacts.recording_switch"
+                    />
+                  </div>
+                  {savesCallArtifacts && (
+                    <div className="flex items-start gap-2 rounded-md bg-background/60 border border-border p-2 text-[11px] leading-relaxed text-muted-foreground">
+                      <Checkbox
+                        id="call-artifacts-permission"
+                        checked={capturePermissionConfirmed}
+                        onCheckedChange={(checked) =>
+                          setCapturePermissionConfirmed(checked === true)
+                        }
+                        disabled={isCallActive}
+                        data-ocid="dashboard.call_artifacts.permission_checkbox"
+                        className="mt-0.5"
+                      />
+                      <Label
+                        htmlFor="call-artifacts-permission"
+                        className="text-[11px] leading-relaxed text-muted-foreground"
+                      >
+                        I confirm I have permission to record or save this
+                        conversation, or that consent is not required where it
+                        takes place.
+                      </Label>
+                    </div>
+                  )}
+                </div>
+
                 <Button
                   onClick={handleCall}
                   disabled={
                     isCallActive ||
                     !recipient ||
                     !selectedPresetId ||
-                    availableSeconds <= 0
+                    availableSeconds <= 0 ||
+                    (savesCallArtifacts && !capturePermissionConfirmed)
                   }
                   data-ocid="dashboard.call.submit_button"
                   className="w-full gap-2"
