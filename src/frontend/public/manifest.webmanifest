@@ -1,0 +1,24 @@
+{
+  "name": "VoiceCall AI",
+  "short_name": "VoiceCall AI",
+  "description": "Buy prepaid phone time, place AI-powered calls, and manage call history with VoiceCall AI.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#00070a",
+  "theme_color": "#00d8df",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
