@@ -17,6 +17,9 @@ export interface VoiceServerHealth {
   twilioConfigured: boolean;
   xaiConfigured: boolean;
   billingConfigured?: boolean;
+  backendCanisterId?: string;
+  backendHost?: string;
+  icpServerPrincipal?: string;
   model: string;
 }
 

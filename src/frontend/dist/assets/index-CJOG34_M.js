@@ -32995,6 +32995,1299 @@ function RootLayout() {
     /* @__PURE__ */ jsxRuntimeExports.jsx(Toaster, { position: "bottom-right", theme: "dark" })
   ] });
 }
+const SystemLog = Record({
+  "level": Variant({
+    "info": Null,
+    "warn": Null,
+    "error": Null
+  }),
+  "message": Text,
+  "timestamp": Int,
+  "callId": Opt(Nat)
+});
+const CallStatus$1 = Variant({
+  "pending": Null,
+  "completed": Null,
+  "inProgress": Null,
+  "failed": Null
+});
+const CallRecordPublic = Record({
+  "id": Nat,
+  "startTime": Int,
+  "status": CallStatus$1,
+  "endTime": Opt(Int),
+  "userId": Principal2,
+  "recipientPhone": Text,
+  "callSid": Opt(Text),
+  "presetId": Nat,
+  "transcript": Opt(Text)
+});
+const UserRole$1 = Variant({
+  "admin": Null,
+  "user": Null,
+  "guest": Null
+});
+const ToolsEnabled = Record({
+  "xSearch": Bool,
+  "webSearch": Bool,
+  "functionCalling": Bool
+});
+const Voice$1 = Variant({
+  "ara": Null,
+  "eve": Null,
+  "leo": Null,
+  "rex": Null,
+  "sal": Null
+});
+const SampleRate$1 = Variant({
+  "hz16000": Null,
+  "hz32000": Null,
+  "hz22050": Null,
+  "hz24000": Null,
+  "hz44100": Null,
+  "hz48000": Null,
+  "hz8000": Null
+});
+const TurnDetection = Record({
+  "prefixPaddingMs": Nat,
+  "threshold": Float64,
+  "silenceDurationMs": Nat,
+  "serverVad": Bool
+});
+const AudioFormat$1 = Variant({
+  "pcm": Null,
+  "pcma": Null,
+  "pcmu": Null
+});
+const CallPresetInput = Record({
+  "toolsEnabled": ToolsEnabled,
+  "voice": Voice$1,
+  "name": Text,
+  "sampleRate": SampleRate$1,
+  "systemPrompt": Text,
+  "turnDetection": TurnDetection,
+  "audioFormat": AudioFormat$1
+});
+const CallPreset = Record({
+  "id": Nat,
+  "toolsEnabled": ToolsEnabled,
+  "ownerId": Principal2,
+  "voice": Voice$1,
+  "name": Text,
+  "sampleRate": SampleRate$1,
+  "systemPrompt": Text,
+  "turnDetection": TurnDetection,
+  "audioFormat": AudioFormat$1
+});
+const PresetId = Nat;
+const CallId = Nat;
+const EphemeralTokenResult = Variant({
+  "ok": Record({ "token": Text, "websocketUrl": Text }),
+  "err": Text
+});
+const InitiateCallInput = Record({
+  "recipientPhone": Text,
+  "presetId": Nat
+});
+const InitiateCallResult = Variant({
+  "ok": Record({ "callSid": Text, "callId": Nat }),
+  "err": Text
+});
+const StripeMode = Variant({
+  "live": Null,
+  "test": Null
+});
+const PurchaseIntentStatus = Variant({
+  "canceled": Null,
+  "paid": Null,
+  "pending": Null
+});
+const PurchaseIntentPublic = Record({
+  "amountCents": Nat,
+  "createdAt": Int,
+  "id": Text,
+  "mode": StripeMode,
+  "packageId": Text,
+  "paidAt": Opt(Int),
+  "seconds": Nat,
+  "status": PurchaseIntentStatus,
+  "stripeSessionId": Opt(Text),
+  "user": Principal2
+});
+const CreatePurchaseIntentResult = Variant({
+  "ok": PurchaseIntentPublic,
+  "err": Text
+});
+const CallReservationStatus = Variant({
+  "active": Null,
+  "canceled": Null,
+  "finished": Null,
+  "reserved": Null
+});
+const CallReservationPublic = Record({
+  "allowedSeconds": Nat,
+  "billedSeconds": Opt(Nat),
+  "callId": Nat,
+  "callSid": Opt(Text),
+  "callToken": Opt(Text),
+  "canceledReason": Opt(Text),
+  "createdAt": Int,
+  "expiresAt": Int,
+  "finishedAt": Opt(Int),
+  "id": Text,
+  "presetId": Nat,
+  "recipientPhone": Text,
+  "startedAt": Opt(Int),
+  "status": CallReservationStatus,
+  "transcript": Opt(Text),
+  "usedSeconds": Opt(Nat),
+  "user": Principal2
+});
+const ReserveCallResult = Variant({
+  "ok": CallReservationPublic,
+  "err": Text
+});
+const BillingPackage = Record({
+  "amountCents": Nat,
+  "id": Text,
+  "name": Text,
+  "seconds": Nat
+});
+const BillingStatus = Record({
+  "availableSeconds": Nat,
+  "balanceSeconds": Nat,
+  "packages": Vec(BillingPackage),
+  "reservedSeconds": Nat
+});
+const BillingMutationResult = Variant({
+  "ok": Bool,
+  "err": Text
+});
+const http_header = Record({
+  "value": Text,
+  "name": Text
+});
+const http_request_result = Record({
+  "status": Nat,
+  "body": Vec(Nat8),
+  "headers": Vec(http_header)
+});
+const TransformationInput = Record({
+  "context": Vec(Nat8),
+  "response": http_request_result
+});
+const TransformationOutput = Record({
+  "status": Nat,
+  "body": Vec(Nat8),
+  "headers": Vec(http_header)
+});
+Service({
+  "_initializeAccessControl": Func([], [], []),
+  "adminGetSystemLogs": Func([Nat], [Vec(SystemLog)], ["query"]),
+  "adminListAllCalls": Func([], [Vec(CallRecordPublic)], ["query"]),
+  "adminListUserCalls": Func(
+    [Principal2],
+    [Vec(CallRecordPublic)],
+    ["query"]
+  ),
+  "assignCallerUserRole": Func([Principal2, UserRole$1], [], []),
+  "cancelCallReservation": Func(
+    [Text, Text],
+    [BillingMutationResult],
+    []
+  ),
+  "createPreset": Func([CallPresetInput], [CallPreset], []),
+  "createPurchaseIntent": Func(
+    [Text],
+    [CreatePurchaseIntentResult],
+    []
+  ),
+  "creditPaidSeconds": Func(
+    [Text, Text, Principal2, Nat, StripeMode],
+    [BillingMutationResult],
+    []
+  ),
+  "deletePreset": Func([PresetId], [Bool], []),
+  "duplicatePreset": Func([PresetId], [Opt(CallPreset)], []),
+  "finishCallAndDebit": Func(
+    [Text, Nat, Opt(Text), Opt(Text)],
+    [BillingMutationResult],
+    []
+  ),
+  "getAdminConfig": Func(
+    [],
+    [
+      Record({
+        "hasXaiKey": Bool,
+        "hasTwilioAuth": Bool,
+        "twilioFromNumber": Text,
+        "twilioAccountSid": Text
+      })
+    ],
+    ["query"]
+  ),
+  "getCallRecord": Func([CallId], [Opt(CallRecordPublic)], ["query"]),
+  "getBillingPackages": Func([], [Vec(BillingPackage)], ["query"]),
+  "getCallerUserRole": Func([], [UserRole$1], ["query"]),
+  "getEphemeralToken": Func([PresetId], [EphemeralTokenResult], []),
+  "getMyBillingStatus": Func([], [BillingStatus], ["query"]),
+  "getPreset": Func([PresetId], [Opt(CallPreset)], ["query"]),
+  "getPurchaseIntentForServer": Func(
+    [Text],
+    [Opt(PurchaseIntentPublic)],
+    ["query"]
+  ),
+  "initiateCall": Func([InitiateCallInput], [InitiateCallResult], []),
+  "isCallerAdmin": Func([], [Bool], ["query"]),
+  "listMyCalls": Func([], [Vec(CallRecordPublic)], ["query"]),
+  "listMyPresets": Func([], [Vec(CallPreset)], ["query"]),
+  "markReservationStarted": Func(
+    [Text, Text],
+    [BillingMutationResult],
+    []
+  ),
+  "reserveCall": Func([InitiateCallInput], [ReserveCallResult], []),
+  "setAdminConfig": Func([Text, Text, Text, Text], [], []),
+  "transform": Func(
+    [TransformationInput],
+    [TransformationOutput],
+    ["query"]
+  ),
+  "twilioWebhook": Func([Text, Text], [Text], []),
+  "updateCallStatus": Func(
+    [CallId, CallStatus$1, Opt(Text)],
+    [Bool],
+    []
+  ),
+  "updatePreset": Func(
+    [PresetId, CallPresetInput],
+    [Opt(CallPreset)],
+    []
+  )
+});
+const idlFactory = ({ IDL: IDL2 }) => {
+  const SystemLog2 = IDL2.Record({
+    "level": IDL2.Variant({
+      "info": IDL2.Null,
+      "warn": IDL2.Null,
+      "error": IDL2.Null
+    }),
+    "message": IDL2.Text,
+    "timestamp": IDL2.Int,
+    "callId": IDL2.Opt(IDL2.Nat)
+  });
+  const CallStatus2 = IDL2.Variant({
+    "pending": IDL2.Null,
+    "completed": IDL2.Null,
+    "inProgress": IDL2.Null,
+    "failed": IDL2.Null
+  });
+  const CallRecordPublic2 = IDL2.Record({
+    "id": IDL2.Nat,
+    "startTime": IDL2.Int,
+    "status": CallStatus2,
+    "endTime": IDL2.Opt(IDL2.Int),
+    "userId": IDL2.Principal,
+    "recipientPhone": IDL2.Text,
+    "callSid": IDL2.Opt(IDL2.Text),
+    "presetId": IDL2.Nat,
+    "transcript": IDL2.Opt(IDL2.Text)
+  });
+  const UserRole2 = IDL2.Variant({
+    "admin": IDL2.Null,
+    "user": IDL2.Null,
+    "guest": IDL2.Null
+  });
+  const ToolsEnabled2 = IDL2.Record({
+    "xSearch": IDL2.Bool,
+    "webSearch": IDL2.Bool,
+    "functionCalling": IDL2.Bool
+  });
+  const Voice2 = IDL2.Variant({
+    "ara": IDL2.Null,
+    "eve": IDL2.Null,
+    "leo": IDL2.Null,
+    "rex": IDL2.Null,
+    "sal": IDL2.Null
+  });
+  const SampleRate2 = IDL2.Variant({
+    "hz16000": IDL2.Null,
+    "hz32000": IDL2.Null,
+    "hz22050": IDL2.Null,
+    "hz24000": IDL2.Null,
+    "hz44100": IDL2.Null,
+    "hz48000": IDL2.Null,
+    "hz8000": IDL2.Null
+  });
+  const TurnDetection2 = IDL2.Record({
+    "prefixPaddingMs": IDL2.Nat,
+    "threshold": IDL2.Float64,
+    "silenceDurationMs": IDL2.Nat,
+    "serverVad": IDL2.Bool
+  });
+  const AudioFormat2 = IDL2.Variant({
+    "pcm": IDL2.Null,
+    "pcma": IDL2.Null,
+    "pcmu": IDL2.Null
+  });
+  const CallPresetInput2 = IDL2.Record({
+    "toolsEnabled": ToolsEnabled2,
+    "voice": Voice2,
+    "name": IDL2.Text,
+    "sampleRate": SampleRate2,
+    "systemPrompt": IDL2.Text,
+    "turnDetection": TurnDetection2,
+    "audioFormat": AudioFormat2
+  });
+  const CallPreset2 = IDL2.Record({
+    "id": IDL2.Nat,
+    "toolsEnabled": ToolsEnabled2,
+    "ownerId": IDL2.Principal,
+    "voice": Voice2,
+    "name": IDL2.Text,
+    "sampleRate": SampleRate2,
+    "systemPrompt": IDL2.Text,
+    "turnDetection": TurnDetection2,
+    "audioFormat": AudioFormat2
+  });
+  const PresetId2 = IDL2.Nat;
+  const CallId2 = IDL2.Nat;
+  const EphemeralTokenResult2 = IDL2.Variant({
+    "ok": IDL2.Record({ "token": IDL2.Text, "websocketUrl": IDL2.Text }),
+    "err": IDL2.Text
+  });
+  const InitiateCallInput2 = IDL2.Record({
+    "recipientPhone": IDL2.Text,
+    "presetId": IDL2.Nat
+  });
+  const InitiateCallResult2 = IDL2.Variant({
+    "ok": IDL2.Record({ "callSid": IDL2.Text, "callId": IDL2.Nat }),
+    "err": IDL2.Text
+  });
+  const StripeMode2 = IDL2.Variant({
+    "live": IDL2.Null,
+    "test": IDL2.Null
+  });
+  const PurchaseIntentStatus2 = IDL2.Variant({
+    "canceled": IDL2.Null,
+    "paid": IDL2.Null,
+    "pending": IDL2.Null
+  });
+  const PurchaseIntentPublic2 = IDL2.Record({
+    "amountCents": IDL2.Nat,
+    "createdAt": IDL2.Int,
+    "id": IDL2.Text,
+    "mode": StripeMode2,
+    "packageId": IDL2.Text,
+    "paidAt": IDL2.Opt(IDL2.Int),
+    "seconds": IDL2.Nat,
+    "status": PurchaseIntentStatus2,
+    "stripeSessionId": IDL2.Opt(IDL2.Text),
+    "user": IDL2.Principal
+  });
+  const CreatePurchaseIntentResult2 = IDL2.Variant({
+    "ok": PurchaseIntentPublic2,
+    "err": IDL2.Text
+  });
+  const CallReservationStatus2 = IDL2.Variant({
+    "active": IDL2.Null,
+    "canceled": IDL2.Null,
+    "finished": IDL2.Null,
+    "reserved": IDL2.Null
+  });
+  const CallReservationPublic2 = IDL2.Record({
+    "allowedSeconds": IDL2.Nat,
+    "billedSeconds": IDL2.Opt(IDL2.Nat),
+    "callId": IDL2.Nat,
+    "callSid": IDL2.Opt(IDL2.Text),
+    "callToken": IDL2.Opt(IDL2.Text),
+    "canceledReason": IDL2.Opt(IDL2.Text),
+    "createdAt": IDL2.Int,
+    "expiresAt": IDL2.Int,
+    "finishedAt": IDL2.Opt(IDL2.Int),
+    "id": IDL2.Text,
+    "presetId": IDL2.Nat,
+    "recipientPhone": IDL2.Text,
+    "startedAt": IDL2.Opt(IDL2.Int),
+    "status": CallReservationStatus2,
+    "transcript": IDL2.Opt(IDL2.Text),
+    "usedSeconds": IDL2.Opt(IDL2.Nat),
+    "user": IDL2.Principal
+  });
+  const ReserveCallResult2 = IDL2.Variant({
+    "ok": CallReservationPublic2,
+    "err": IDL2.Text
+  });
+  const BillingPackage2 = IDL2.Record({
+    "amountCents": IDL2.Nat,
+    "id": IDL2.Text,
+    "name": IDL2.Text,
+    "seconds": IDL2.Nat
+  });
+  const BillingStatus2 = IDL2.Record({
+    "availableSeconds": IDL2.Nat,
+    "balanceSeconds": IDL2.Nat,
+    "packages": IDL2.Vec(BillingPackage2),
+    "reservedSeconds": IDL2.Nat
+  });
+  const BillingMutationResult2 = IDL2.Variant({
+    "ok": IDL2.Bool,
+    "err": IDL2.Text
+  });
+  const http_header2 = IDL2.Record({ "value": IDL2.Text, "name": IDL2.Text });
+  const http_request_result2 = IDL2.Record({
+    "status": IDL2.Nat,
+    "body": IDL2.Vec(IDL2.Nat8),
+    "headers": IDL2.Vec(http_header2)
+  });
+  const TransformationInput2 = IDL2.Record({
+    "context": IDL2.Vec(IDL2.Nat8),
+    "response": http_request_result2
+  });
+  const TransformationOutput2 = IDL2.Record({
+    "status": IDL2.Nat,
+    "body": IDL2.Vec(IDL2.Nat8),
+    "headers": IDL2.Vec(http_header2)
+  });
+  return IDL2.Service({
+    "_initializeAccessControl": IDL2.Func([], [], []),
+    "adminGetSystemLogs": IDL2.Func([IDL2.Nat], [IDL2.Vec(SystemLog2)], ["query"]),
+    "adminListAllCalls": IDL2.Func([], [IDL2.Vec(CallRecordPublic2)], ["query"]),
+    "adminListUserCalls": IDL2.Func(
+      [IDL2.Principal],
+      [IDL2.Vec(CallRecordPublic2)],
+      ["query"]
+    ),
+    "assignCallerUserRole": IDL2.Func([IDL2.Principal, UserRole2], [], []),
+    "cancelCallReservation": IDL2.Func(
+      [IDL2.Text, IDL2.Text],
+      [BillingMutationResult2],
+      []
+    ),
+    "createPreset": IDL2.Func([CallPresetInput2], [CallPreset2], []),
+    "createPurchaseIntent": IDL2.Func(
+      [IDL2.Text],
+      [CreatePurchaseIntentResult2],
+      []
+    ),
+    "creditPaidSeconds": IDL2.Func(
+      [IDL2.Text, IDL2.Text, IDL2.Principal, IDL2.Nat, StripeMode2],
+      [BillingMutationResult2],
+      []
+    ),
+    "deletePreset": IDL2.Func([PresetId2], [IDL2.Bool], []),
+    "duplicatePreset": IDL2.Func([PresetId2], [IDL2.Opt(CallPreset2)], []),
+    "finishCallAndDebit": IDL2.Func(
+      [IDL2.Text, IDL2.Nat, IDL2.Opt(IDL2.Text), IDL2.Opt(IDL2.Text)],
+      [BillingMutationResult2],
+      []
+    ),
+    "getAdminConfig": IDL2.Func(
+      [],
+      [
+        IDL2.Record({
+          "hasXaiKey": IDL2.Bool,
+          "hasTwilioAuth": IDL2.Bool,
+          "twilioFromNumber": IDL2.Text,
+          "twilioAccountSid": IDL2.Text
+        })
+      ],
+      ["query"]
+    ),
+    "getCallRecord": IDL2.Func(
+      [CallId2],
+      [IDL2.Opt(CallRecordPublic2)],
+      ["query"]
+    ),
+    "getBillingPackages": IDL2.Func([], [IDL2.Vec(BillingPackage2)], ["query"]),
+    "getCallerUserRole": IDL2.Func([], [UserRole2], ["query"]),
+    "getEphemeralToken": IDL2.Func([PresetId2], [EphemeralTokenResult2], []),
+    "getMyBillingStatus": IDL2.Func([], [BillingStatus2], ["query"]),
+    "getPreset": IDL2.Func([PresetId2], [IDL2.Opt(CallPreset2)], ["query"]),
+    "getPurchaseIntentForServer": IDL2.Func(
+      [IDL2.Text],
+      [IDL2.Opt(PurchaseIntentPublic2)],
+      ["query"]
+    ),
+    "initiateCall": IDL2.Func([InitiateCallInput2], [InitiateCallResult2], []),
+    "isCallerAdmin": IDL2.Func([], [IDL2.Bool], ["query"]),
+    "listMyCalls": IDL2.Func([], [IDL2.Vec(CallRecordPublic2)], ["query"]),
+    "listMyPresets": IDL2.Func([], [IDL2.Vec(CallPreset2)], ["query"]),
+    "markReservationStarted": IDL2.Func(
+      [IDL2.Text, IDL2.Text],
+      [BillingMutationResult2],
+      []
+    ),
+    "reserveCall": IDL2.Func([InitiateCallInput2], [ReserveCallResult2], []),
+    "setAdminConfig": IDL2.Func(
+      [IDL2.Text, IDL2.Text, IDL2.Text, IDL2.Text],
+      [],
+      []
+    ),
+    "transform": IDL2.Func(
+      [TransformationInput2],
+      [TransformationOutput2],
+      ["query"]
+    ),
+    "twilioWebhook": IDL2.Func([IDL2.Text, IDL2.Text], [IDL2.Text], []),
+    "updateCallStatus": IDL2.Func(
+      [CallId2, CallStatus2, IDL2.Opt(IDL2.Text)],
+      [IDL2.Bool],
+      []
+    ),
+    "updatePreset": IDL2.Func(
+      [PresetId2, CallPresetInput2],
+      [IDL2.Opt(CallPreset2)],
+      []
+    )
+  });
+};
+function candid_some(value) {
+  return [
+    value
+  ];
+}
+function candid_none() {
+  return [];
+}
+function record_opt_to_undefined(arg) {
+  return arg == null ? void 0 : arg;
+}
+var AudioFormat = /* @__PURE__ */ ((AudioFormat2) => {
+  AudioFormat2["pcm"] = "pcm";
+  AudioFormat2["pcma"] = "pcma";
+  AudioFormat2["pcmu"] = "pcmu";
+  return AudioFormat2;
+})(AudioFormat || {});
+var CallStatus = /* @__PURE__ */ ((CallStatus2) => {
+  CallStatus2["pending"] = "pending";
+  CallStatus2["completed"] = "completed";
+  CallStatus2["inProgress"] = "inProgress";
+  CallStatus2["failed"] = "failed";
+  return CallStatus2;
+})(CallStatus || {});
+var SampleRate = /* @__PURE__ */ ((SampleRate2) => {
+  SampleRate2["hz16000"] = "hz16000";
+  SampleRate2["hz32000"] = "hz32000";
+  SampleRate2["hz22050"] = "hz22050";
+  SampleRate2["hz24000"] = "hz24000";
+  SampleRate2["hz44100"] = "hz44100";
+  SampleRate2["hz48000"] = "hz48000";
+  SampleRate2["hz8000"] = "hz8000";
+  return SampleRate2;
+})(SampleRate || {});
+var UserRole = /* @__PURE__ */ ((UserRole2) => {
+  UserRole2["admin"] = "admin";
+  UserRole2["user"] = "user";
+  UserRole2["guest"] = "guest";
+  return UserRole2;
+})(UserRole || {});
+var Variant_info_warn_error = /* @__PURE__ */ ((Variant_info_warn_error2) => {
+  Variant_info_warn_error2["info"] = "info";
+  Variant_info_warn_error2["warn"] = "warn";
+  Variant_info_warn_error2["error"] = "error";
+  return Variant_info_warn_error2;
+})(Variant_info_warn_error || {});
+var Voice = /* @__PURE__ */ ((Voice2) => {
+  Voice2["ara"] = "ara";
+  Voice2["eve"] = "eve";
+  Voice2["leo"] = "leo";
+  Voice2["rex"] = "rex";
+  Voice2["sal"] = "sal";
+  return Voice2;
+})(Voice || {});
+class Backend {
+  constructor(actor, _uploadFile, _downloadFile, processError2) {
+    this.actor = actor;
+    this._uploadFile = _uploadFile;
+    this._downloadFile = _downloadFile;
+    this.processError = processError2;
+  }
+  async _initializeAccessControl() {
+    if (this.processError) {
+      try {
+        const result = await this.actor._initializeAccessControl();
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor._initializeAccessControl();
+      return result;
+    }
+  }
+  async adminGetSystemLogs(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.adminGetSystemLogs(arg0);
+        return from_candid_vec_n1(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.adminGetSystemLogs(arg0);
+      return from_candid_vec_n1(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async adminListAllCalls() {
+    if (this.processError) {
+      try {
+        const result = await this.actor.adminListAllCalls();
+        return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.adminListAllCalls();
+      return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async adminListUserCalls(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.adminListUserCalls(arg0);
+        return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.adminListUserCalls(arg0);
+      return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async assignCallerUserRole(arg0, arg1) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n13(this._uploadFile, this._downloadFile, arg1));
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n13(this._uploadFile, this._downloadFile, arg1));
+      return result;
+    }
+  }
+  async cancelCallReservation(arg0, arg1) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.cancelCallReservation(arg0, arg1);
+        return from_candid_BillingMutationResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.cancelCallReservation(arg0, arg1);
+      return from_candid_BillingMutationResult(result);
+    }
+  }
+  async createPreset(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.createPreset(to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg0));
+        return from_candid_CallPreset_n23(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.createPreset(to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg0));
+      return from_candid_CallPreset_n23(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async createPurchaseIntent(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.createPurchaseIntent(arg0);
+        return from_candid_CreatePurchaseIntentResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.createPurchaseIntent(arg0);
+      return from_candid_CreatePurchaseIntentResult(result);
+    }
+  }
+  async deletePreset(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.deletePreset(arg0);
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.deletePreset(arg0);
+      return result;
+    }
+  }
+  async duplicatePreset(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.duplicatePreset(arg0);
+        return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.duplicatePreset(arg0);
+      return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async getAdminConfig() {
+    if (this.processError) {
+      try {
+        const result = await this.actor.getAdminConfig();
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.getAdminConfig();
+      return result;
+    }
+  }
+  async getBillingPackages() {
+    if (this.processError) {
+      try {
+        const result = await this.actor.getBillingPackages();
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.getBillingPackages();
+      return result;
+    }
+  }
+  async getCallRecord(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.getCallRecord(arg0);
+        return from_candid_opt_n32(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.getCallRecord(arg0);
+      return from_candid_opt_n32(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async getCallerUserRole() {
+    if (this.processError) {
+      try {
+        const result = await this.actor.getCallerUserRole();
+        return from_candid_UserRole_n33(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.getCallerUserRole();
+      return from_candid_UserRole_n33(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async getEphemeralToken(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.getEphemeralToken(arg0);
+        return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.getEphemeralToken(arg0);
+      return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async getMyBillingStatus() {
+    if (this.processError) {
+      try {
+        const result = await this.actor.getMyBillingStatus();
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.getMyBillingStatus();
+      return result;
+    }
+  }
+  async getPreset(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.getPreset(arg0);
+        return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.getPreset(arg0);
+      return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async initiateCall(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.initiateCall(arg0);
+        return from_candid_InitiateCallResult_n37(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.initiateCall(arg0);
+      return from_candid_InitiateCallResult_n37(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async isCallerAdmin() {
+    if (this.processError) {
+      try {
+        const result = await this.actor.isCallerAdmin();
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.isCallerAdmin();
+      return result;
+    }
+  }
+  async listMyCalls() {
+    if (this.processError) {
+      try {
+        const result = await this.actor.listMyCalls();
+        return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.listMyCalls();
+      return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async listMyPresets() {
+    if (this.processError) {
+      try {
+        const result = await this.actor.listMyPresets();
+        return from_candid_vec_n39(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.listMyPresets();
+      return from_candid_vec_n39(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async reserveCall(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.reserveCall(arg0);
+        return from_candid_ReserveCallResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.reserveCall(arg0);
+      return from_candid_ReserveCallResult(result);
+    }
+  }
+  async setAdminConfig(arg0, arg1, arg2, arg3) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.setAdminConfig(arg0, arg1, arg2, arg3);
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.setAdminConfig(arg0, arg1, arg2, arg3);
+      return result;
+    }
+  }
+  async transform(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.transform(arg0);
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.transform(arg0);
+      return result;
+    }
+  }
+  async twilioWebhook(arg0, arg1) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.twilioWebhook(arg0, arg1);
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.twilioWebhook(arg0, arg1);
+      return result;
+    }
+  }
+  async updateCallStatus(arg0, arg1, arg2) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.updateCallStatus(arg0, to_candid_CallStatus_n40(this._uploadFile, this._downloadFile, arg1), to_candid_opt_n42(this._uploadFile, this._downloadFile, arg2));
+        return result;
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.updateCallStatus(arg0, to_candid_CallStatus_n40(this._uploadFile, this._downloadFile, arg1), to_candid_opt_n42(this._uploadFile, this._downloadFile, arg2));
+      return result;
+    }
+  }
+  async updatePreset(arg0, arg1) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.updatePreset(arg0, to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg1));
+        return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.updatePreset(arg0, to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg1));
+      return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
+    }
+  }
+}
+function from_candid_opt_text(value) {
+  return value.length === 0 ? void 0 : value[0];
+}
+function from_candid_opt_nat(value) {
+  return value.length === 0 ? void 0 : value[0];
+}
+function from_candid_StripeMode(value) {
+  return "test" in value ? "test" : "live";
+}
+function from_candid_PurchaseIntentStatus(value) {
+  return "canceled" in value ? "canceled" : "paid" in value ? "paid" : "pending";
+}
+function from_candid_CallReservationStatus(value) {
+  return "active" in value ? "active" : "canceled" in value ? "canceled" : "finished" in value ? "finished" : "reserved";
+}
+function from_candid_PurchaseIntentPublic(value) {
+  return {
+    amountCents: value.amountCents,
+    createdAt: value.createdAt,
+    id: value.id,
+    mode: from_candid_StripeMode(value.mode),
+    packageId: value.packageId,
+    paidAt: from_candid_opt_nat(value.paidAt),
+    seconds: value.seconds,
+    status: from_candid_PurchaseIntentStatus(value.status),
+    stripeSessionId: from_candid_opt_text(value.stripeSessionId),
+    user: value.user
+  };
+}
+function from_candid_CreatePurchaseIntentResult(value) {
+  return "ok" in value ? {
+    __kind__: "ok",
+    ok: from_candid_PurchaseIntentPublic(value.ok)
+  } : {
+    __kind__: "err",
+    err: value.err
+  };
+}
+function from_candid_CallReservationPublic(value) {
+  return {
+    allowedSeconds: value.allowedSeconds,
+    billedSeconds: from_candid_opt_nat(value.billedSeconds),
+    callId: value.callId,
+    callSid: from_candid_opt_text(value.callSid),
+    callToken: from_candid_opt_text(value.callToken),
+    canceledReason: from_candid_opt_text(value.canceledReason),
+    createdAt: value.createdAt,
+    expiresAt: value.expiresAt,
+    finishedAt: from_candid_opt_nat(value.finishedAt),
+    id: value.id,
+    presetId: value.presetId,
+    recipientPhone: value.recipientPhone,
+    startedAt: from_candid_opt_nat(value.startedAt),
+    status: from_candid_CallReservationStatus(value.status),
+    transcript: from_candid_opt_text(value.transcript),
+    usedSeconds: from_candid_opt_nat(value.usedSeconds),
+    user: value.user
+  };
+}
+function from_candid_ReserveCallResult(value) {
+  return "ok" in value ? {
+    __kind__: "ok",
+    ok: from_candid_CallReservationPublic(value.ok)
+  } : {
+    __kind__: "err",
+    err: value.err
+  };
+}
+function from_candid_BillingMutationResult(value) {
+  return "ok" in value ? {
+    __kind__: "ok",
+    ok: value.ok
+  } : {
+    __kind__: "err",
+    err: value.err
+  };
+}
+function from_candid_AudioFormat_n29(_uploadFile, _downloadFile, value) {
+  return from_candid_variant_n30(_uploadFile, _downloadFile, value);
+}
+function from_candid_CallPreset_n23(_uploadFile, _downloadFile, value) {
+  return from_candid_record_n24(_uploadFile, _downloadFile, value);
+}
+function from_candid_CallRecordPublic_n7(_uploadFile, _downloadFile, value) {
+  return from_candid_record_n8(_uploadFile, _downloadFile, value);
+}
+function from_candid_CallStatus_n9(_uploadFile, _downloadFile, value) {
+  return from_candid_variant_n10(_uploadFile, _downloadFile, value);
+}
+function from_candid_EphemeralTokenResult_n35(_uploadFile, _downloadFile, value) {
+  return from_candid_variant_n36(_uploadFile, _downloadFile, value);
+}
+function from_candid_InitiateCallResult_n37(_uploadFile, _downloadFile, value) {
+  return from_candid_variant_n38(_uploadFile, _downloadFile, value);
+}
+function from_candid_SampleRate_n27(_uploadFile, _downloadFile, value) {
+  return from_candid_variant_n28(_uploadFile, _downloadFile, value);
+}
+function from_candid_SystemLog_n2(_uploadFile, _downloadFile, value) {
+  return from_candid_record_n3(_uploadFile, _downloadFile, value);
+}
+function from_candid_UserRole_n33(_uploadFile, _downloadFile, value) {
+  return from_candid_variant_n34(_uploadFile, _downloadFile, value);
+}
+function from_candid_Voice_n25(_uploadFile, _downloadFile, value) {
+  return from_candid_variant_n26(_uploadFile, _downloadFile, value);
+}
+function from_candid_opt_n11(_uploadFile, _downloadFile, value) {
+  return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n12(_uploadFile, _downloadFile, value) {
+  return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n31(_uploadFile, _downloadFile, value) {
+  return value.length === 0 ? null : from_candid_CallPreset_n23(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n32(_uploadFile, _downloadFile, value) {
+  return value.length === 0 ? null : from_candid_CallRecordPublic_n7(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n5(_uploadFile, _downloadFile, value) {
+  return value.length === 0 ? null : value[0];
+}
+function from_candid_record_n24(_uploadFile, _downloadFile, value) {
+  return {
+    id: value.id,
+    toolsEnabled: value.toolsEnabled,
+    ownerId: value.ownerId,
+    voice: from_candid_Voice_n25(_uploadFile, _downloadFile, value.voice),
+    name: value.name,
+    sampleRate: from_candid_SampleRate_n27(_uploadFile, _downloadFile, value.sampleRate),
+    systemPrompt: value.systemPrompt,
+    turnDetection: value.turnDetection,
+    audioFormat: from_candid_AudioFormat_n29(_uploadFile, _downloadFile, value.audioFormat)
+  };
+}
+function from_candid_record_n3(_uploadFile, _downloadFile, value) {
+  return {
+    level: from_candid_variant_n4(_uploadFile, _downloadFile, value.level),
+    message: value.message,
+    timestamp: value.timestamp,
+    callId: record_opt_to_undefined(from_candid_opt_n5(_uploadFile, _downloadFile, value.callId))
+  };
+}
+function from_candid_record_n8(_uploadFile, _downloadFile, value) {
+  return {
+    id: value.id,
+    startTime: value.startTime,
+    status: from_candid_CallStatus_n9(_uploadFile, _downloadFile, value.status),
+    endTime: record_opt_to_undefined(from_candid_opt_n11(_uploadFile, _downloadFile, value.endTime)),
+    userId: value.userId,
+    recipientPhone: value.recipientPhone,
+    callSid: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.callSid)),
+    presetId: value.presetId,
+    transcript: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.transcript))
+  };
+}
+function from_candid_variant_n10(_uploadFile, _downloadFile, value) {
+  return "pending" in value ? "pending" : "completed" in value ? "completed" : "inProgress" in value ? "inProgress" : "failed" in value ? "failed" : value;
+}
+function from_candid_variant_n26(_uploadFile, _downloadFile, value) {
+  return "ara" in value ? "ara" : "eve" in value ? "eve" : "leo" in value ? "leo" : "rex" in value ? "rex" : "sal" in value ? "sal" : value;
+}
+function from_candid_variant_n28(_uploadFile, _downloadFile, value) {
+  return "hz16000" in value ? "hz16000" : "hz32000" in value ? "hz32000" : "hz22050" in value ? "hz22050" : "hz24000" in value ? "hz24000" : "hz44100" in value ? "hz44100" : "hz48000" in value ? "hz48000" : "hz8000" in value ? "hz8000" : value;
+}
+function from_candid_variant_n30(_uploadFile, _downloadFile, value) {
+  return "pcm" in value ? "pcm" : "pcma" in value ? "pcma" : "pcmu" in value ? "pcmu" : value;
+}
+function from_candid_variant_n34(_uploadFile, _downloadFile, value) {
+  return "admin" in value ? "admin" : "user" in value ? "user" : "guest" in value ? "guest" : value;
+}
+function from_candid_variant_n36(_uploadFile, _downloadFile, value) {
+  return "ok" in value ? {
+    __kind__: "ok",
+    ok: value.ok
+  } : "err" in value ? {
+    __kind__: "err",
+    err: value.err
+  } : value;
+}
+function from_candid_variant_n38(_uploadFile, _downloadFile, value) {
+  return "ok" in value ? {
+    __kind__: "ok",
+    ok: value.ok
+  } : "err" in value ? {
+    __kind__: "err",
+    err: value.err
+  } : value;
+}
+function from_candid_variant_n4(_uploadFile, _downloadFile, value) {
+  return "info" in value ? "info" : "warn" in value ? "warn" : "error" in value ? "error" : value;
+}
+function from_candid_vec_n1(_uploadFile, _downloadFile, value) {
+  return value.map((x3) => from_candid_SystemLog_n2(_uploadFile, _downloadFile, x3));
+}
+function from_candid_vec_n39(_uploadFile, _downloadFile, value) {
+  return value.map((x3) => from_candid_CallPreset_n23(_uploadFile, _downloadFile, x3));
+}
+function from_candid_vec_n6(_uploadFile, _downloadFile, value) {
+  return value.map((x3) => from_candid_CallRecordPublic_n7(_uploadFile, _downloadFile, x3));
+}
+function to_candid_AudioFormat_n21(_uploadFile, _downloadFile, value) {
+  return to_candid_variant_n22(_uploadFile, _downloadFile, value);
+}
+function to_candid_CallPresetInput_n15(_uploadFile, _downloadFile, value) {
+  return to_candid_record_n16(_uploadFile, _downloadFile, value);
+}
+function to_candid_CallStatus_n40(_uploadFile, _downloadFile, value) {
+  return to_candid_variant_n41(_uploadFile, _downloadFile, value);
+}
+function to_candid_SampleRate_n19(_uploadFile, _downloadFile, value) {
+  return to_candid_variant_n20(_uploadFile, _downloadFile, value);
+}
+function to_candid_UserRole_n13(_uploadFile, _downloadFile, value) {
+  return to_candid_variant_n14(_uploadFile, _downloadFile, value);
+}
+function to_candid_Voice_n17(_uploadFile, _downloadFile, value) {
+  return to_candid_variant_n18(_uploadFile, _downloadFile, value);
+}
+function to_candid_opt_n42(_uploadFile, _downloadFile, value) {
+  return value === null ? candid_none() : candid_some(value);
+}
+function to_candid_record_n16(_uploadFile, _downloadFile, value) {
+  return {
+    toolsEnabled: value.toolsEnabled,
+    voice: to_candid_Voice_n17(_uploadFile, _downloadFile, value.voice),
+    name: value.name,
+    sampleRate: to_candid_SampleRate_n19(_uploadFile, _downloadFile, value.sampleRate),
+    systemPrompt: value.systemPrompt,
+    turnDetection: value.turnDetection,
+    audioFormat: to_candid_AudioFormat_n21(_uploadFile, _downloadFile, value.audioFormat)
+  };
+}
+function to_candid_variant_n14(_uploadFile, _downloadFile, value) {
+  return value == "admin" ? {
+    admin: null
+  } : value == "user" ? {
+    user: null
+  } : value == "guest" ? {
+    guest: null
+  } : value;
+}
+function to_candid_variant_n18(_uploadFile, _downloadFile, value) {
+  return value == "ara" ? {
+    ara: null
+  } : value == "eve" ? {
+    eve: null
+  } : value == "leo" ? {
+    leo: null
+  } : value == "rex" ? {
+    rex: null
+  } : value == "sal" ? {
+    sal: null
+  } : value;
+}
+function to_candid_variant_n20(_uploadFile, _downloadFile, value) {
+  return value == "hz16000" ? {
+    hz16000: null
+  } : value == "hz32000" ? {
+    hz32000: null
+  } : value == "hz22050" ? {
+    hz22050: null
+  } : value == "hz24000" ? {
+    hz24000: null
+  } : value == "hz44100" ? {
+    hz44100: null
+  } : value == "hz48000" ? {
+    hz48000: null
+  } : value == "hz8000" ? {
+    hz8000: null
+  } : value;
+}
+function to_candid_variant_n22(_uploadFile, _downloadFile, value) {
+  return value == "pcm" ? {
+    pcm: null
+  } : value == "pcma" ? {
+    pcma: null
+  } : value == "pcmu" ? {
+    pcmu: null
+  } : value;
+}
+function to_candid_variant_n41(_uploadFile, _downloadFile, value) {
+  return value == "pending" ? {
+    pending: null
+  } : value == "completed" ? {
+    completed: null
+  } : value == "inProgress" ? {
+    inProgress: null
+  } : value == "failed" ? {
+    failed: null
+  } : value;
+}
+function createActor(canisterId, _uploadFile, _downloadFile, options = {}) {
+  const agent = options.agent || HttpAgent.createSync({
+    ...options.agentOptions
+  });
+  if (options.agent && options.agentOptions) {
+    console.warn("Detected both agent and agentOptions passed to createActor. Ignoring agentOptions and proceeding with the provided agent.");
+  }
+  const actor = Actor.createActor(idlFactory, {
+    agent,
+    canisterId,
+    ...options.actorOptions
+  });
+  return new Backend(actor, _uploadFile, _downloadFile, options.processError);
+}
 function setRef(ref, value) {
   if (typeof ref === "function") {
     return ref(value);
@@ -35791,1299 +37084,6 @@ function Separator({
     }
   );
 }
-const SystemLog = Record({
-  "level": Variant({
-    "info": Null,
-    "warn": Null,
-    "error": Null
-  }),
-  "message": Text,
-  "timestamp": Int,
-  "callId": Opt(Nat)
-});
-const CallStatus$1 = Variant({
-  "pending": Null,
-  "completed": Null,
-  "inProgress": Null,
-  "failed": Null
-});
-const CallRecordPublic = Record({
-  "id": Nat,
-  "startTime": Int,
-  "status": CallStatus$1,
-  "endTime": Opt(Int),
-  "userId": Principal2,
-  "recipientPhone": Text,
-  "callSid": Opt(Text),
-  "presetId": Nat,
-  "transcript": Opt(Text)
-});
-const UserRole$1 = Variant({
-  "admin": Null,
-  "user": Null,
-  "guest": Null
-});
-const ToolsEnabled = Record({
-  "xSearch": Bool,
-  "webSearch": Bool,
-  "functionCalling": Bool
-});
-const Voice$1 = Variant({
-  "ara": Null,
-  "eve": Null,
-  "leo": Null,
-  "rex": Null,
-  "sal": Null
-});
-const SampleRate$1 = Variant({
-  "hz16000": Null,
-  "hz32000": Null,
-  "hz22050": Null,
-  "hz24000": Null,
-  "hz44100": Null,
-  "hz48000": Null,
-  "hz8000": Null
-});
-const TurnDetection = Record({
-  "prefixPaddingMs": Nat,
-  "threshold": Float64,
-  "silenceDurationMs": Nat,
-  "serverVad": Bool
-});
-const AudioFormat$1 = Variant({
-  "pcm": Null,
-  "pcma": Null,
-  "pcmu": Null
-});
-const CallPresetInput = Record({
-  "toolsEnabled": ToolsEnabled,
-  "voice": Voice$1,
-  "name": Text,
-  "sampleRate": SampleRate$1,
-  "systemPrompt": Text,
-  "turnDetection": TurnDetection,
-  "audioFormat": AudioFormat$1
-});
-const CallPreset = Record({
-  "id": Nat,
-  "toolsEnabled": ToolsEnabled,
-  "ownerId": Principal2,
-  "voice": Voice$1,
-  "name": Text,
-  "sampleRate": SampleRate$1,
-  "systemPrompt": Text,
-  "turnDetection": TurnDetection,
-  "audioFormat": AudioFormat$1
-});
-const PresetId = Nat;
-const CallId = Nat;
-const EphemeralTokenResult = Variant({
-  "ok": Record({ "token": Text, "websocketUrl": Text }),
-  "err": Text
-});
-const InitiateCallInput = Record({
-  "recipientPhone": Text,
-  "presetId": Nat
-});
-const InitiateCallResult = Variant({
-  "ok": Record({ "callSid": Text, "callId": Nat }),
-  "err": Text
-});
-const StripeMode = Variant({
-  "live": Null,
-  "test": Null
-});
-const PurchaseIntentStatus = Variant({
-  "canceled": Null,
-  "paid": Null,
-  "pending": Null
-});
-const PurchaseIntentPublic = Record({
-  "amountCents": Nat,
-  "createdAt": Int,
-  "id": Text,
-  "mode": StripeMode,
-  "packageId": Text,
-  "paidAt": Opt(Int),
-  "seconds": Nat,
-  "status": PurchaseIntentStatus,
-  "stripeSessionId": Opt(Text),
-  "user": Principal2
-});
-const CreatePurchaseIntentResult = Variant({
-  "ok": PurchaseIntentPublic,
-  "err": Text
-});
-const CallReservationStatus = Variant({
-  "active": Null,
-  "canceled": Null,
-  "finished": Null,
-  "reserved": Null
-});
-const CallReservationPublic = Record({
-  "allowedSeconds": Nat,
-  "billedSeconds": Opt(Nat),
-  "callId": Nat,
-  "callSid": Opt(Text),
-  "callToken": Opt(Text),
-  "canceledReason": Opt(Text),
-  "createdAt": Int,
-  "expiresAt": Int,
-  "finishedAt": Opt(Int),
-  "id": Text,
-  "presetId": Nat,
-  "recipientPhone": Text,
-  "startedAt": Opt(Int),
-  "status": CallReservationStatus,
-  "transcript": Opt(Text),
-  "usedSeconds": Opt(Nat),
-  "user": Principal2
-});
-const ReserveCallResult = Variant({
-  "ok": CallReservationPublic,
-  "err": Text
-});
-const BillingPackage = Record({
-  "amountCents": Nat,
-  "id": Text,
-  "name": Text,
-  "seconds": Nat
-});
-const BillingStatus = Record({
-  "availableSeconds": Nat,
-  "balanceSeconds": Nat,
-  "packages": Vec(BillingPackage),
-  "reservedSeconds": Nat
-});
-const BillingMutationResult = Variant({
-  "ok": Bool,
-  "err": Text
-});
-const http_header = Record({
-  "value": Text,
-  "name": Text
-});
-const http_request_result = Record({
-  "status": Nat,
-  "body": Vec(Nat8),
-  "headers": Vec(http_header)
-});
-const TransformationInput = Record({
-  "context": Vec(Nat8),
-  "response": http_request_result
-});
-const TransformationOutput = Record({
-  "status": Nat,
-  "body": Vec(Nat8),
-  "headers": Vec(http_header)
-});
-Service({
-  "_initializeAccessControl": Func([], [], []),
-  "adminGetSystemLogs": Func([Nat], [Vec(SystemLog)], ["query"]),
-  "adminListAllCalls": Func([], [Vec(CallRecordPublic)], ["query"]),
-  "adminListUserCalls": Func(
-    [Principal2],
-    [Vec(CallRecordPublic)],
-    ["query"]
-  ),
-  "assignCallerUserRole": Func([Principal2, UserRole$1], [], []),
-  "cancelCallReservation": Func(
-    [Text, Text],
-    [BillingMutationResult],
-    []
-  ),
-  "createPreset": Func([CallPresetInput], [CallPreset], []),
-  "createPurchaseIntent": Func(
-    [Text],
-    [CreatePurchaseIntentResult],
-    []
-  ),
-  "creditPaidSeconds": Func(
-    [Text, Text, Principal2, Nat, StripeMode],
-    [BillingMutationResult],
-    []
-  ),
-  "deletePreset": Func([PresetId], [Bool], []),
-  "duplicatePreset": Func([PresetId], [Opt(CallPreset)], []),
-  "finishCallAndDebit": Func(
-    [Text, Nat, Opt(Text), Opt(Text)],
-    [BillingMutationResult],
-    []
-  ),
-  "getAdminConfig": Func(
-    [],
-    [
-      Record({
-        "hasXaiKey": Bool,
-        "hasTwilioAuth": Bool,
-        "twilioFromNumber": Text,
-        "twilioAccountSid": Text
-      })
-    ],
-    ["query"]
-  ),
-  "getCallRecord": Func([CallId], [Opt(CallRecordPublic)], ["query"]),
-  "getBillingPackages": Func([], [Vec(BillingPackage)], ["query"]),
-  "getCallerUserRole": Func([], [UserRole$1], ["query"]),
-  "getEphemeralToken": Func([PresetId], [EphemeralTokenResult], []),
-  "getMyBillingStatus": Func([], [BillingStatus], ["query"]),
-  "getPreset": Func([PresetId], [Opt(CallPreset)], ["query"]),
-  "getPurchaseIntentForServer": Func(
-    [Text],
-    [Opt(PurchaseIntentPublic)],
-    ["query"]
-  ),
-  "initiateCall": Func([InitiateCallInput], [InitiateCallResult], []),
-  "isCallerAdmin": Func([], [Bool], ["query"]),
-  "listMyCalls": Func([], [Vec(CallRecordPublic)], ["query"]),
-  "listMyPresets": Func([], [Vec(CallPreset)], ["query"]),
-  "markReservationStarted": Func(
-    [Text, Text],
-    [BillingMutationResult],
-    []
-  ),
-  "reserveCall": Func([InitiateCallInput], [ReserveCallResult], []),
-  "setAdminConfig": Func([Text, Text, Text, Text], [], []),
-  "transform": Func(
-    [TransformationInput],
-    [TransformationOutput],
-    ["query"]
-  ),
-  "twilioWebhook": Func([Text, Text], [Text], []),
-  "updateCallStatus": Func(
-    [CallId, CallStatus$1, Opt(Text)],
-    [Bool],
-    []
-  ),
-  "updatePreset": Func(
-    [PresetId, CallPresetInput],
-    [Opt(CallPreset)],
-    []
-  )
-});
-const idlFactory = ({ IDL: IDL2 }) => {
-  const SystemLog2 = IDL2.Record({
-    "level": IDL2.Variant({
-      "info": IDL2.Null,
-      "warn": IDL2.Null,
-      "error": IDL2.Null
-    }),
-    "message": IDL2.Text,
-    "timestamp": IDL2.Int,
-    "callId": IDL2.Opt(IDL2.Nat)
-  });
-  const CallStatus2 = IDL2.Variant({
-    "pending": IDL2.Null,
-    "completed": IDL2.Null,
-    "inProgress": IDL2.Null,
-    "failed": IDL2.Null
-  });
-  const CallRecordPublic2 = IDL2.Record({
-    "id": IDL2.Nat,
-    "startTime": IDL2.Int,
-    "status": CallStatus2,
-    "endTime": IDL2.Opt(IDL2.Int),
-    "userId": IDL2.Principal,
-    "recipientPhone": IDL2.Text,
-    "callSid": IDL2.Opt(IDL2.Text),
-    "presetId": IDL2.Nat,
-    "transcript": IDL2.Opt(IDL2.Text)
-  });
-  const UserRole2 = IDL2.Variant({
-    "admin": IDL2.Null,
-    "user": IDL2.Null,
-    "guest": IDL2.Null
-  });
-  const ToolsEnabled2 = IDL2.Record({
-    "xSearch": IDL2.Bool,
-    "webSearch": IDL2.Bool,
-    "functionCalling": IDL2.Bool
-  });
-  const Voice2 = IDL2.Variant({
-    "ara": IDL2.Null,
-    "eve": IDL2.Null,
-    "leo": IDL2.Null,
-    "rex": IDL2.Null,
-    "sal": IDL2.Null
-  });
-  const SampleRate2 = IDL2.Variant({
-    "hz16000": IDL2.Null,
-    "hz32000": IDL2.Null,
-    "hz22050": IDL2.Null,
-    "hz24000": IDL2.Null,
-    "hz44100": IDL2.Null,
-    "hz48000": IDL2.Null,
-    "hz8000": IDL2.Null
-  });
-  const TurnDetection2 = IDL2.Record({
-    "prefixPaddingMs": IDL2.Nat,
-    "threshold": IDL2.Float64,
-    "silenceDurationMs": IDL2.Nat,
-    "serverVad": IDL2.Bool
-  });
-  const AudioFormat2 = IDL2.Variant({
-    "pcm": IDL2.Null,
-    "pcma": IDL2.Null,
-    "pcmu": IDL2.Null
-  });
-  const CallPresetInput2 = IDL2.Record({
-    "toolsEnabled": ToolsEnabled2,
-    "voice": Voice2,
-    "name": IDL2.Text,
-    "sampleRate": SampleRate2,
-    "systemPrompt": IDL2.Text,
-    "turnDetection": TurnDetection2,
-    "audioFormat": AudioFormat2
-  });
-  const CallPreset2 = IDL2.Record({
-    "id": IDL2.Nat,
-    "toolsEnabled": ToolsEnabled2,
-    "ownerId": IDL2.Principal,
-    "voice": Voice2,
-    "name": IDL2.Text,
-    "sampleRate": SampleRate2,
-    "systemPrompt": IDL2.Text,
-    "turnDetection": TurnDetection2,
-    "audioFormat": AudioFormat2
-  });
-  const PresetId2 = IDL2.Nat;
-  const CallId2 = IDL2.Nat;
-  const EphemeralTokenResult2 = IDL2.Variant({
-    "ok": IDL2.Record({ "token": IDL2.Text, "websocketUrl": IDL2.Text }),
-    "err": IDL2.Text
-  });
-  const InitiateCallInput2 = IDL2.Record({
-    "recipientPhone": IDL2.Text,
-    "presetId": IDL2.Nat
-  });
-  const InitiateCallResult2 = IDL2.Variant({
-    "ok": IDL2.Record({ "callSid": IDL2.Text, "callId": IDL2.Nat }),
-    "err": IDL2.Text
-  });
-  const StripeMode2 = IDL2.Variant({
-    "live": IDL2.Null,
-    "test": IDL2.Null
-  });
-  const PurchaseIntentStatus2 = IDL2.Variant({
-    "canceled": IDL2.Null,
-    "paid": IDL2.Null,
-    "pending": IDL2.Null
-  });
-  const PurchaseIntentPublic2 = IDL2.Record({
-    "amountCents": IDL2.Nat,
-    "createdAt": IDL2.Int,
-    "id": IDL2.Text,
-    "mode": StripeMode2,
-    "packageId": IDL2.Text,
-    "paidAt": IDL2.Opt(IDL2.Int),
-    "seconds": IDL2.Nat,
-    "status": PurchaseIntentStatus2,
-    "stripeSessionId": IDL2.Opt(IDL2.Text),
-    "user": IDL2.Principal
-  });
-  const CreatePurchaseIntentResult2 = IDL2.Variant({
-    "ok": PurchaseIntentPublic2,
-    "err": IDL2.Text
-  });
-  const CallReservationStatus2 = IDL2.Variant({
-    "active": IDL2.Null,
-    "canceled": IDL2.Null,
-    "finished": IDL2.Null,
-    "reserved": IDL2.Null
-  });
-  const CallReservationPublic2 = IDL2.Record({
-    "allowedSeconds": IDL2.Nat,
-    "billedSeconds": IDL2.Opt(IDL2.Nat),
-    "callId": IDL2.Nat,
-    "callSid": IDL2.Opt(IDL2.Text),
-    "callToken": IDL2.Opt(IDL2.Text),
-    "canceledReason": IDL2.Opt(IDL2.Text),
-    "createdAt": IDL2.Int,
-    "expiresAt": IDL2.Int,
-    "finishedAt": IDL2.Opt(IDL2.Int),
-    "id": IDL2.Text,
-    "presetId": IDL2.Nat,
-    "recipientPhone": IDL2.Text,
-    "startedAt": IDL2.Opt(IDL2.Int),
-    "status": CallReservationStatus2,
-    "transcript": IDL2.Opt(IDL2.Text),
-    "usedSeconds": IDL2.Opt(IDL2.Nat),
-    "user": IDL2.Principal
-  });
-  const ReserveCallResult2 = IDL2.Variant({
-    "ok": CallReservationPublic2,
-    "err": IDL2.Text
-  });
-  const BillingPackage2 = IDL2.Record({
-    "amountCents": IDL2.Nat,
-    "id": IDL2.Text,
-    "name": IDL2.Text,
-    "seconds": IDL2.Nat
-  });
-  const BillingStatus2 = IDL2.Record({
-    "availableSeconds": IDL2.Nat,
-    "balanceSeconds": IDL2.Nat,
-    "packages": IDL2.Vec(BillingPackage2),
-    "reservedSeconds": IDL2.Nat
-  });
-  const BillingMutationResult2 = IDL2.Variant({
-    "ok": IDL2.Bool,
-    "err": IDL2.Text
-  });
-  const http_header2 = IDL2.Record({ "value": IDL2.Text, "name": IDL2.Text });
-  const http_request_result2 = IDL2.Record({
-    "status": IDL2.Nat,
-    "body": IDL2.Vec(IDL2.Nat8),
-    "headers": IDL2.Vec(http_header2)
-  });
-  const TransformationInput2 = IDL2.Record({
-    "context": IDL2.Vec(IDL2.Nat8),
-    "response": http_request_result2
-  });
-  const TransformationOutput2 = IDL2.Record({
-    "status": IDL2.Nat,
-    "body": IDL2.Vec(IDL2.Nat8),
-    "headers": IDL2.Vec(http_header2)
-  });
-  return IDL2.Service({
-    "_initializeAccessControl": IDL2.Func([], [], []),
-    "adminGetSystemLogs": IDL2.Func([IDL2.Nat], [IDL2.Vec(SystemLog2)], ["query"]),
-    "adminListAllCalls": IDL2.Func([], [IDL2.Vec(CallRecordPublic2)], ["query"]),
-    "adminListUserCalls": IDL2.Func(
-      [IDL2.Principal],
-      [IDL2.Vec(CallRecordPublic2)],
-      ["query"]
-    ),
-    "assignCallerUserRole": IDL2.Func([IDL2.Principal, UserRole2], [], []),
-    "cancelCallReservation": IDL2.Func(
-      [IDL2.Text, IDL2.Text],
-      [BillingMutationResult2],
-      []
-    ),
-    "createPreset": IDL2.Func([CallPresetInput2], [CallPreset2], []),
-    "createPurchaseIntent": IDL2.Func(
-      [IDL2.Text],
-      [CreatePurchaseIntentResult2],
-      []
-    ),
-    "creditPaidSeconds": IDL2.Func(
-      [IDL2.Text, IDL2.Text, IDL2.Principal, IDL2.Nat, StripeMode2],
-      [BillingMutationResult2],
-      []
-    ),
-    "deletePreset": IDL2.Func([PresetId2], [IDL2.Bool], []),
-    "duplicatePreset": IDL2.Func([PresetId2], [IDL2.Opt(CallPreset2)], []),
-    "finishCallAndDebit": IDL2.Func(
-      [IDL2.Text, IDL2.Nat, IDL2.Opt(IDL2.Text), IDL2.Opt(IDL2.Text)],
-      [BillingMutationResult2],
-      []
-    ),
-    "getAdminConfig": IDL2.Func(
-      [],
-      [
-        IDL2.Record({
-          "hasXaiKey": IDL2.Bool,
-          "hasTwilioAuth": IDL2.Bool,
-          "twilioFromNumber": IDL2.Text,
-          "twilioAccountSid": IDL2.Text
-        })
-      ],
-      ["query"]
-    ),
-    "getCallRecord": IDL2.Func(
-      [CallId2],
-      [IDL2.Opt(CallRecordPublic2)],
-      ["query"]
-    ),
-    "getBillingPackages": IDL2.Func([], [IDL2.Vec(BillingPackage2)], ["query"]),
-    "getCallerUserRole": IDL2.Func([], [UserRole2], ["query"]),
-    "getEphemeralToken": IDL2.Func([PresetId2], [EphemeralTokenResult2], []),
-    "getMyBillingStatus": IDL2.Func([], [BillingStatus2], ["query"]),
-    "getPreset": IDL2.Func([PresetId2], [IDL2.Opt(CallPreset2)], ["query"]),
-    "getPurchaseIntentForServer": IDL2.Func(
-      [IDL2.Text],
-      [IDL2.Opt(PurchaseIntentPublic2)],
-      ["query"]
-    ),
-    "initiateCall": IDL2.Func([InitiateCallInput2], [InitiateCallResult2], []),
-    "isCallerAdmin": IDL2.Func([], [IDL2.Bool], ["query"]),
-    "listMyCalls": IDL2.Func([], [IDL2.Vec(CallRecordPublic2)], ["query"]),
-    "listMyPresets": IDL2.Func([], [IDL2.Vec(CallPreset2)], ["query"]),
-    "markReservationStarted": IDL2.Func(
-      [IDL2.Text, IDL2.Text],
-      [BillingMutationResult2],
-      []
-    ),
-    "reserveCall": IDL2.Func([InitiateCallInput2], [ReserveCallResult2], []),
-    "setAdminConfig": IDL2.Func(
-      [IDL2.Text, IDL2.Text, IDL2.Text, IDL2.Text],
-      [],
-      []
-    ),
-    "transform": IDL2.Func(
-      [TransformationInput2],
-      [TransformationOutput2],
-      ["query"]
-    ),
-    "twilioWebhook": IDL2.Func([IDL2.Text, IDL2.Text], [IDL2.Text], []),
-    "updateCallStatus": IDL2.Func(
-      [CallId2, CallStatus2, IDL2.Opt(IDL2.Text)],
-      [IDL2.Bool],
-      []
-    ),
-    "updatePreset": IDL2.Func(
-      [PresetId2, CallPresetInput2],
-      [IDL2.Opt(CallPreset2)],
-      []
-    )
-  });
-};
-function candid_some(value) {
-  return [
-    value
-  ];
-}
-function candid_none() {
-  return [];
-}
-function record_opt_to_undefined(arg) {
-  return arg == null ? void 0 : arg;
-}
-var AudioFormat = /* @__PURE__ */ ((AudioFormat2) => {
-  AudioFormat2["pcm"] = "pcm";
-  AudioFormat2["pcma"] = "pcma";
-  AudioFormat2["pcmu"] = "pcmu";
-  return AudioFormat2;
-})(AudioFormat || {});
-var CallStatus = /* @__PURE__ */ ((CallStatus2) => {
-  CallStatus2["pending"] = "pending";
-  CallStatus2["completed"] = "completed";
-  CallStatus2["inProgress"] = "inProgress";
-  CallStatus2["failed"] = "failed";
-  return CallStatus2;
-})(CallStatus || {});
-var SampleRate = /* @__PURE__ */ ((SampleRate2) => {
-  SampleRate2["hz16000"] = "hz16000";
-  SampleRate2["hz32000"] = "hz32000";
-  SampleRate2["hz22050"] = "hz22050";
-  SampleRate2["hz24000"] = "hz24000";
-  SampleRate2["hz44100"] = "hz44100";
-  SampleRate2["hz48000"] = "hz48000";
-  SampleRate2["hz8000"] = "hz8000";
-  return SampleRate2;
-})(SampleRate || {});
-var UserRole = /* @__PURE__ */ ((UserRole2) => {
-  UserRole2["admin"] = "admin";
-  UserRole2["user"] = "user";
-  UserRole2["guest"] = "guest";
-  return UserRole2;
-})(UserRole || {});
-var Variant_info_warn_error = /* @__PURE__ */ ((Variant_info_warn_error2) => {
-  Variant_info_warn_error2["info"] = "info";
-  Variant_info_warn_error2["warn"] = "warn";
-  Variant_info_warn_error2["error"] = "error";
-  return Variant_info_warn_error2;
-})(Variant_info_warn_error || {});
-var Voice = /* @__PURE__ */ ((Voice2) => {
-  Voice2["ara"] = "ara";
-  Voice2["eve"] = "eve";
-  Voice2["leo"] = "leo";
-  Voice2["rex"] = "rex";
-  Voice2["sal"] = "sal";
-  return Voice2;
-})(Voice || {});
-class Backend {
-  constructor(actor, _uploadFile, _downloadFile, processError2) {
-    this.actor = actor;
-    this._uploadFile = _uploadFile;
-    this._downloadFile = _downloadFile;
-    this.processError = processError2;
-  }
-  async _initializeAccessControl() {
-    if (this.processError) {
-      try {
-        const result = await this.actor._initializeAccessControl();
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor._initializeAccessControl();
-      return result;
-    }
-  }
-  async adminGetSystemLogs(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.adminGetSystemLogs(arg0);
-        return from_candid_vec_n1(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.adminGetSystemLogs(arg0);
-      return from_candid_vec_n1(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async adminListAllCalls() {
-    if (this.processError) {
-      try {
-        const result = await this.actor.adminListAllCalls();
-        return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.adminListAllCalls();
-      return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async adminListUserCalls(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.adminListUserCalls(arg0);
-        return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.adminListUserCalls(arg0);
-      return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async assignCallerUserRole(arg0, arg1) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n13(this._uploadFile, this._downloadFile, arg1));
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n13(this._uploadFile, this._downloadFile, arg1));
-      return result;
-    }
-  }
-  async cancelCallReservation(arg0, arg1) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.cancelCallReservation(arg0, arg1);
-        return from_candid_BillingMutationResult(result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.cancelCallReservation(arg0, arg1);
-      return from_candid_BillingMutationResult(result);
-    }
-  }
-  async createPreset(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.createPreset(to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg0));
-        return from_candid_CallPreset_n23(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.createPreset(to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg0));
-      return from_candid_CallPreset_n23(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async createPurchaseIntent(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.createPurchaseIntent(arg0);
-        return from_candid_CreatePurchaseIntentResult(result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.createPurchaseIntent(arg0);
-      return from_candid_CreatePurchaseIntentResult(result);
-    }
-  }
-  async deletePreset(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.deletePreset(arg0);
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.deletePreset(arg0);
-      return result;
-    }
-  }
-  async duplicatePreset(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.duplicatePreset(arg0);
-        return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.duplicatePreset(arg0);
-      return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async getAdminConfig() {
-    if (this.processError) {
-      try {
-        const result = await this.actor.getAdminConfig();
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.getAdminConfig();
-      return result;
-    }
-  }
-  async getBillingPackages() {
-    if (this.processError) {
-      try {
-        const result = await this.actor.getBillingPackages();
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.getBillingPackages();
-      return result;
-    }
-  }
-  async getCallRecord(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.getCallRecord(arg0);
-        return from_candid_opt_n32(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.getCallRecord(arg0);
-      return from_candid_opt_n32(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async getCallerUserRole() {
-    if (this.processError) {
-      try {
-        const result = await this.actor.getCallerUserRole();
-        return from_candid_UserRole_n33(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.getCallerUserRole();
-      return from_candid_UserRole_n33(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async getEphemeralToken(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.getEphemeralToken(arg0);
-        return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.getEphemeralToken(arg0);
-      return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async getMyBillingStatus() {
-    if (this.processError) {
-      try {
-        const result = await this.actor.getMyBillingStatus();
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.getMyBillingStatus();
-      return result;
-    }
-  }
-  async getPreset(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.getPreset(arg0);
-        return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.getPreset(arg0);
-      return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async initiateCall(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.initiateCall(arg0);
-        return from_candid_InitiateCallResult_n37(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.initiateCall(arg0);
-      return from_candid_InitiateCallResult_n37(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async isCallerAdmin() {
-    if (this.processError) {
-      try {
-        const result = await this.actor.isCallerAdmin();
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.isCallerAdmin();
-      return result;
-    }
-  }
-  async listMyCalls() {
-    if (this.processError) {
-      try {
-        const result = await this.actor.listMyCalls();
-        return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.listMyCalls();
-      return from_candid_vec_n6(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async listMyPresets() {
-    if (this.processError) {
-      try {
-        const result = await this.actor.listMyPresets();
-        return from_candid_vec_n39(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.listMyPresets();
-      return from_candid_vec_n39(this._uploadFile, this._downloadFile, result);
-    }
-  }
-  async reserveCall(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.reserveCall(arg0);
-        return from_candid_ReserveCallResult(result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.reserveCall(arg0);
-      return from_candid_ReserveCallResult(result);
-    }
-  }
-  async setAdminConfig(arg0, arg1, arg2, arg3) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.setAdminConfig(arg0, arg1, arg2, arg3);
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.setAdminConfig(arg0, arg1, arg2, arg3);
-      return result;
-    }
-  }
-  async transform(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.transform(arg0);
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.transform(arg0);
-      return result;
-    }
-  }
-  async twilioWebhook(arg0, arg1) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.twilioWebhook(arg0, arg1);
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.twilioWebhook(arg0, arg1);
-      return result;
-    }
-  }
-  async updateCallStatus(arg0, arg1, arg2) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.updateCallStatus(arg0, to_candid_CallStatus_n40(this._uploadFile, this._downloadFile, arg1), to_candid_opt_n42(this._uploadFile, this._downloadFile, arg2));
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.updateCallStatus(arg0, to_candid_CallStatus_n40(this._uploadFile, this._downloadFile, arg1), to_candid_opt_n42(this._uploadFile, this._downloadFile, arg2));
-      return result;
-    }
-  }
-  async updatePreset(arg0, arg1) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.updatePreset(arg0, to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg1));
-        return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.updatePreset(arg0, to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg1));
-      return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
-    }
-  }
-}
-function from_candid_opt_text(value) {
-  return value.length === 0 ? void 0 : value[0];
-}
-function from_candid_opt_nat(value) {
-  return value.length === 0 ? void 0 : value[0];
-}
-function from_candid_StripeMode(value) {
-  return "test" in value ? "test" : "live";
-}
-function from_candid_PurchaseIntentStatus(value) {
-  return "canceled" in value ? "canceled" : "paid" in value ? "paid" : "pending";
-}
-function from_candid_CallReservationStatus(value) {
-  return "active" in value ? "active" : "canceled" in value ? "canceled" : "finished" in value ? "finished" : "reserved";
-}
-function from_candid_PurchaseIntentPublic(value) {
-  return {
-    amountCents: value.amountCents,
-    createdAt: value.createdAt,
-    id: value.id,
-    mode: from_candid_StripeMode(value.mode),
-    packageId: value.packageId,
-    paidAt: from_candid_opt_nat(value.paidAt),
-    seconds: value.seconds,
-    status: from_candid_PurchaseIntentStatus(value.status),
-    stripeSessionId: from_candid_opt_text(value.stripeSessionId),
-    user: value.user
-  };
-}
-function from_candid_CreatePurchaseIntentResult(value) {
-  return "ok" in value ? {
-    __kind__: "ok",
-    ok: from_candid_PurchaseIntentPublic(value.ok)
-  } : {
-    __kind__: "err",
-    err: value.err
-  };
-}
-function from_candid_CallReservationPublic(value) {
-  return {
-    allowedSeconds: value.allowedSeconds,
-    billedSeconds: from_candid_opt_nat(value.billedSeconds),
-    callId: value.callId,
-    callSid: from_candid_opt_text(value.callSid),
-    callToken: from_candid_opt_text(value.callToken),
-    canceledReason: from_candid_opt_text(value.canceledReason),
-    createdAt: value.createdAt,
-    expiresAt: value.expiresAt,
-    finishedAt: from_candid_opt_nat(value.finishedAt),
-    id: value.id,
-    presetId: value.presetId,
-    recipientPhone: value.recipientPhone,
-    startedAt: from_candid_opt_nat(value.startedAt),
-    status: from_candid_CallReservationStatus(value.status),
-    transcript: from_candid_opt_text(value.transcript),
-    usedSeconds: from_candid_opt_nat(value.usedSeconds),
-    user: value.user
-  };
-}
-function from_candid_ReserveCallResult(value) {
-  return "ok" in value ? {
-    __kind__: "ok",
-    ok: from_candid_CallReservationPublic(value.ok)
-  } : {
-    __kind__: "err",
-    err: value.err
-  };
-}
-function from_candid_BillingMutationResult(value) {
-  return "ok" in value ? {
-    __kind__: "ok",
-    ok: value.ok
-  } : {
-    __kind__: "err",
-    err: value.err
-  };
-}
-function from_candid_AudioFormat_n29(_uploadFile, _downloadFile, value) {
-  return from_candid_variant_n30(_uploadFile, _downloadFile, value);
-}
-function from_candid_CallPreset_n23(_uploadFile, _downloadFile, value) {
-  return from_candid_record_n24(_uploadFile, _downloadFile, value);
-}
-function from_candid_CallRecordPublic_n7(_uploadFile, _downloadFile, value) {
-  return from_candid_record_n8(_uploadFile, _downloadFile, value);
-}
-function from_candid_CallStatus_n9(_uploadFile, _downloadFile, value) {
-  return from_candid_variant_n10(_uploadFile, _downloadFile, value);
-}
-function from_candid_EphemeralTokenResult_n35(_uploadFile, _downloadFile, value) {
-  return from_candid_variant_n36(_uploadFile, _downloadFile, value);
-}
-function from_candid_InitiateCallResult_n37(_uploadFile, _downloadFile, value) {
-  return from_candid_variant_n38(_uploadFile, _downloadFile, value);
-}
-function from_candid_SampleRate_n27(_uploadFile, _downloadFile, value) {
-  return from_candid_variant_n28(_uploadFile, _downloadFile, value);
-}
-function from_candid_SystemLog_n2(_uploadFile, _downloadFile, value) {
-  return from_candid_record_n3(_uploadFile, _downloadFile, value);
-}
-function from_candid_UserRole_n33(_uploadFile, _downloadFile, value) {
-  return from_candid_variant_n34(_uploadFile, _downloadFile, value);
-}
-function from_candid_Voice_n25(_uploadFile, _downloadFile, value) {
-  return from_candid_variant_n26(_uploadFile, _downloadFile, value);
-}
-function from_candid_opt_n11(_uploadFile, _downloadFile, value) {
-  return value.length === 0 ? null : value[0];
-}
-function from_candid_opt_n12(_uploadFile, _downloadFile, value) {
-  return value.length === 0 ? null : value[0];
-}
-function from_candid_opt_n31(_uploadFile, _downloadFile, value) {
-  return value.length === 0 ? null : from_candid_CallPreset_n23(_uploadFile, _downloadFile, value[0]);
-}
-function from_candid_opt_n32(_uploadFile, _downloadFile, value) {
-  return value.length === 0 ? null : from_candid_CallRecordPublic_n7(_uploadFile, _downloadFile, value[0]);
-}
-function from_candid_opt_n5(_uploadFile, _downloadFile, value) {
-  return value.length === 0 ? null : value[0];
-}
-function from_candid_record_n24(_uploadFile, _downloadFile, value) {
-  return {
-    id: value.id,
-    toolsEnabled: value.toolsEnabled,
-    ownerId: value.ownerId,
-    voice: from_candid_Voice_n25(_uploadFile, _downloadFile, value.voice),
-    name: value.name,
-    sampleRate: from_candid_SampleRate_n27(_uploadFile, _downloadFile, value.sampleRate),
-    systemPrompt: value.systemPrompt,
-    turnDetection: value.turnDetection,
-    audioFormat: from_candid_AudioFormat_n29(_uploadFile, _downloadFile, value.audioFormat)
-  };
-}
-function from_candid_record_n3(_uploadFile, _downloadFile, value) {
-  return {
-    level: from_candid_variant_n4(_uploadFile, _downloadFile, value.level),
-    message: value.message,
-    timestamp: value.timestamp,
-    callId: record_opt_to_undefined(from_candid_opt_n5(_uploadFile, _downloadFile, value.callId))
-  };
-}
-function from_candid_record_n8(_uploadFile, _downloadFile, value) {
-  return {
-    id: value.id,
-    startTime: value.startTime,
-    status: from_candid_CallStatus_n9(_uploadFile, _downloadFile, value.status),
-    endTime: record_opt_to_undefined(from_candid_opt_n11(_uploadFile, _downloadFile, value.endTime)),
-    userId: value.userId,
-    recipientPhone: value.recipientPhone,
-    callSid: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.callSid)),
-    presetId: value.presetId,
-    transcript: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.transcript))
-  };
-}
-function from_candid_variant_n10(_uploadFile, _downloadFile, value) {
-  return "pending" in value ? "pending" : "completed" in value ? "completed" : "inProgress" in value ? "inProgress" : "failed" in value ? "failed" : value;
-}
-function from_candid_variant_n26(_uploadFile, _downloadFile, value) {
-  return "ara" in value ? "ara" : "eve" in value ? "eve" : "leo" in value ? "leo" : "rex" in value ? "rex" : "sal" in value ? "sal" : value;
-}
-function from_candid_variant_n28(_uploadFile, _downloadFile, value) {
-  return "hz16000" in value ? "hz16000" : "hz32000" in value ? "hz32000" : "hz22050" in value ? "hz22050" : "hz24000" in value ? "hz24000" : "hz44100" in value ? "hz44100" : "hz48000" in value ? "hz48000" : "hz8000" in value ? "hz8000" : value;
-}
-function from_candid_variant_n30(_uploadFile, _downloadFile, value) {
-  return "pcm" in value ? "pcm" : "pcma" in value ? "pcma" : "pcmu" in value ? "pcmu" : value;
-}
-function from_candid_variant_n34(_uploadFile, _downloadFile, value) {
-  return "admin" in value ? "admin" : "user" in value ? "user" : "guest" in value ? "guest" : value;
-}
-function from_candid_variant_n36(_uploadFile, _downloadFile, value) {
-  return "ok" in value ? {
-    __kind__: "ok",
-    ok: value.ok
-  } : "err" in value ? {
-    __kind__: "err",
-    err: value.err
-  } : value;
-}
-function from_candid_variant_n38(_uploadFile, _downloadFile, value) {
-  return "ok" in value ? {
-    __kind__: "ok",
-    ok: value.ok
-  } : "err" in value ? {
-    __kind__: "err",
-    err: value.err
-  } : value;
-}
-function from_candid_variant_n4(_uploadFile, _downloadFile, value) {
-  return "info" in value ? "info" : "warn" in value ? "warn" : "error" in value ? "error" : value;
-}
-function from_candid_vec_n1(_uploadFile, _downloadFile, value) {
-  return value.map((x3) => from_candid_SystemLog_n2(_uploadFile, _downloadFile, x3));
-}
-function from_candid_vec_n39(_uploadFile, _downloadFile, value) {
-  return value.map((x3) => from_candid_CallPreset_n23(_uploadFile, _downloadFile, x3));
-}
-function from_candid_vec_n6(_uploadFile, _downloadFile, value) {
-  return value.map((x3) => from_candid_CallRecordPublic_n7(_uploadFile, _downloadFile, x3));
-}
-function to_candid_AudioFormat_n21(_uploadFile, _downloadFile, value) {
-  return to_candid_variant_n22(_uploadFile, _downloadFile, value);
-}
-function to_candid_CallPresetInput_n15(_uploadFile, _downloadFile, value) {
-  return to_candid_record_n16(_uploadFile, _downloadFile, value);
-}
-function to_candid_CallStatus_n40(_uploadFile, _downloadFile, value) {
-  return to_candid_variant_n41(_uploadFile, _downloadFile, value);
-}
-function to_candid_SampleRate_n19(_uploadFile, _downloadFile, value) {
-  return to_candid_variant_n20(_uploadFile, _downloadFile, value);
-}
-function to_candid_UserRole_n13(_uploadFile, _downloadFile, value) {
-  return to_candid_variant_n14(_uploadFile, _downloadFile, value);
-}
-function to_candid_Voice_n17(_uploadFile, _downloadFile, value) {
-  return to_candid_variant_n18(_uploadFile, _downloadFile, value);
-}
-function to_candid_opt_n42(_uploadFile, _downloadFile, value) {
-  return value === null ? candid_none() : candid_some(value);
-}
-function to_candid_record_n16(_uploadFile, _downloadFile, value) {
-  return {
-    toolsEnabled: value.toolsEnabled,
-    voice: to_candid_Voice_n17(_uploadFile, _downloadFile, value.voice),
-    name: value.name,
-    sampleRate: to_candid_SampleRate_n19(_uploadFile, _downloadFile, value.sampleRate),
-    systemPrompt: value.systemPrompt,
-    turnDetection: value.turnDetection,
-    audioFormat: to_candid_AudioFormat_n21(_uploadFile, _downloadFile, value.audioFormat)
-  };
-}
-function to_candid_variant_n14(_uploadFile, _downloadFile, value) {
-  return value == "admin" ? {
-    admin: null
-  } : value == "user" ? {
-    user: null
-  } : value == "guest" ? {
-    guest: null
-  } : value;
-}
-function to_candid_variant_n18(_uploadFile, _downloadFile, value) {
-  return value == "ara" ? {
-    ara: null
-  } : value == "eve" ? {
-    eve: null
-  } : value == "leo" ? {
-    leo: null
-  } : value == "rex" ? {
-    rex: null
-  } : value == "sal" ? {
-    sal: null
-  } : value;
-}
-function to_candid_variant_n20(_uploadFile, _downloadFile, value) {
-  return value == "hz16000" ? {
-    hz16000: null
-  } : value == "hz32000" ? {
-    hz32000: null
-  } : value == "hz22050" ? {
-    hz22050: null
-  } : value == "hz24000" ? {
-    hz24000: null
-  } : value == "hz44100" ? {
-    hz44100: null
-  } : value == "hz48000" ? {
-    hz48000: null
-  } : value == "hz8000" ? {
-    hz8000: null
-  } : value;
-}
-function to_candid_variant_n22(_uploadFile, _downloadFile, value) {
-  return value == "pcm" ? {
-    pcm: null
-  } : value == "pcma" ? {
-    pcma: null
-  } : value == "pcmu" ? {
-    pcmu: null
-  } : value;
-}
-function to_candid_variant_n41(_uploadFile, _downloadFile, value) {
-  return value == "pending" ? {
-    pending: null
-  } : value == "completed" ? {
-    completed: null
-  } : value == "inProgress" ? {
-    inProgress: null
-  } : value == "failed" ? {
-    failed: null
-  } : value;
-}
-function createActor(canisterId, _uploadFile, _downloadFile, options = {}) {
-  const agent = options.agent || HttpAgent.createSync({
-    ...options.agentOptions
-  });
-  if (options.agent && options.agentOptions) {
-    console.warn("Detected both agent and agentOptions passed to createActor. Ignoring agentOptions and proceeding with the provided agent.");
-  }
-  const actor = Actor.createActor(idlFactory, {
-    agent,
-    canisterId,
-    ...options.actorOptions
-  });
-  return new Backend(actor, _uploadFile, _downloadFile, options.processError);
-}
 function useAuth() {
   const {
     login,
@@ -38390,6 +38390,98 @@ function useAssignUserRole() {
     }
   });
 }
+let runtimeEnvPromise = null;
+async function loadRuntimeEnv() {
+  if (!runtimeEnvPromise) {
+    runtimeEnvPromise = fetch("/env.json", { cache: "no-store" }).then((response) => response.ok ? response.json() : {}).catch(() => ({}));
+  }
+  return runtimeEnvPromise;
+}
+function normalizeServerUrl(url) {
+  const trimmed = url.trim().replace(/\/+$/, "");
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (/^(localhost|127\.0\.0\.1|\[::1\])/i.test(trimmed)) {
+    return `http://${trimmed}`;
+  }
+  return `https://${trimmed}`;
+}
+async function getVoiceServerUrl() {
+  const runtimeEnv = await loadRuntimeEnv();
+  const url = runtimeEnv.voice_server_url;
+  if (!url || url === "undefined") {
+    throw new Error(
+      "Voice server URL is not configured. Set voice_server_url in src/frontend/env.json."
+    );
+  }
+  return normalizeServerUrl(url);
+}
+function serializePreset(preset) {
+  return {
+    id: preset.id.toString(),
+    name: preset.name,
+    systemPrompt: preset.systemPrompt,
+    voice: preset.voice,
+    audioFormat: preset.audioFormat,
+    sampleRate: preset.sampleRate,
+    turnDetection: {
+      serverVad: preset.turnDetection.serverVad,
+      threshold: preset.turnDetection.threshold,
+      silenceDurationMs: Number(preset.turnDetection.silenceDurationMs),
+      prefixPaddingMs: Number(preset.turnDetection.prefixPaddingMs)
+    },
+    toolsEnabled: preset.toolsEnabled
+  };
+}
+async function postJson(path, body) {
+  const baseUrl = await getVoiceServerUrl();
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.ok === false) {
+    throw new Error(
+      payload.error || `Voice server request failed (${response.status})`
+    );
+  }
+  return payload;
+}
+async function startVoiceServerCall({
+  recipientPhone,
+  preset,
+  callId,
+  reservationId,
+  callToken
+}) {
+  return postJson("/initiate-call", {
+    recipientPhone,
+    preset: serializePreset(preset),
+    callId: callId.toString(),
+    reservationId,
+    callToken
+  });
+}
+async function endVoiceServerCall(callSid) {
+  await postJson("/end-call", { callSid });
+}
+async function createCheckoutSession({
+  purchaseIntentId,
+  returnUrl
+}) {
+  return postJson("/billing/create-checkout-session", {
+    purchaseIntentId,
+    returnUrl
+  });
+}
+async function getVoiceServerHealth() {
+  const baseUrl = await getVoiceServerUrl();
+  const response = await fetch(`${baseUrl}/health`, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Voice server health check failed (${response.status})`);
+  }
+  return response.json();
+}
 function InputWithReveal({
   id: id2,
   placeholder,
@@ -38424,7 +38516,11 @@ function InputWithReveal({
   ] });
 }
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
-function StatusBadge({ configured }) {
+function StatusBadge({
+  configured,
+  configuredLabel = "Configured",
+  missingLabel = "Not Set"
+}) {
   return configured ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
     Badge,
     {
@@ -38432,7 +38528,7 @@ function StatusBadge({ configured }) {
       className: "bg-green-500/10 text-green-400 border-green-500/30 text-xs",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheckBig, { className: "w-3 h-3 mr-1" }),
-        "Configured"
+        configuredLabel
       ]
     }
   ) : /* @__PURE__ */ jsxRuntimeExports.jsxs(
@@ -38442,15 +38538,22 @@ function StatusBadge({ configured }) {
       className: "bg-destructive/10 text-destructive border-destructive/30 text-xs",
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(CircleX, { className: "w-3 h-3 mr-1" }),
-        "Not Set"
+        missingLabel
       ]
     }
   );
 }
 function AdminDashboardPage() {
+  var _a3, _b3, _c2;
   const { data: config, isLoading: configLoading } = useGetAdminConfig();
   const { data: allCalls, isLoading: callsLoading } = useAdminListAllCalls();
   const setConfig = useSetAdminConfig();
+  const assignRole = useAssignUserRole();
+  const voiceServerQuery = useQuery({
+    queryKey: ["voiceServerHealth"],
+    queryFn: getVoiceServerHealth,
+    retry: false
+  });
   const [xaiKey, setXaiKey] = reactExports.useState("");
   const [xaiSaving, setXaiSaving] = reactExports.useState(false);
   const [twilioSid, setTwilioSid] = reactExports.useState("");
@@ -38530,6 +38633,23 @@ function AdminDashboardPage() {
       setFromError("");
     }
   };
+  const paymentServerPrincipal = ((_b3 = (_a3 = voiceServerQuery.data) == null ? void 0 : _a3.icpServerPrincipal) == null ? void 0 : _b3.trim()) ?? "";
+  const handleAuthorizePaymentServer = async () => {
+    if (!paymentServerPrincipal) {
+      ue.error("Payment server principal is unavailable");
+      return;
+    }
+    try {
+      await assignRole.mutateAsync({
+        user: Principal$1.fromText(paymentServerPrincipal),
+        role: UserRole.admin
+      });
+      ue.success("Payment server authorized");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to authorize server";
+      ue.error(message);
+    }
+  };
   const recentCalls = (allCalls ?? []).slice(0, 10);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(ProtectedRoute, { requireAdmin: true, children: /* @__PURE__ */ jsxRuntimeExports.jsx(AppLayout, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-8", "data-ocid": "admin.dashboard.page", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
@@ -38540,7 +38660,7 @@ function AdminDashboardPage() {
       /* @__PURE__ */ jsxRuntimeExports.jsx(Radio, { className: "w-4 h-4 text-primary" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "text-sm font-semibold text-foreground uppercase tracking-widest", children: "Integrations" })
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-2 gap-6", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 xl:grid-cols-3 gap-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         Card,
         {
@@ -38711,6 +38831,68 @@ function AdminDashboardPage() {
                   }
                 )
               ] })
+            ] })
+          ]
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        Card,
+        {
+          className: "bg-card border-border",
+          "data-ocid": "admin.payment_server.card",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(CardHeader, { className: "pb-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(CardTitle, { className: "text-base flex items-center gap-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-4 h-4 text-primary" }),
+                  "Payment Server"
+                ] }),
+                voiceServerQuery.isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-5 w-20" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  StatusBadge,
+                  {
+                    configured: Boolean(paymentServerPrincipal) && Boolean((_c2 = voiceServerQuery.data) == null ? void 0 : _c2.billingConfigured),
+                    configuredLabel: "Detected",
+                    missingLabel: "Unavailable"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { children: "Stripe checkout and webhook fulfillment identity" })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(CardContent, { className: "space-y-4", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Label,
+                  {
+                    htmlFor: "payment-server-principal",
+                    className: "text-xs font-medium text-muted-foreground",
+                    children: "Principal ID"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Input,
+                  {
+                    id: "payment-server-principal",
+                    readOnly: true,
+                    value: paymentServerPrincipal,
+                    placeholder: voiceServerQuery.isError ? "Voice server unavailable" : "Waiting for voice server...",
+                    "data-ocid": "admin.payment_server.principal.input",
+                    className: "font-mono text-sm"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                Button,
+                {
+                  onClick: handleAuthorizePaymentServer,
+                  disabled: !paymentServerPrincipal || assignRole.isPending,
+                  "data-ocid": "admin.payment_server.authorize_button",
+                  className: "w-full gap-2",
+                  children: [
+                    assignRole.isPending ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ShieldCheck, { className: "w-4 h-4" }),
+                    assignRole.isPending ? "Authorizing..." : "Authorize Server"
+                  ]
+                }
+              )
             ] })
           ]
         }
@@ -44372,98 +44554,6 @@ function AdminUsersPage() {
 const Route$4 = createFileRoute("/admin/users")({
   component: AdminUsersPage
 });
-let runtimeEnvPromise = null;
-async function loadRuntimeEnv() {
-  if (!runtimeEnvPromise) {
-    runtimeEnvPromise = fetch("/env.json", { cache: "no-store" }).then((response) => response.ok ? response.json() : {}).catch(() => ({}));
-  }
-  return runtimeEnvPromise;
-}
-function normalizeServerUrl(url) {
-  const trimmed = url.trim().replace(/\/+$/, "");
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (/^(localhost|127\.0\.0\.1|\[::1\])/i.test(trimmed)) {
-    return `http://${trimmed}`;
-  }
-  return `https://${trimmed}`;
-}
-async function getVoiceServerUrl() {
-  const runtimeEnv = await loadRuntimeEnv();
-  const url = runtimeEnv.voice_server_url;
-  if (!url || url === "undefined") {
-    throw new Error(
-      "Voice server URL is not configured. Set voice_server_url in src/frontend/env.json."
-    );
-  }
-  return normalizeServerUrl(url);
-}
-function serializePreset(preset) {
-  return {
-    id: preset.id.toString(),
-    name: preset.name,
-    systemPrompt: preset.systemPrompt,
-    voice: preset.voice,
-    audioFormat: preset.audioFormat,
-    sampleRate: preset.sampleRate,
-    turnDetection: {
-      serverVad: preset.turnDetection.serverVad,
-      threshold: preset.turnDetection.threshold,
-      silenceDurationMs: Number(preset.turnDetection.silenceDurationMs),
-      prefixPaddingMs: Number(preset.turnDetection.prefixPaddingMs)
-    },
-    toolsEnabled: preset.toolsEnabled
-  };
-}
-async function postJson(path, body) {
-  const baseUrl = await getVoiceServerUrl();
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok || payload.ok === false) {
-    throw new Error(
-      payload.error || `Voice server request failed (${response.status})`
-    );
-  }
-  return payload;
-}
-async function startVoiceServerCall({
-  recipientPhone,
-  preset,
-  callId,
-  reservationId,
-  callToken
-}) {
-  return postJson("/initiate-call", {
-    recipientPhone,
-    preset: serializePreset(preset),
-    callId: callId.toString(),
-    reservationId,
-    callToken
-  });
-}
-async function endVoiceServerCall(callSid) {
-  await postJson("/end-call", { callSid });
-}
-async function createCheckoutSession({
-  purchaseIntentId,
-  returnUrl
-}) {
-  return postJson("/billing/create-checkout-session", {
-    purchaseIntentId,
-    returnUrl
-  });
-}
-async function getVoiceServerHealth() {
-  const baseUrl = await getVoiceServerUrl();
-  const response = await fetch(`${baseUrl}/health`, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`Voice server health check failed (${response.status})`);
-  }
-  return response.json();
-}
 const features = [
   {
     icon: Mic,

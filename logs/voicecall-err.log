@@ -1,0 +1,122 @@
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+Error: Origin not allowed by CORS: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+    at origin (file:///C:/Projects/voicecall-ai/src/server/server.js:30:16)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:219:13
+    at optionsCallback (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:199:9)
+    at corsMiddleware (C:\Projects\voicecall-ai\node_modules\.pnpm\cors@2.8.6\node_modules\cors\lib\index.js:204:7)
+    at Layer.handle [as handle_request] (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\layer.js:95:5)
+    at trim_prefix (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:328:13)
+    at C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:286:9
+    at router.process_params (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:346:12)
+    at next (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\router\index.js:280:10)
+    at expressInit (C:\Projects\voicecall-ai\node_modules\.pnpm\express@4.22.1\node_modules\express\lib\middleware\init.js:40:5)
+{"level":"error","message":"Failed to create Checkout Session","error":"The replica returned a rejection error:\n  Request ID: 5b54b08840c0b7d5e93ee0305bdb8c0bf067837f2d59c1837357e3c5fbffe6f4\n  Reject code: 5\n  Reject text: Error from Canister 2dwhz-ziaaa-aaaak-qy2ia-cai: Canister called `ic0.trap` with message: 'User is not registered'.\nConsider gracefully handling failures from this canister or altering the canister to handle exceptions. See documentation: https://internetcomputer.org/docs/current/references/execution-errors#trapped-explicitly\n  Error code: IC0503\n\nCall context:\n  Canister ID: 2dwhz-ziaaa-aaaak-qy2ia-cai\n  Method name: getPurchaseIntentForServer\n  HTTP details: {\n  \"ok\": true,\n  \"status\": 200,\n  \"statusText\": \"OK\",\n  \"headers\": [\n    [\n      \"access-control-allow-origin\",\n      \"*\"\n    ],\n    [\n      \"access-control-expose-headers\",\n      \"accept-ranges,content-length,content-range,x-request-id,x-ic-canister-id\"\n    ],\n    [\n      \"content-length\",\n      \"545\"\n    ],\n    [\n      \"content-type\",\n      \"application/cbor\"\n    ],\n    [\n      \"date\",\n      \"Sun, 10 May 2026 15:52:28 GMT\"\n    ],\n    [\n      \"strict-transport-security\",\n      \"max-age=31536000; includeSubDomains\"\n    ],\n    [\n      \"vary\",\n      \"origin, access-control-request-method, access-control-request-headers\"\n    ],\n    [\n      \"x-content-type-options\",\n      \"nosniff\"\n    ],\n    [\n      \"x-frame-options\",\n      \"DENY\"\n    ],\n    [\n      \"x-ic-canister-id\",\n      \"2dwhz-ziaaa-aaaak-qy2ia-cai\"\n    ],\n    [\n      \"x-request-id\",\n      \"019e1297-08bd-7d10-bd72-7e49c89d9722\"\n    ]\n  ],\n  \"requestDetails\": {\n    \"request_type\": \"query\",\n    \"canister_id\": {\n      \"__principal__\": \"2dwhz-ziaaa-aaaak-qy2ia-cai\"\n    },\n    \"method_name\": \"getPurchaseIntentForServer\",\n    \"arg\": {\n      \"0\": 68,\n      \"1\": 73,\n      \"2\": 68,\n      \"3\": 76,\n      \"4\": 0,\n      \"5\": 1,\n      \"6\": 113,\n      \"7\": 4,\n      \"8\": 112,\n      \"9\": 105,\n      \"10\": 95,\n      \"11\": 49\n    },\n    \"sender\": {\n      \"__principal__\": \"roef4-rxyxd-bw4zu-6xjb5-r6kk7-aqgp2-zaogj-z4r6p-dp237-cd7or-wae\"\n    },\n    \"ingress_expiry\": {\n      \"__expiry__\": \"1778428620000000000\"\n    }\n  }\n}","at":"2026-05-10T15:52:28.372Z"}

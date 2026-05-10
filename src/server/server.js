@@ -221,6 +221,35 @@ function log(level, message, meta = {}) {
   }
 }
 
+function isBackendAuthorizationError(error) {
+  const message = String(error?.message || error || "");
+  return (
+    message.includes("User is not registered") ||
+    message.includes("Unauthorized: server admin only") ||
+    message.includes("Only admins can assign user roles")
+  );
+}
+
+function getPaymentServerAuthorizationMessage() {
+  const principal = getIcpServerPrincipalText();
+  return principal
+    ? `Payment server principal ${principal} is not authorized in the IC backend. Open Admin Dashboard and authorize the payment server, or grant that principal the admin role.`
+    : "Payment server identity is not configured. Set ICP_SERVER_IDENTITY_JSON in the voice server environment.";
+}
+
+function logPaymentServerAuthorizationFailure(action, error) {
+  const principal = getIcpServerPrincipalText();
+  log("error", "Payment server identity is not authorized in the IC backend", {
+    action,
+    principal,
+    backendCanisterId: process.env.BACKEND_CANISTER_ID || "",
+    error: error?.message || String(error),
+    grantCommand: principal
+      ? `icp canister call -e ic backend assignCallerUserRole '(principal "${principal}", variant { admin })'`
+      : "",
+  });
+}
+
 function getPublicHost() {
   const raw = process.env.HOSTNAME || process.env.PUBLIC_URL || "";
   if (!raw.trim()) return "";
@@ -354,7 +383,16 @@ function getSessionFromRequest(req) {
 
 async function getPurchaseIntentOrThrow(purchaseIntentId) {
   const actor = await getBackendActor();
-  const optionalIntent = await actor.getPurchaseIntentForServer(purchaseIntentId);
+  let optionalIntent;
+  try {
+    optionalIntent = await actor.getPurchaseIntentForServer(purchaseIntentId);
+  } catch (error) {
+    if (isBackendAuthorizationError(error)) {
+      logPaymentServerAuthorizationFailure("getPurchaseIntentForServer", error);
+      throw new Error(getPaymentServerAuthorizationMessage());
+    }
+    throw error;
+  }
   const intent = normalizePurchaseIntent(unwrapOptional(optionalIntent));
   if (!intent) {
     throw new Error("Purchase intent not found.");
@@ -440,13 +478,22 @@ async function fulfillCheckoutSession(session, mode) {
   }
 
   const actor = await getBackendActor();
-  const result = await actor.creditPaidSeconds(
-    session.id,
-    purchaseIntentId,
-    principalFromText(principal),
-    BigInt(seconds),
-    stripeModeToCandid(mode),
-  );
+  let result;
+  try {
+    result = await actor.creditPaidSeconds(
+      session.id,
+      purchaseIntentId,
+      principalFromText(principal),
+      BigInt(seconds),
+      stripeModeToCandid(mode),
+    );
+  } catch (error) {
+    if (isBackendAuthorizationError(error)) {
+      logPaymentServerAuthorizationFailure("creditPaidSeconds", error);
+      throw new Error(getPaymentServerAuthorizationMessage());
+    }
+    throw error;
+  }
   okOrThrow(result, "Unable to credit paid phone time.");
   log("info", "Credited paid phone time", {
     sessionId: session.id,

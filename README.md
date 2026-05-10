@@ -215,6 +215,8 @@ Copy the printed `ICP_SERVER_IDENTITY_JSON=...` line into `src\server\.env`. Cop
 icp canister call -e ic backend assignCallerUserRole '(principal "SERVER_PRINCIPAL_HERE", variant { admin })'
 ```
 
+You can also do this from the app: open **Admin Dashboard**, find **Payment Server**, and click **Authorize Server**. This grants the Node voice server permission to read purchase intents and credit phone time after Stripe webhooks.
+
 In Stripe, create two webhook endpoints:
 
 ```text

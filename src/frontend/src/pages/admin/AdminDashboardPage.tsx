@@ -1,3 +1,4 @@
+import { UserRole } from "@/backend";
 import { AppLayout } from "@/components/AppLayout";
 import { CallStatusBadge } from "@/components/CallStatusBadge";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -15,17 +16,23 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useAdminListAllCalls,
+  useAssignUserRole,
   useGetAdminConfig,
   useSetAdminConfig,
 } from "@/hooks/use-backend";
+import { getVoiceServerHealth } from "@/lib/voice-server";
+import { Principal } from "@icp-sdk/core/principal";
+import { useQuery } from "@tanstack/react-query";
 import {
   CheckCircle,
+  CreditCard,
   Eye,
   EyeOff,
   KeyRound,
   Loader2,
   Phone,
   Radio,
+  ShieldCheck,
   XCircle,
 } from "lucide-react";
 import { useState } from "react";
@@ -70,14 +77,22 @@ function InputWithReveal({
 
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
 
-function StatusBadge({ configured }: { configured: boolean }) {
+function StatusBadge({
+  configured,
+  configuredLabel = "Configured",
+  missingLabel = "Not Set",
+}: {
+  configured: boolean;
+  configuredLabel?: string;
+  missingLabel?: string;
+}) {
   return configured ? (
     <Badge
       variant="outline"
       className="bg-green-500/10 text-green-400 border-green-500/30 text-xs"
     >
       <CheckCircle className="w-3 h-3 mr-1" />
-      Configured
+      {configuredLabel}
     </Badge>
   ) : (
     <Badge
@@ -85,7 +100,7 @@ function StatusBadge({ configured }: { configured: boolean }) {
       className="bg-destructive/10 text-destructive border-destructive/30 text-xs"
     >
       <XCircle className="w-3 h-3 mr-1" />
-      Not Set
+      {missingLabel}
     </Badge>
   );
 }
@@ -94,6 +109,12 @@ export default function AdminDashboardPage() {
   const { data: config, isLoading: configLoading } = useGetAdminConfig();
   const { data: allCalls, isLoading: callsLoading } = useAdminListAllCalls();
   const setConfig = useSetAdminConfig();
+  const assignRole = useAssignUserRole();
+  const voiceServerQuery = useQuery({
+    queryKey: ["voiceServerHealth"],
+    queryFn: getVoiceServerHealth,
+    retry: false,
+  });
 
   // xAI section state
   const [xaiKey, setXaiKey] = useState("");
@@ -183,6 +204,27 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const paymentServerPrincipal =
+    voiceServerQuery.data?.icpServerPrincipal?.trim() ?? "";
+
+  const handleAuthorizePaymentServer = async () => {
+    if (!paymentServerPrincipal) {
+      toast.error("Payment server principal is unavailable");
+      return;
+    }
+    try {
+      await assignRole.mutateAsync({
+        user: Principal.fromText(paymentServerPrincipal),
+        role: UserRole.admin,
+      });
+      toast.success("Payment server authorized");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to authorize server";
+      toast.error(message);
+    }
+  };
+
   const recentCalls = (allCalls ?? []).slice(0, 10);
 
   return (
@@ -207,7 +249,7 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Integration cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
             {/* xAI config */}
             <Card
               className="bg-card border-border"
@@ -371,6 +413,71 @@ export default function AdminDashboardPage() {
                     {twilioTesting ? "Testing..." : "Test Connection"}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Payment server authorization */}
+            <Card
+              className="bg-card border-border"
+              data-ocid="admin.payment_server.card"
+            >
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between gap-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-primary" />
+                    Payment Server
+                  </CardTitle>
+                  {voiceServerQuery.isLoading ? (
+                    <Skeleton className="h-5 w-20" />
+                  ) : (
+                    <StatusBadge
+                      configured={
+                        Boolean(paymentServerPrincipal) &&
+                        Boolean(voiceServerQuery.data?.billingConfigured)
+                      }
+                      configuredLabel="Detected"
+                      missingLabel="Unavailable"
+                    />
+                  )}
+                </div>
+                <CardDescription>
+                  Stripe checkout and webhook fulfillment identity
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="payment-server-principal"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Principal ID
+                  </Label>
+                  <Input
+                    id="payment-server-principal"
+                    readOnly
+                    value={paymentServerPrincipal}
+                    placeholder={
+                      voiceServerQuery.isError
+                        ? "Voice server unavailable"
+                        : "Waiting for voice server..."
+                    }
+                    data-ocid="admin.payment_server.principal.input"
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <Button
+                  onClick={handleAuthorizePaymentServer}
+                  disabled={!paymentServerPrincipal || assignRole.isPending}
+                  data-ocid="admin.payment_server.authorize_button"
+                  className="w-full gap-2"
+                >
+                  {assignRole.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ShieldCheck className="w-4 h-4" />
+                  )}
+                  {assignRole.isPending ? "Authorizing..." : "Authorize Server"}
+                </Button>
               </CardContent>
             </Card>
           </div>
