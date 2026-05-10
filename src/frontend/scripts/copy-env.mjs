@@ -35,6 +35,15 @@ function looksLikeMainnetOrigin(value) {
   return /^https:\/\/[^/]+\.(icp0\.io|ic0\.app)$/i.test(String(value || ""));
 }
 
+function getCspDirective(cspText, directive) {
+  const match = cspText.match(new RegExp(`${directive}\\s+([^";]+)`));
+  return match?.[1] || "";
+}
+
+function directiveAllows(cspText, directive, origin) {
+  return getCspDirective(cspText, directive).split(/\s+/).includes(origin);
+}
+
 const env = JSON.parse(readFileSync(source, "utf8"));
 const requiredKeys = [
   "backend_host",
@@ -74,9 +83,14 @@ if (
 if (existsSync(assetConfig)) {
   const voiceOrigin = new URL(env.voice_server_url).origin;
   const assetConfigText = readFileSync(assetConfig, "utf8");
-  if (!assetConfigText.includes(voiceOrigin)) {
+  if (!directiveAllows(assetConfigText, "connect-src", voiceOrigin)) {
     throw new Error(
       `${assetConfig} Content-Security-Policy does not allow ${voiceOrigin}. Add it to connect-src before deploying.`,
+    );
+  }
+  if (!directiveAllows(assetConfigText, "media-src", voiceOrigin)) {
+    throw new Error(
+      `${assetConfig} Content-Security-Policy does not allow recording playback from ${voiceOrigin}. Add it to media-src before deploying.`,
     );
   }
 }

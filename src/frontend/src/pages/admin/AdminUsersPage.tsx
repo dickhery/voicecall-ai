@@ -32,9 +32,11 @@ import {
   ArrowLeft,
   Loader2,
   Phone,
+  Search,
   ShieldCheck,
   User,
   Users,
+  X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -42,17 +44,46 @@ import { toast } from "sonner";
 type UserEntry = {
   principalId: string;
   callCount: number;
+  lastCallTime: bigint;
 };
 
+function compareBigIntDesc(a: bigint, b: bigint): number {
+  if (a === b) return 0;
+  return a > b ? -1 : 1;
+}
+
+function formatCompactDateTime(ns: bigint): string {
+  return new Date(Number(ns / 1_000_000n)).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function buildUserList(calls: CallRecordPublic[]): UserEntry[] {
-  const counts = new Map<string, number>();
+  const users = new Map<string, UserEntry>();
   for (const call of calls) {
     const key = call.userId.toString();
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+    const existing = users.get(key);
+    if (!existing) {
+      users.set(key, {
+        principalId: key,
+        callCount: 1,
+        lastCallTime: call.startTime,
+      });
+      continue;
+    }
+    existing.callCount += 1;
+    if (call.startTime > existing.lastCallTime) {
+      existing.lastCallTime = call.startTime;
+    }
   }
-  return Array.from(counts.entries())
-    .map(([principalId, callCount]) => ({ principalId, callCount }))
-    .sort((a, b) => b.callCount - a.callCount);
+  return Array.from(users.values()).sort(
+    (a, b) =>
+      compareBigIntDesc(a.lastCallTime, b.lastCallTime) ||
+      b.callCount - a.callCount,
+  );
 }
 
 function UserCallHistory({
@@ -69,6 +100,22 @@ function UserCallHistory({
     principal = null;
   }
   const { data: calls, isLoading } = useAdminListUserCalls(principal);
+  const [search, setSearch] = useState("");
+
+  const filteredCalls = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return calls ?? [];
+    return (calls ?? []).filter((call) => {
+      const timestamp = formatCompactDateTime(call.startTime);
+      return [
+        call.recipientPhone,
+        call.status,
+        call.id.toString(),
+        call.callSid ?? "",
+        timestamp,
+      ].some((value) => value.toLowerCase().includes(query));
+    });
+  }, [calls, search]);
 
   return (
     <div className="space-y-4">
@@ -99,10 +146,35 @@ function UserCallHistory({
             Calls
           </CardTitle>
           <CardDescription className="text-xs">
-            {isLoading ? "Loading..." : `${calls?.length ?? 0} calls`}
+            {isLoading
+              ? "Loading..."
+              : search
+                ? `${filteredCalls.length} of ${calls?.length ?? 0} calls`
+                : `${calls?.length ?? 0} calls`}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search calls..."
+              className="h-8 pl-8 pr-8 text-xs"
+              data-ocid="admin.user_calls.search_input"
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Clear user call search"
+                data-ocid="admin.user_calls.clear_search_button"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
           {isLoading ? (
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
@@ -116,13 +188,17 @@ function UserCallHistory({
             >
               No calls found for this user.
             </div>
+          ) : filteredCalls.length === 0 ? (
+            <div className="text-center py-8 text-sm text-muted-foreground">
+              No calls match your search.
+            </div>
           ) : (
             <div className="divide-y divide-border">
-              {calls.map((call, idx) => (
+              {filteredCalls.map((call, idx) => (
                 <div
                   key={call.id.toString()}
                   data-ocid={`admin.user_call.item.${idx + 1}`}
-                  className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                  className="flex items-center gap-3 py-2 first:pt-0 last:pb-0"
                 >
                   <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -130,9 +206,7 @@ function UserCallHistory({
                       {call.recipientPhone}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(
-                        Number(call.startTime / 1_000_000n),
-                      ).toLocaleString()}
+                      {formatCompactDateTime(call.startTime)}
                     </p>
                   </div>
                   <CallStatusBadge status={call.status} />
@@ -152,8 +226,20 @@ export default function AdminUsersPage() {
   const assignRole = useAssignUserRole();
   const { data: allCalls, isLoading: callsLoading } = useAdminListAllCalls();
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [userSearch, setUserSearch] = useState("");
 
   const userList = useMemo(() => buildUserList(allCalls ?? []), [allCalls]);
+  const filteredUserList = useMemo(() => {
+    const query = userSearch.trim().toLowerCase();
+    if (!query) return userList;
+    return userList.filter((entry) =>
+      [
+        entry.principalId,
+        entry.callCount.toString(),
+        formatCompactDateTime(entry.lastCallTime),
+      ].some((value) => value.toLowerCase().includes(query)),
+    );
+  }, [userList, userSearch]);
 
   const handleAssign = async () => {
     if (!principalInput.trim()) {
@@ -211,10 +297,33 @@ export default function AdminUsersPage() {
               <CardDescription>
                 {callsLoading
                   ? "Loading..."
-                  : `${userList.length} user${userList.length !== 1 ? "s" : ""} found`}
+                  : userSearch
+                    ? `${filteredUserList.length} of ${userList.length} users`
+                    : `${userList.length} user${userList.length !== 1 ? "s" : ""} found`}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                <Input
+                  value={userSearch}
+                  onChange={(event) => setUserSearch(event.target.value)}
+                  placeholder="Search users..."
+                  className="h-8 pl-8 pr-8 text-xs"
+                  data-ocid="admin.users.search_input"
+                />
+                {userSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setUserSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label="Clear user search"
+                    data-ocid="admin.users.clear_search_button"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
               {callsLoading ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
@@ -228,15 +337,19 @@ export default function AdminUsersPage() {
                 >
                   No users have made calls yet.
                 </div>
+              ) : filteredUserList.length === 0 ? (
+                <div className="text-center py-10 text-sm text-muted-foreground">
+                  No users match your search.
+                </div>
               ) : (
-                <div className="divide-y divide-border">
-                  {userList.map((entry, idx) => (
+                <div className="divide-y divide-border max-h-[520px] overflow-y-auto">
+                  {filteredUserList.map((entry, idx) => (
                     <button
                       type="button"
                       key={entry.principalId}
                       data-ocid={`admin.user.item.${idx + 1}`}
                       onClick={() => setSelectedUser(entry.principalId)}
-                      className="w-full flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:bg-muted/20 -mx-1 px-1 rounded-lg transition-colors text-left"
+                      className="w-full flex items-center gap-3 py-2 first:pt-0 last:pb-0 hover:bg-muted/20 -mx-1 px-1 rounded-lg transition-colors text-left"
                     >
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                         <User className="w-4 h-4 text-primary" />
@@ -247,7 +360,8 @@ export default function AdminUsersPage() {
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {entry.callCount} call
-                          {entry.callCount !== 1 ? "s" : ""}
+                          {entry.callCount !== 1 ? "s" : ""} - latest{" "}
+                          {formatCompactDateTime(entry.lastCallTime)}
                         </p>
                       </div>
                       <Badge

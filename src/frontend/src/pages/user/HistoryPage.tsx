@@ -143,6 +143,34 @@ function withDownloadParam(url: string): string {
   }
 }
 
+function getRecordingMimeType(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const format = parsed.searchParams.get("format")?.toLowerCase();
+    if (format === "wav" || parsed.pathname.toLowerCase().endsWith(".wav")) {
+      return "audio/wav";
+    }
+  } catch {
+    if (url.toLowerCase().endsWith(".wav")) return "audio/wav";
+  }
+  return "audio/mpeg";
+}
+
+function formatAudioElementError(error: MediaError | null): string {
+  switch (error?.code) {
+    case MediaError.MEDIA_ERR_ABORTED:
+      return "Audio playback was interrupted.";
+    case MediaError.MEDIA_ERR_NETWORK:
+      return "The browser could not load this recording from the voice server.";
+    case MediaError.MEDIA_ERR_DECODE:
+      return "The browser could not decode this recording.";
+    case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+      return "This browser could not play the recording format.";
+    default:
+      return "The browser could not play this recording.";
+  }
+}
+
 const ALL_STATUSES: Array<{ value: CallStatus | "all"; label: string }> = [
   { value: "all", label: "All Statuses" },
   { value: CallStatus.pending, label: "Pending" },
@@ -671,7 +699,16 @@ function RecordingArtifact({
       {isResolving ? (
         <Skeleton className="h-9 w-full" />
       ) : playbackUrl ? (
-        <audio controls src={playbackUrl} className="w-full h-9">
+        <audio
+          key={playbackUrl}
+          controls
+          preload="metadata"
+          className="w-full h-9"
+          onError={(event) =>
+            setError(formatAudioElementError(event.currentTarget.error))
+          }
+        >
+          <source src={playbackUrl} type={getRecordingMimeType(playbackUrl)} />
           <track
             kind="captions"
             srcLang="en"

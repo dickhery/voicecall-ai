@@ -490,7 +490,7 @@ The IC asset canister serves a strict Content Security Policy from:
 src/frontend/public/.ic-assets.json5
 ```
 
-If `voice_server_url` changes, add the new origin to the `connect-src` directive before redeploying the frontend. The build checks this now, so a mismatched CSP fails locally instead of letting the deployed browser block `/health` or `/initiate-call`.
+If `voice_server_url` changes, add the new origin to both `connect-src` and `media-src` before redeploying the frontend. The build checks this now, so a mismatched CSP fails locally instead of letting the deployed browser block `/health`, `/initiate-call`, live monitoring, or recording playback.
 
 ## CORS Notes
 

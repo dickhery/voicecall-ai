@@ -26,6 +26,22 @@ function useBackendActor() {
   return useActor(createActor);
 }
 
+function compareBigIntDesc(a: bigint, b: bigint): number {
+  if (a === b) return 0;
+  return a > b ? -1 : 1;
+}
+
+function sortCallsNewestFirst(calls: CallRecordPublic[]): CallRecordPublic[] {
+  return [...calls].sort((a, b) => {
+    const byStart = compareBigIntDesc(a.startTime, b.startTime);
+    return byStart || compareBigIntDesc(a.id, b.id);
+  });
+}
+
+function sortLogsNewestFirst(logs: SystemLog[]): SystemLog[] {
+  return [...logs].sort((a, b) => compareBigIntDesc(a.timestamp, b.timestamp));
+}
+
 export function useListMyPresets() {
   const { actor, isFetching } = useBackendActor();
   return useQuery<CallPreset[]>({
@@ -111,7 +127,7 @@ export function useListMyCalls() {
     queryKey: ["myCalls"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listMyCalls();
+      return sortCallsNewestFirst(await actor.listMyCalls());
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 5000,
@@ -197,7 +213,7 @@ export function useAdminGetSystemLogs(limit = 100n) {
     queryKey: ["adminLogs", limit.toString()],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.adminGetSystemLogs(limit);
+      return sortLogsNewestFirst(await actor.adminGetSystemLogs(limit));
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 10_000,
@@ -210,7 +226,7 @@ export function useAdminListAllCalls() {
     queryKey: ["adminAllCalls"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.adminListAllCalls();
+      return sortCallsNewestFirst(await actor.adminListAllCalls());
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 10_000,
@@ -223,7 +239,7 @@ export function useAdminListUserCalls(userId: Principal | null) {
     queryKey: ["adminUserCalls", userId?.toString()],
     queryFn: async () => {
       if (!actor || !userId) return [];
-      return actor.adminListUserCalls(userId);
+      return sortCallsNewestFirst(await actor.adminListUserCalls(userId));
     },
     enabled: !!actor && !isFetching && userId !== null,
   });

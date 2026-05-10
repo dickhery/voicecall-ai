@@ -112,6 +112,12 @@ function isOriginAllowed(origin) {
 
 app.use(
   cors({
+    exposedHeaders: [
+      "Accept-Ranges",
+      "Content-Length",
+      "Content-Range",
+      "Content-Type",
+    ],
     origin(origin, callback) {
       if (isOriginAllowed(origin)) {
         callback(null, true);
@@ -974,6 +980,9 @@ app.get("/recordings/:recordingSid", async (req, res) => {
         format === "wav" ? "audio/wav" : "audio/mpeg",
       );
     }
+    res.setHeader("Accept-Ranges", "bytes");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader("Vary", "Origin, Range");
     res.setHeader(
       "Content-Disposition",
       `${req.query.download === "1" ? "attachment" : "inline"}; filename="voicecall-recording-${recordingSid}.${format}"`,

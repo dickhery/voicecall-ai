@@ -4,6 +4,9 @@ import Principal "mo:core/Principal";
 import Time "mo:core/Time";
 import Runtime "mo:core/Runtime";
 import Nat "mo:core/Nat";
+import Int "mo:core/Int";
+import Array "mo:core/Array";
+import Order "mo:core/Order";
 import Types "../types/calls";
 import Common "../types/common";
 
@@ -96,6 +99,13 @@ module {
     };
   };
 
+  private func compareCallsNewestFirst(a : Types.CallRecordPublic, b : Types.CallRecordPublic) : Order.Order {
+    switch (Int.compare(b.startTime, a.startTime)) {
+      case (#equal) { Nat.compare(b.id, a.id) };
+      case (order) { order };
+    };
+  };
+
   public func listCallsForUser(
     state : State,
     userId : Principal,
@@ -110,7 +120,7 @@ module {
             case (?r) { buf.add(toPublic(r)) };
           };
         });
-        buf.toArray();
+        Array.sort(buf.toArray(), compareCallsNewestFirst);
       };
     };
   };
@@ -118,7 +128,7 @@ module {
   public func listAllCalls(state : State) : [Types.CallRecordPublic] {
     let buf = List.empty<Types.CallRecordPublic>();
     state.callRecords.forEach(func(_k, r) { buf.add(toPublic(r)) });
-    buf.toArray();
+    Array.sort(buf.toArray(), compareCallsNewestFirst);
   };
 
   public func addSystemLog(
@@ -139,6 +149,6 @@ module {
   public func getSystemLogs(state : State, limit : Nat) : [Types.SystemLog] {
     let total = state.systemLogs.size();
     let start : Nat = if (total > limit) { total - limit } else { 0 };
-    state.systemLogs.sliceToArray(start, total);
+    Array.reverse(state.systemLogs.sliceToArray(start, total));
   };
 };

@@ -38288,6 +38288,19 @@ function Label({
 function useBackendActor() {
   return useActor(createActor);
 }
+function compareBigIntDesc$1(a2, b2) {
+  if (a2 === b2) return 0;
+  return a2 > b2 ? -1 : 1;
+}
+function sortCallsNewestFirst(calls) {
+  return [...calls].sort((a2, b2) => {
+    const byStart = compareBigIntDesc$1(a2.startTime, b2.startTime);
+    return byStart || compareBigIntDesc$1(a2.id, b2.id);
+  });
+}
+function sortLogsNewestFirst(logs) {
+  return [...logs].sort((a2, b2) => compareBigIntDesc$1(a2.timestamp, b2.timestamp));
+}
 function useListMyPresets() {
   const { actor, isFetching } = useBackendActor();
   return useQuery({
@@ -38352,7 +38365,7 @@ function useListMyCalls() {
     queryKey: ["myCalls"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.listMyCalls();
+      return sortCallsNewestFirst(await actor.listMyCalls());
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 5e3
@@ -38399,7 +38412,7 @@ function useAdminGetSystemLogs(limit = 100n) {
     queryKey: ["adminLogs", limit.toString()],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.adminGetSystemLogs(limit);
+      return sortLogsNewestFirst(await actor.adminGetSystemLogs(limit));
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 1e4
@@ -38411,7 +38424,7 @@ function useAdminListAllCalls() {
     queryKey: ["adminAllCalls"],
     queryFn: async () => {
       if (!actor) return [];
-      return actor.adminListAllCalls();
+      return sortCallsNewestFirst(await actor.adminListAllCalls());
     },
     enabled: !!actor && !isFetching,
     refetchInterval: 1e4
@@ -38423,7 +38436,7 @@ function useAdminListUserCalls(userId) {
     queryKey: ["adminUserCalls", userId == null ? void 0 : userId.toString()],
     queryFn: async () => {
       if (!actor || !userId) return [];
-      return actor.adminListUserCalls(userId);
+      return sortCallsNewestFirst(await actor.adminListUserCalls(userId));
     },
     enabled: !!actor && !isFetching && userId !== null
   });
@@ -44376,6 +44389,7 @@ function AdminLogsPage() {
     dataUpdatedAt
   } = useAdminGetSystemLogs(BigInt(limit));
   const [levelFilter, setLevelFilter] = reactExports.useState("all");
+  const [search, setSearch] = reactExports.useState("");
   const [lastRefresh, setLastRefresh] = reactExports.useState(/* @__PURE__ */ new Date());
   const timerRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
@@ -44399,9 +44413,23 @@ function AdminLogsPage() {
       setLastRefresh(/* @__PURE__ */ new Date());
     }, 3e4);
   };
-  const filtered = (logs ?? []).filter(
-    (log2) => levelFilter === "all" ? true : log2.level === levelFilter
-  );
+  const filtered = reactExports.useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return (logs ?? []).filter((log2) => {
+      var _a3;
+      if (levelFilter !== "all" && log2.level !== levelFilter) return false;
+      if (!query) return true;
+      const timestamp = new Date(
+        Number(log2.timestamp / 1000000n)
+      ).toLocaleString();
+      return [
+        log2.message,
+        levelConfig[log2.level].label,
+        ((_a3 = log2.callId) == null ? void 0 : _a3.toString()) ?? "",
+        timestamp
+      ].some((value) => value.toLowerCase().includes(query));
+    });
+  }, [logs, levelFilter, search]);
   const errorCount = (logs ?? []).filter(
     (l) => l.level === Variant_info_warn_error.error
   ).length;
@@ -44444,6 +44472,30 @@ function AdminLogsPage() {
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 flex-wrap", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative flex-1 min-w-[min(100%,18rem)]", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: "absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Input,
+          {
+            value: search,
+            onChange: (event) => setSearch(event.target.value),
+            placeholder: "Search logs...",
+            className: "h-8 pl-8 pr-8 text-xs",
+            "data-ocid": "admin.logs.search_input"
+          }
+        ),
+        search && /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "button",
+          {
+            type: "button",
+            onClick: () => setSearch(""),
+            className: "absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground",
+            "aria-label": "Clear log search",
+            "data-ocid": "admin.logs.clear_search_button",
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "w-3.5 h-3.5" })
+          }
+        )
+      ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(Select, { value: levelFilter, onValueChange: setLevelFilter, children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           SelectTrigger,
@@ -44488,13 +44540,27 @@ function AdminLogsPage() {
           children: /* @__PURE__ */ jsxRuntimeExports.jsx(RefreshCw, { className: "w-3.5 h-3.5" })
         }
       ),
+      (search || levelFilter !== "all") && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          variant: "ghost",
+          size: "sm",
+          className: "h-8 px-2 text-xs",
+          onClick: () => {
+            setSearch("");
+            setLevelFilter("all");
+          },
+          "data-ocid": "admin.logs.clear_filters_button",
+          children: "Clear"
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-xs text-muted-foreground ml-1", children: [
         "Last refresh: ",
         lastRefresh.toLocaleTimeString()
       ] })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-xl border border-border bg-card overflow-hidden", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[7rem_1fr_11rem] gap-4 px-4 py-3 bg-muted/30 border-b border-border text-xs font-semibold text-muted-foreground uppercase tracking-wider", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-[5.75rem_minmax(0,1fr)_8.5rem] gap-3 px-3 py-2 bg-muted/30 border-b border-border text-[11px] font-semibold text-muted-foreground uppercase tracking-wider", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Level" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: "Message" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-right", children: "Timestamp" })
@@ -44502,11 +44568,11 @@ function AdminLogsPage() {
       isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-border", children: [1, 2, 3, 4, 5].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
         "div",
         {
-          className: "grid grid-cols-[7rem_1fr_11rem] gap-4 px-4 py-3",
+          className: "grid grid-cols-[5.75rem_minmax(0,1fr)_8.5rem] gap-3 px-3 py-2",
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-5 w-14" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-4 w-full" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-4 w-36 ml-auto" })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-4 w-28 ml-auto" })
           ]
         },
         i
@@ -44518,32 +44584,43 @@ function AdminLogsPage() {
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollText, { className: "w-8 h-8 text-muted-foreground/30 mb-3" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground", children: "No logs found" }),
-            levelFilter !== "all" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            (levelFilter !== "all" || search) && /* @__PURE__ */ jsxRuntimeExports.jsx(
               "button",
               {
                 type: "button",
                 className: "mt-2 text-xs text-primary hover:underline",
-                onClick: () => setLevelFilter("all"),
-                children: "Clear filter"
+                onClick: () => {
+                  setLevelFilter("all");
+                  setSearch("");
+                },
+                children: "Clear filters"
               }
             )
           ]
         }
-      ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-border max-h-[600px] overflow-y-auto", children: filtered.map((log2, idx) => {
+      ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-border max-h-[560px] overflow-y-auto", children: filtered.map((log2, idx) => {
         const cfg = levelConfig[log2.level];
         const LevelIcon = cfg.icon;
         const logKey = `${log2.timestamp.toString()}-${idx}`;
+        const timestamp = new Date(
+          Number(log2.timestamp / 1000000n)
+        ).toLocaleString(void 0, {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           "div",
           {
             "data-ocid": `admin.log.item.${idx + 1}`,
-            className: "grid grid-cols-[7rem_1fr_11rem] gap-4 px-4 py-3 items-start hover:bg-muted/10 transition-colors",
+            className: "grid grid-cols-[5.75rem_minmax(0,1fr)_8.5rem] gap-3 px-3 py-2 items-start hover:bg-muted/10 transition-colors",
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs(
                 Badge,
                 {
                   variant: "outline",
-                  className: `text-xs w-16 justify-center ${cfg.className}`,
+                  className: `h-5 text-[11px] w-14 justify-center ${cfg.className}`,
                   children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(LevelIcon, { className: "w-3 h-3 mr-1" }),
                     cfg.label
@@ -44551,15 +44628,20 @@ function AdminLogsPage() {
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-mono text-foreground leading-relaxed break-all", children: log2.message }),
-                log2.callId !== void 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-xs text-muted-foreground font-mono", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "p",
+                  {
+                    className: "text-xs font-mono text-foreground leading-snug line-clamp-2 [overflow-wrap:anywhere]",
+                    title: log2.message,
+                    children: log2.message
+                  }
+                ),
+                log2.callId !== void 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "mt-0.5 text-[11px] text-muted-foreground font-mono", children: [
                   "call:",
                   log2.callId.toString()
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-muted-foreground font-mono text-right", children: new Date(
-                Number(log2.timestamp / 1000000n)
-              ).toLocaleString() })
+              /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[11px] text-muted-foreground font-mono text-right", children: timestamp })
             ]
           },
           logKey
@@ -44578,13 +44660,39 @@ function AdminLogsPage() {
 const Route$5 = createFileRoute("/admin/logs")({
   component: AdminLogsPage
 });
+function compareBigIntDesc(a2, b2) {
+  if (a2 === b2) return 0;
+  return a2 > b2 ? -1 : 1;
+}
+function formatCompactDateTime(ns) {
+  return new Date(Number(ns / 1000000n)).toLocaleString(void 0, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
 function buildUserList(calls) {
-  const counts = /* @__PURE__ */ new Map();
+  const users = /* @__PURE__ */ new Map();
   for (const call of calls) {
     const key = call.userId.toString();
-    counts.set(key, (counts.get(key) ?? 0) + 1);
+    const existing = users.get(key);
+    if (!existing) {
+      users.set(key, {
+        principalId: key,
+        callCount: 1,
+        lastCallTime: call.startTime
+      });
+      continue;
+    }
+    existing.callCount += 1;
+    if (call.startTime > existing.lastCallTime) {
+      existing.lastCallTime = call.startTime;
+    }
   }
-  return Array.from(counts.entries()).map(([principalId, callCount]) => ({ principalId, callCount })).sort((a2, b2) => b2.callCount - a2.callCount);
+  return Array.from(users.values()).sort(
+    (a2, b2) => compareBigIntDesc(a2.lastCallTime, b2.lastCallTime) || b2.callCount - a2.callCount
+  );
 }
 function UserCallHistory({
   userId,
@@ -44597,6 +44705,21 @@ function UserCallHistory({
     principal = null;
   }
   const { data: calls, isLoading } = useAdminListUserCalls(principal);
+  const [search, setSearch] = reactExports.useState("");
+  const filteredCalls = reactExports.useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return calls ?? [];
+    return (calls ?? []).filter((call) => {
+      const timestamp = formatCompactDateTime(call.startTime);
+      return [
+        call.recipientPhone,
+        call.status,
+        call.id.toString(),
+        call.callSid ?? "",
+        timestamp
+      ].some((value) => value.toLowerCase().includes(query));
+    });
+  }, [calls, search]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -44621,33 +44744,57 @@ function UserCallHistory({
           /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-4 h-4 text-primary" }),
           "Calls"
         ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { className: "text-xs", children: isLoading ? "Loading..." : `${(calls == null ? void 0 : calls.length) ?? 0} calls` })
+        /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { className: "text-xs", children: isLoading ? "Loading..." : search ? `${filteredCalls.length} of ${(calls == null ? void 0 : calls.length) ?? 0} calls` : `${(calls == null ? void 0 : calls.length) ?? 0} calls` })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: [1, 2, 3].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-12 w-full" }, i)) }) : !calls || calls.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-        "div",
-        {
-          className: "text-center py-8 text-sm text-muted-foreground",
-          "data-ocid": "admin.user_calls.empty_state",
-          children: "No calls found for this user."
-        }
-      ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-border", children: calls.map((call, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        "div",
-        {
-          "data-ocid": `admin.user_call.item.${idx + 1}`,
-          className: "flex items-center gap-3 py-3 first:pt-0 last:pb-0",
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-4 h-4 text-muted-foreground shrink-0" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-mono font-medium truncate", children: call.recipientPhone }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: new Date(
-                Number(call.startTime / 1000000n)
-              ).toLocaleString() })
-            ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(CallStatusBadge, { status: call.status })
-          ]
-        },
-        call.id.toString()
-      )) }) })
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(CardContent, { className: "space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: "absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Input,
+            {
+              value: search,
+              onChange: (event) => setSearch(event.target.value),
+              placeholder: "Search calls...",
+              className: "h-8 pl-8 pr-8 text-xs",
+              "data-ocid": "admin.user_calls.search_input"
+            }
+          ),
+          search && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "button",
+            {
+              type: "button",
+              onClick: () => setSearch(""),
+              className: "absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground",
+              "aria-label": "Clear user call search",
+              "data-ocid": "admin.user_calls.clear_search_button",
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "w-3.5 h-3.5" })
+            }
+          )
+        ] }),
+        isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: [1, 2, 3].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-12 w-full" }, i)) }) : !calls || calls.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+          "div",
+          {
+            className: "text-center py-8 text-sm text-muted-foreground",
+            "data-ocid": "admin.user_calls.empty_state",
+            children: "No calls found for this user."
+          }
+        ) : filteredCalls.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-8 text-sm text-muted-foreground", children: "No calls match your search." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-border", children: filteredCalls.map((call, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            "data-ocid": `admin.user_call.item.${idx + 1}`,
+            className: "flex items-center gap-3 py-2 first:pt-0 last:pb-0",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-4 h-4 text-muted-foreground shrink-0" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-mono font-medium truncate", children: call.recipientPhone }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: formatCompactDateTime(call.startTime) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CallStatusBadge, { status: call.status })
+            ]
+          },
+          call.id.toString()
+        )) })
+      ] })
     ] })
   ] });
 }
@@ -44657,7 +44804,19 @@ function AdminUsersPage() {
   const assignRole = useAssignUserRole();
   const { data: allCalls, isLoading: callsLoading } = useAdminListAllCalls();
   const [selectedUser, setSelectedUser] = reactExports.useState(null);
+  const [userSearch, setUserSearch] = reactExports.useState("");
   const userList = reactExports.useMemo(() => buildUserList(allCalls ?? []), [allCalls]);
+  const filteredUserList = reactExports.useMemo(() => {
+    const query = userSearch.trim().toLowerCase();
+    if (!query) return userList;
+    return userList.filter(
+      (entry) => [
+        entry.principalId,
+        entry.callCount.toString(),
+        formatCompactDateTime(entry.lastCallTime)
+      ].some((value) => value.toLowerCase().includes(query))
+    );
+  }, [userList, userSearch]);
   const handleAssign = async () => {
     if (!principalInput.trim()) {
       ue.error("Enter a principal ID");
@@ -44697,44 +44856,73 @@ function AdminUsersPage() {
               /* @__PURE__ */ jsxRuntimeExports.jsx(Users, { className: "w-4 h-4 text-primary" }),
               "All Users"
             ] }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { children: callsLoading ? "Loading..." : `${userList.length} user${userList.length !== 1 ? "s" : ""} found` })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { children: callsLoading ? "Loading..." : userSearch ? `${filteredUserList.length} of ${userList.length} users` : `${userList.length} user${userList.length !== 1 ? "s" : ""} found` })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: callsLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: [1, 2, 3].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-14 w-full" }, i)) }) : userList.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "div",
-            {
-              className: "text-center py-10 text-sm text-muted-foreground",
-              "data-ocid": "admin.users_list.empty_state",
-              children: "No users have made calls yet."
-            }
-          ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-border", children: userList.map((entry, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            "button",
-            {
-              type: "button",
-              "data-ocid": `admin.user.item.${idx + 1}`,
-              onClick: () => setSelectedUser(entry.principalId),
-              className: "w-full flex items-center gap-3 py-3 first:pt-0 last:pb-0 hover:bg-muted/20 -mx-1 px-1 rounded-lg transition-colors text-left",
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(User, { className: "w-4 h-4 text-primary" }) }),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-mono text-foreground truncate", children: entry.principalId }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-muted-foreground", children: [
-                    entry.callCount,
-                    " call",
-                    entry.callCount !== 1 ? "s" : ""
-                  ] })
-                ] }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  Badge,
-                  {
-                    variant: "outline",
-                    className: "text-xs shrink-0 bg-primary/10 text-primary border-primary/30",
-                    children: entry.callCount
-                  }
-                )
-              ]
-            },
-            entry.principalId
-          )) }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(CardContent, { className: "space-y-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: "absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Input,
+                {
+                  value: userSearch,
+                  onChange: (event) => setUserSearch(event.target.value),
+                  placeholder: "Search users...",
+                  className: "h-8 pl-8 pr-8 text-xs",
+                  "data-ocid": "admin.users.search_input"
+                }
+              ),
+              userSearch && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                "button",
+                {
+                  type: "button",
+                  onClick: () => setUserSearch(""),
+                  className: "absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground",
+                  "aria-label": "Clear user search",
+                  "data-ocid": "admin.users.clear_search_button",
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "w-3.5 h-3.5" })
+                }
+              )
+            ] }),
+            callsLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: [1, 2, 3].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-14 w-full" }, i)) }) : userList.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+              "div",
+              {
+                className: "text-center py-10 text-sm text-muted-foreground",
+                "data-ocid": "admin.users_list.empty_state",
+                children: "No users have made calls yet."
+              }
+            ) : filteredUserList.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-center py-10 text-sm text-muted-foreground", children: "No users match your search." }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "divide-y divide-border max-h-[520px] overflow-y-auto", children: filteredUserList.map((entry, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              "button",
+              {
+                type: "button",
+                "data-ocid": `admin.user.item.${idx + 1}`,
+                onClick: () => setSelectedUser(entry.principalId),
+                className: "w-full flex items-center gap-3 py-2 first:pt-0 last:pb-0 hover:bg-muted/20 -mx-1 px-1 rounded-lg transition-colors text-left",
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(User, { className: "w-4 h-4 text-primary" }) }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-mono text-foreground truncate", children: entry.principalId }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-muted-foreground", children: [
+                      entry.callCount,
+                      " call",
+                      entry.callCount !== 1 ? "s" : "",
+                      " - latest",
+                      " ",
+                      formatCompactDateTime(entry.lastCallTime)
+                    ] })
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Badge,
+                    {
+                      variant: "outline",
+                      className: "text-xs shrink-0 bg-primary/10 text-primary border-primary/30",
+                      children: entry.callCount
+                    }
+                  )
+                ]
+              },
+              entry.principalId
+            )) })
+          ] })
         ]
       }
     ),
@@ -55268,6 +55456,33 @@ function withDownloadParam(url) {
     return url;
   }
 }
+function getRecordingMimeType(url) {
+  var _a3;
+  try {
+    const parsed = new URL(url);
+    const format = (_a3 = parsed.searchParams.get("format")) == null ? void 0 : _a3.toLowerCase();
+    if (format === "wav" || parsed.pathname.toLowerCase().endsWith(".wav")) {
+      return "audio/wav";
+    }
+  } catch {
+    if (url.toLowerCase().endsWith(".wav")) return "audio/wav";
+  }
+  return "audio/mpeg";
+}
+function formatAudioElementError(error) {
+  switch (error == null ? void 0 : error.code) {
+    case MediaError.MEDIA_ERR_ABORTED:
+      return "Audio playback was interrupted.";
+    case MediaError.MEDIA_ERR_NETWORK:
+      return "The browser could not load this recording from the voice server.";
+    case MediaError.MEDIA_ERR_DECODE:
+      return "The browser could not decode this recording.";
+    case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+      return "This browser could not play the recording format.";
+    default:
+      return "The browser could not play this recording.";
+  }
+}
 const ALL_STATUSES = [
   { value: "all", label: "All Statuses" },
   { value: CallStatus.pending, label: "Pending" },
@@ -55698,16 +55913,29 @@ function RecordingArtifact({
         }
       )
     ] }),
-    isResolving ? /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-9 w-full" }) : playbackUrl ? /* @__PURE__ */ jsxRuntimeExports.jsx("audio", { controls: true, src: playbackUrl, className: "w-full h-9", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "track",
+    isResolving ? /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-9 w-full" }) : playbackUrl ? /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "audio",
       {
-        kind: "captions",
-        srcLang: "en",
-        label: "Transcript",
-        src: captionSrc,
-        default: true
-      }
-    ) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground/70", children: error ?? "Recording media is not available yet." }),
+        controls: true,
+        preload: "metadata",
+        className: "w-full h-9",
+        onError: (event) => setError(formatAudioElementError(event.currentTarget.error)),
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("source", { src: playbackUrl, type: getRecordingMimeType(playbackUrl) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            "track",
+            {
+              kind: "captions",
+              srcLang: "en",
+              label: "Transcript",
+              src: captionSrc,
+              default: true
+            }
+          )
+        ]
+      },
+      playbackUrl
+    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground/70", children: error ?? "Recording media is not available yet." }),
     error && playbackUrl && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground mt-1", children: error }),
     recordingSid && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground mt-1 font-mono break-all", children: recordingSid })
   ] });
