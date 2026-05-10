@@ -220,6 +220,8 @@ type AudioFormat =
  };
 service : {
   _initializeAccessControl: () -> ();
+  adminAddPromoMinutes: (user: principal, minutes: nat) ->
+   (BillingMutationResult);
   adminGetSystemLogs: (limit: nat) -> (vec SystemLog) query;
   adminListAllCalls: () -> (vec CallRecordPublic) query;
   adminListUserCalls: (userId: principal) -> (vec CallRecordPublic) query;

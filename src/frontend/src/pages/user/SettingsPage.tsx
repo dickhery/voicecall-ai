@@ -433,6 +433,7 @@ export default function SettingsPage() {
   const deletePreset = useDeletePreset();
   const duplicatePreset = useDuplicatePreset();
   const { principal, logout, isAdmin } = useAuth();
+  const userId = principal?.toString() ?? "";
 
   const [expandedPreset, setExpandedPreset] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
@@ -457,6 +458,19 @@ export default function SettingsPage() {
   const handleDuplicate = async (id: bigint) => {
     await duplicatePreset.mutateAsync(id);
     toast.success("Preset duplicated");
+  };
+
+  const handleCopyUserId = async () => {
+    if (!userId) {
+      toast.error("User ID is not available");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(userId);
+      toast.success("User ID copied");
+    } catch {
+      toast.error("Unable to copy User ID");
+    }
   };
 
   return (
@@ -495,17 +509,28 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
               <div className="flex flex-col gap-1">
-                <Label className="text-xs text-muted-foreground">
-                  Principal ID
-                </Label>
+                <Label className="text-xs text-muted-foreground">User ID</Label>
                 <div className="flex items-center gap-2">
                   <code
                     className="flex-1 text-xs font-mono bg-muted/40 rounded-md px-3 py-2 text-foreground truncate"
-                    data-ocid="settings.profile.principal_id"
-                    title={principal?.toString() ?? "Not connected"}
+                    data-ocid="settings.profile.user_id"
+                    title={userId || "Not connected"}
                   >
-                    {principal?.toString() ?? "Not connected"}
+                    {userId || "Not connected"}
                   </code>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCopyUserId}
+                    disabled={!userId}
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
+                    data-ocid="settings.profile.copy_user_id_button"
+                    title="Copy User ID"
+                    aria-label="Copy User ID"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
               </div>
               <Button

@@ -1,7 +1,8 @@
 import { type CallStatus, createActor } from "@/backend";
 import type {
-  CallId,
+  BillingMutationResult,
   BillingStatus,
+  CallId,
   CreatePurchaseIntentResult,
   EphemeralTokenResult,
   InitiateCallInput,
@@ -296,6 +297,25 @@ export function useAssignUserRole() {
     mutationFn: async ({ user, role }) => {
       if (!actor) throw new Error("Actor not available");
       return actor.assignCallerUserRole(user, role);
+    },
+  });
+}
+
+export function useAdminAddPromoMinutes() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<
+    BillingMutationResult,
+    Error,
+    { user: Principal; minutes: bigint }
+  >({
+    mutationFn: async ({ user, minutes }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.adminAddPromoMinutes(user, minutes);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["myBillingStatus"] });
+      qc.invalidateQueries({ queryKey: ["adminLogs"] });
     },
   });
 }

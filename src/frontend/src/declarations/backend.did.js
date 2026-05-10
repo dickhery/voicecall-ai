@@ -197,6 +197,11 @@ export const TransformationOutput = IDL.Record({
 
 export const idlService = IDL.Service({
   '_initializeAccessControl' : IDL.Func([], [], []),
+  'adminAddPromoMinutes' : IDL.Func(
+      [IDL.Principal, IDL.Nat],
+      [BillingMutationResult],
+      [],
+    ),
   'adminGetSystemLogs' : IDL.Func([IDL.Nat], [IDL.Vec(SystemLog)], ['query']),
   'adminListAllCalls' : IDL.Func([], [IDL.Vec(CallRecordPublic)], ['query']),
   'adminListUserCalls' : IDL.Func(
@@ -469,6 +474,11 @@ export const idlFactory = ({ IDL }) => {
   
   return IDL.Service({
     '_initializeAccessControl' : IDL.Func([], [], []),
+    'adminAddPromoMinutes' : IDL.Func(
+        [IDL.Principal, IDL.Nat],
+        [BillingMutationResult],
+        [],
+      ),
     'adminGetSystemLogs' : IDL.Func([IDL.Nat], [IDL.Vec(SystemLog)], ['query']),
     'adminListAllCalls' : IDL.Func([], [IDL.Vec(CallRecordPublic)], ['query']),
     'adminListUserCalls' : IDL.Func(

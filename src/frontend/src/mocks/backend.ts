@@ -87,6 +87,11 @@ const sampleCallRecord2 = {
 
 export const mockBackend: backendInterface = {
   _initializeAccessControl: async () => undefined,
+  adminAddPromoMinutes: async (_user: Principal, _minutes: bigint) => ({
+    __kind__: "ok",
+    ok: true,
+  }),
+
   adminGetSystemLogs: async (_limit: bigint) => [
     {
       level: Variant_info_warn_error.info,

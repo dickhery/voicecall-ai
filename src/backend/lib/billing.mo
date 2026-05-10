@@ -237,6 +237,24 @@ module {
     };
   };
 
+  public func creditPromoMinutes(
+    state : State,
+    user : Principal,
+    minutes : Nat,
+  ) : Types.BillingMutationResult {
+    if (Principal.isAnonymous(user)) {
+      return #err("Cannot credit the anonymous user");
+    };
+    if (minutes == 0) {
+      return #err("Promo minutes must be greater than zero");
+    };
+
+    let seconds = minutes * 60;
+    let current = getBalance(state, user);
+    state.balances.add(user, current + seconds);
+    #ok(true);
+  };
+
   public func createReservation(
     state : State,
     user : Principal,

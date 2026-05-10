@@ -299,6 +299,7 @@ export enum Voice {
 }
 export interface backendInterface {
     _initializeAccessControl(): Promise<void>;
+    adminAddPromoMinutes(user: Principal, minutes: bigint): Promise<BillingMutationResult>;
     adminGetSystemLogs(limit: bigint): Promise<Array<SystemLog>>;
     adminListAllCalls(): Promise<Array<CallRecordPublic>>;
     adminListUserCalls(userId: Principal): Promise<Array<CallRecordPublic>>;
@@ -346,6 +347,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor._initializeAccessControl();
             return result;
+        }
+    }
+    async adminAddPromoMinutes(arg0: Principal, arg1: bigint): Promise<BillingMutationResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.adminAddPromoMinutes(arg0, arg1);
+                return from_candid_BillingMutationResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.adminAddPromoMinutes(arg0, arg1);
+            return from_candid_BillingMutationResult(result);
         }
     }
     async adminGetSystemLogs(arg0: bigint): Promise<Array<SystemLog>> {

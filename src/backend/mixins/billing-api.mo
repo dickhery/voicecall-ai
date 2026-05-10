@@ -82,6 +82,30 @@ mixin (
     result;
   };
 
+  public shared ({ caller }) func adminAddPromoMinutes(
+    user : Principal,
+    minutes : Nat,
+  ) : async BillingTypes.BillingMutationResult {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: admin only");
+    };
+    let result = BillingLib.creditPromoMinutes(billingState, user, minutes);
+    switch (result) {
+      case (#ok(_)) {
+        CallsLib.addSystemLog(
+          callsState,
+          #info,
+          "Added " # debug_show(minutes) # " promo minutes for " # Principal.toText(user),
+          null,
+        );
+      };
+      case (#err(message)) {
+        CallsLib.addSystemLog(callsState, #warn, "Promo credit rejected: " # message, null);
+      };
+    };
+    result;
+  };
+
   public shared ({ caller }) func reserveCall(
     input : CallTypes.InitiateCallInput,
   ) : async BillingTypes.ReserveCallResult {

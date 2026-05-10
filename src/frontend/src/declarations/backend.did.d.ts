@@ -169,6 +169,10 @@ export interface http_request_result {
 }
 export interface _SERVICE {
   '_initializeAccessControl' : ActorMethod<[], undefined>,
+  'adminAddPromoMinutes' : ActorMethod<
+    [Principal, bigint],
+    BillingMutationResult
+  >,
   'adminGetSystemLogs' : ActorMethod<[bigint], Array<SystemLog>>,
   'adminListAllCalls' : ActorMethod<[], Array<CallRecordPublic>>,
   'adminListUserCalls' : ActorMethod<[Principal], Array<CallRecordPublic>>,
