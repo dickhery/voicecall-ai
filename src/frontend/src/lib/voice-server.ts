@@ -40,6 +40,11 @@ export interface CheckoutSessionResponse {
   url: string;
 }
 
+export interface RecordingAccessResponse {
+  ok: true;
+  url: string;
+}
+
 let runtimeEnvPromise: Promise<RuntimeEnv> | null = null;
 
 async function loadRuntimeEnv(): Promise<RuntimeEnv> {
@@ -184,4 +189,29 @@ export async function getLiveAudioMonitorUrl({
   url.searchParams.set("sessionId", sessionId);
   url.searchParams.set("token", monitorToken);
   return url.toString();
+}
+
+export async function getRecordingAccessUrl({
+  recordingSid,
+  callSid,
+}: {
+  recordingSid: string;
+  callSid?: string | null;
+}): Promise<string> {
+  const baseUrl = await getVoiceServerUrl();
+  const url = new URL(`/recordings/${recordingSid}/access`, baseUrl);
+  if (callSid) url.searchParams.set("callSid", callSid);
+  const response = await fetch(url.toString(), { cache: "no-store" });
+  const payload = (await response.json().catch(() => ({}))) as
+    | RecordingAccessResponse
+    | { ok?: false; error?: string };
+  const errorMessage = "error" in payload ? payload.error : undefined;
+
+  if (!response.ok || payload.ok === false || !("url" in payload)) {
+    throw new Error(
+      errorMessage || `Recording access failed (${response.status})`,
+    );
+  }
+
+  return payload.url;
 }

@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useListMyCalls, useListMyPresets } from "@/hooks/use-backend";
+import { getRecordingAccessUrl } from "@/lib/voice-server";
 import type { CallRecordPublic } from "@/types";
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -25,7 +26,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const PAGE_SIZE = 15;
 
@@ -118,6 +119,28 @@ function toCaptionDataUrl(transcript: string) {
     transcript.trim() || "No saved transcript is available for this recording.";
   const vtt = `WEBVTT\n\n00:00:00.000 --> 99:59:59.000\n${captionText}\n`;
   return `data:text/vtt;charset=utf-8,${encodeURIComponent(vtt)}`;
+}
+
+function isTwilioRecordingUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.hostname.endsWith("twilio.com") &&
+      /\/Recordings\/RE[a-fA-F0-9]{32}/.test(parsed.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+function withDownloadParam(url: string): string {
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("download", "1");
+    return parsed.toString();
+  } catch {
+    return url;
+  }
 }
 
 const ALL_STATUSES: Array<{ value: CallStatus | "all"; label: string }> = [
@@ -413,7 +436,6 @@ function CallRow({
   onToggle: () => void;
 }) {
   const artifacts = parseCallArtifacts(call.transcript);
-  const captionSrc = toCaptionDataUrl(artifacts.transcript);
 
   return (
     <div data-ocid={`history.call.item.${idx}`}>
@@ -501,42 +523,12 @@ function CallRow({
             </div>
           </div>
           {artifacts.recordingUrl && (
-            <div className="mb-4">
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <p className="text-xs font-medium text-muted-foreground">
-                  Audio Recording
-                </p>
-                <Button
-                  asChild
-                  variant="outline"
-                  size="sm"
-                  className="h-7 gap-1.5 text-xs"
-                >
-                  <a href={artifacts.recordingUrl} download>
-                    <Download className="w-3.5 h-3.5" />
-                    Save audio
-                  </a>
-                </Button>
-              </div>
-              <audio
-                controls
-                src={artifacts.recordingUrl}
-                className="w-full h-9"
-              >
-                <track
-                  kind="captions"
-                  srcLang="en"
-                  label="Transcript"
-                  src={captionSrc}
-                  default
-                />
-              </audio>
-              {artifacts.recordingSid && (
-                <p className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
-                  {artifacts.recordingSid}
-                </p>
-              )}
-            </div>
+            <RecordingArtifact
+              recordingUrl={artifacts.recordingUrl}
+              recordingSid={artifacts.recordingSid}
+              callSid={call.callSid}
+              transcript={artifacts.transcript}
+            />
           )}
           {artifacts.recordingPending && (
             <p className="text-xs text-muted-foreground/70 mb-4">
@@ -577,6 +569,129 @@ function CallRow({
             </p>
           ) : null}
         </div>
+      )}
+    </div>
+  );
+}
+
+function RecordingArtifact({
+  recordingUrl,
+  recordingSid,
+  callSid,
+  transcript,
+}: {
+  recordingUrl: string;
+  recordingSid: string | null;
+  callSid?: string | null;
+  transcript: string;
+}) {
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
+  const [isResolving, setIsResolving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const captionSrc = useMemo(() => toCaptionDataUrl(transcript), [transcript]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const needsProxy = isTwilioRecordingUrl(recordingUrl);
+    setError(null);
+
+    if (!needsProxy) {
+      setPlaybackUrl(recordingUrl);
+      setIsResolving(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    if (!recordingSid) {
+      setPlaybackUrl(null);
+      setIsResolving(false);
+      setError(
+        "This recording is missing the Twilio Recording SID needed for in-app playback.",
+      );
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setPlaybackUrl(null);
+    setIsResolving(true);
+    getRecordingAccessUrl({ recordingSid, callSid })
+      .then((url) => {
+        if (!cancelled) setPlaybackUrl(url);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          const message =
+            err instanceof Error
+              ? err.message
+              : "Unable to prepare recording playback.";
+          setError(message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsResolving(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [callSid, recordingSid, recordingUrl]);
+
+  const downloadUrl = playbackUrl ? withDownloadParam(playbackUrl) : null;
+
+  function handleDownload() {
+    if (!downloadUrl) return;
+    const anchor = document.createElement("a");
+    anchor.href = downloadUrl;
+    anchor.download = `voicecall-recording-${recordingSid ?? "audio"}.mp3`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between gap-3 mb-2">
+        <p className="text-xs font-medium text-muted-foreground">
+          Audio Recording
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 gap-1.5 text-xs"
+          onClick={handleDownload}
+          disabled={!downloadUrl || isResolving}
+        >
+          <Download className="w-3.5 h-3.5" />
+          Save audio
+        </Button>
+      </div>
+      {isResolving ? (
+        <Skeleton className="h-9 w-full" />
+      ) : playbackUrl ? (
+        <audio controls src={playbackUrl} className="w-full h-9">
+          <track
+            kind="captions"
+            srcLang="en"
+            label="Transcript"
+            src={captionSrc}
+            default
+          />
+        </audio>
+      ) : (
+        <p className="text-xs text-muted-foreground/70">
+          {error ?? "Recording media is not available yet."}
+        </p>
+      )}
+      {error && playbackUrl && (
+        <p className="text-[10px] text-muted-foreground mt-1">{error}</p>
+      )}
+      {recordingSid && (
+        <p className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
+          {recordingSid}
+        </p>
       )}
     </div>
   );

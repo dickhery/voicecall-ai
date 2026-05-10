@@ -1,6 +1,7 @@
 import "dotenv/config";
 import http from "node:http";
 import crypto from "node:crypto";
+import { Readable } from "node:stream";
 import cors from "cors";
 import express from "express";
 import Stripe from "stripe";
@@ -23,7 +24,7 @@ const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
 const TRANSCRIPT_FINISH_GRACE_MS = 2_500;
 const RECORDING_FINISH_GRACE_MS = 10_000;
-const SERVER_VERSION = "2026-05-10-live-audio-artifacts";
+const SERVER_VERSION = "2026-05-10-recording-proxy-live-audio";
 const SERVER_STARTED_AT = new Date().toISOString();
 
 const BILLING_PACKAGES = {
@@ -281,6 +282,15 @@ function getPublicRecordingStatusUrl(sessionId) {
   return url.toString();
 }
 
+function requireTwilioConfig() {
+  if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
+    throw new Error("Twilio credentials are not configured.");
+  }
+  if (!twilioClient) {
+    throw new Error("Twilio client is not configured.");
+  }
+}
+
 function requireServerConfig() {
   const missing = requiredEnv.filter((key) => !process.env[key]);
   if (!process.env.BACKEND_CANISTER_ID) missing.push("BACKEND_CANISTER_ID");
@@ -416,15 +426,104 @@ function normalizeRecordingUrl(recordingUrl) {
   return `${url}.mp3`;
 }
 
+function normalizeRecordingSid(recordingSid) {
+  const sid = String(recordingSid || "").trim();
+  if (!/^RE[a-fA-F0-9]{32}$/.test(sid)) {
+    throw new Error("A valid Twilio RecordingSid is required.");
+  }
+  return sid;
+}
+
+function normalizeCallSid(callSid) {
+  const sid = String(callSid || "").trim();
+  if (!sid) return "";
+  if (!/^CA[a-fA-F0-9]{32}$/.test(sid)) {
+    throw new Error("A valid Twilio CallSid is required.");
+  }
+  return sid;
+}
+
+function getRecordingAccessSecret() {
+  return (
+    process.env.RECORDING_ACCESS_SECRET ||
+    process.env.TWILIO_AUTH_TOKEN ||
+    process.env.ICP_SERVER_IDENTITY_SECRET_KEY ||
+    ""
+  );
+}
+
+function signRecordingAccess(recordingSid, callSid = "") {
+  const secret = getRecordingAccessSecret();
+  if (!secret) {
+    throw new Error("Recording access secret is not configured.");
+  }
+  return crypto
+    .createHmac("sha256", secret)
+    .update(`${recordingSid}:${callSid}`)
+    .digest("base64url");
+}
+
+function isRecordingAccessTokenValid(recordingSid, callSid, token) {
+  const supplied = String(token || "").trim();
+  if (!supplied) return false;
+  const expected = signRecordingAccess(recordingSid, callSid);
+  const suppliedBytes = Buffer.from(supplied);
+  const expectedBytes = Buffer.from(expected);
+  return (
+    suppliedBytes.length === expectedBytes.length &&
+    crypto.timingSafeEqual(suppliedBytes, expectedBytes)
+  );
+}
+
+function buildPublicRecordingMediaUrl(recordingSid, callSid = "") {
+  const publicBaseUrl = getPublicBaseUrl();
+  if (!publicBaseUrl) {
+    throw new Error(
+      "Missing HOSTNAME. Recording playback requires a public voice server URL.",
+    );
+  }
+  const url = new URL(`/recordings/${recordingSid}`, publicBaseUrl);
+  if (callSid) url.searchParams.set("callSid", callSid);
+  url.searchParams.set("token", signRecordingAccess(recordingSid, callSid));
+  return url.toString();
+}
+
+function buildTwilioRecordingMediaUrl(recordingSid, format = "mp3") {
+  return `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(
+    process.env.TWILIO_ACCOUNT_SID,
+  )}/Recordings/${encodeURIComponent(recordingSid)}.${format}`;
+}
+
+function getTwilioBasicAuthHeader() {
+  return `Basic ${Buffer.from(
+    `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`,
+  ).toString("base64")}`;
+}
+
 function updateSessionRecordingFromBody(session, body = {}) {
   if (!session?.recordAudio) return;
-  const recordingUrl = normalizeRecordingUrl(body.RecordingUrl);
-  const recordingSid = String(body.RecordingSid || "").trim();
+  const twilioRecordingUrl = normalizeRecordingUrl(body.RecordingUrl);
+  const rawRecordingSid = String(body.RecordingSid || "").trim();
+  const recordingSid = /^RE[a-fA-F0-9]{32}$/.test(rawRecordingSid)
+    ? rawRecordingSid
+    : "";
+  const callSid = String(
+    body.CallSid || session.recording?.callSid || session.callSid || "",
+  ).trim();
   const recordingStatus = String(body.RecordingStatus || "").trim();
-  if (!recordingUrl && !recordingSid && !recordingStatus) return;
+  if (!twilioRecordingUrl && !recordingSid && !recordingStatus) return;
+  const statusLower = recordingStatus.toLowerCase();
+  const isPlayableStatus = !recordingStatus || statusLower === "completed";
+  const appRecordingUrl =
+    recordingSid && isPlayableStatus
+      ? buildPublicRecordingMediaUrl(recordingSid, callSid)
+      : "";
+  const fallbackRecordingUrl = isPlayableStatus ? twilioRecordingUrl : "";
   session.recording = {
     sid: recordingSid || session.recording?.sid || null,
-    url: recordingUrl || session.recording?.url || null,
+    callSid: callSid || session.recording?.callSid || null,
+    url: appRecordingUrl || session.recording?.url || fallbackRecordingUrl || null,
+    sourceUrl: twilioRecordingUrl || session.recording?.sourceUrl || null,
     status: recordingStatus || session.recording?.status || null,
     duration: body.RecordingDuration
       ? String(body.RecordingDuration)
@@ -783,6 +882,115 @@ app.get("/health", (_req, res) => {
     icpServerPrincipal: getIcpServerPrincipalText(),
     model: XAI_MODEL,
   });
+});
+
+app.get("/recordings/:recordingSid/access", async (req, res) => {
+  try {
+    requireTwilioConfig();
+    const recordingSid = normalizeRecordingSid(req.params.recordingSid);
+    const callSid = normalizeCallSid(req.query.callSid);
+
+    if (callSid) {
+      const recording = await twilioClient.recordings(recordingSid).fetch();
+      const recordingCallSid = String(
+        recording.callSid || recording.call_sid || "",
+      );
+      if (recordingCallSid && recordingCallSid !== callSid) {
+        throw new Error("Recording does not belong to this call.");
+      }
+    }
+
+    res.json({
+      ok: true,
+      url: buildPublicRecordingMediaUrl(recordingSid, callSid),
+    });
+  } catch (error) {
+    log("error", "Failed to create recording access URL", {
+      recordingSid: req.params.recordingSid,
+      error: error.message,
+    });
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/recordings/:recordingSid", async (req, res) => {
+  try {
+    requireTwilioConfig();
+    const recordingSid = normalizeRecordingSid(req.params.recordingSid);
+    const callSid = normalizeCallSid(req.query.callSid);
+    const token = String(req.query.token || "");
+    if (!isRecordingAccessTokenValid(recordingSid, callSid, token)) {
+      res
+        .status(403)
+        .json({ ok: false, error: "Recording access link is invalid." });
+      return;
+    }
+
+    const format =
+      String(req.query.format || "mp3").toLowerCase() === "wav" ? "wav" : "mp3";
+    const upstreamHeaders = {
+      Authorization: getTwilioBasicAuthHeader(),
+      Accept: format === "wav" ? "audio/wav" : "audio/mpeg",
+    };
+    const range = req.get("range");
+    if (range) upstreamHeaders.Range = range;
+
+    const upstream = await fetch(
+      buildTwilioRecordingMediaUrl(recordingSid, format),
+      {
+        headers: upstreamHeaders,
+      },
+    );
+
+    if (!upstream.ok && upstream.status !== 206) {
+      const errorBody = await upstream.text().catch(() => "");
+      log("warn", "Twilio recording media request failed", {
+        recordingSid,
+        status: upstream.status,
+        error: errorBody.slice(0, 500),
+      });
+      res
+        .status(upstream.status || 502)
+        .json({ ok: false, error: "Recording media is not available yet." });
+      return;
+    }
+
+    const passthroughHeaders = [
+      "accept-ranges",
+      "cache-control",
+      "content-length",
+      "content-range",
+      "content-type",
+      "etag",
+      "last-modified",
+    ];
+    for (const header of passthroughHeaders) {
+      const value = upstream.headers.get(header);
+      if (value) res.setHeader(header, value);
+    }
+    if (!upstream.headers.get("content-type")) {
+      res.setHeader(
+        "Content-Type",
+        format === "wav" ? "audio/wav" : "audio/mpeg",
+      );
+    }
+    res.setHeader(
+      "Content-Disposition",
+      `${req.query.download === "1" ? "attachment" : "inline"}; filename="voicecall-recording-${recordingSid}.${format}"`,
+    );
+    res.status(upstream.status);
+    if (!upstream.body) {
+      res.end();
+      return;
+    }
+    Readable.fromWeb(upstream.body).pipe(res);
+  } catch (error) {
+    log("error", "Failed to stream recording media", {
+      recordingSid: req.params.recordingSid,
+      error: error.message,
+    });
+    res.status(400).json({ ok: false, error: error.message });
+  }
 });
 
 app.post("/billing/create-checkout-session", async (req, res) => {

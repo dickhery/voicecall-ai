@@ -38604,6 +38604,23 @@ async function getLiveAudioMonitorUrl({
   url.searchParams.set("token", monitorToken);
   return url.toString();
 }
+async function getRecordingAccessUrl({
+  recordingSid,
+  callSid
+}) {
+  const baseUrl = await getVoiceServerUrl();
+  const url = new URL(`/recordings/${recordingSid}/access`, baseUrl);
+  if (callSid) url.searchParams.set("callSid", callSid);
+  const response = await fetch(url.toString(), { cache: "no-store" });
+  const payload = await response.json().catch(() => ({}));
+  const errorMessage = "error" in payload ? payload.error : void 0;
+  if (!response.ok || payload.ok === false || !("url" in payload)) {
+    throw new Error(
+      errorMessage || `Recording access failed (${response.status})`
+    );
+  }
+  return payload.url;
+}
 function InputWithReveal({
   id: id2,
   placeholder,
@@ -46182,6 +46199,9 @@ function Switch({
   );
 }
 const WAVEFORM_BARS = 20;
+const MONITOR_SAMPLE_RATE = 8e3;
+const MONITOR_JITTER_SECONDS = 0.12;
+const MONITOR_FADE_SAMPLES = 8;
 function decodeBase64Payload(payload) {
   const binary = window.atob(payload);
   const bytes = new Uint8Array(binary.length);
@@ -46195,10 +46215,21 @@ function decodeMuLawSample(value) {
   const sign = sample & 128;
   const exponent = sample >> 4 & 7;
   const mantissa = sample & 15;
-  let magnitude = (mantissa << 4) + 8 << exponent;
+  let magnitude = (mantissa << 3) + 132 << exponent;
   magnitude -= 132;
   const pcm = sign ? -magnitude : magnitude;
   return Math.max(-1, Math.min(1, pcm / 32768));
+}
+function writeDecodedMuLawSamples(bytes, samples) {
+  let sumSquares = 0;
+  for (let i = 0; i < bytes.length; i += 1) {
+    const decoded = decodeMuLawSample(bytes[i]);
+    sumSquares += decoded * decoded;
+    const fadeIn = Math.min(1, i / MONITOR_FADE_SAMPLES);
+    const fadeOut = Math.min(1, (bytes.length - i - 1) / MONITOR_FADE_SAMPLES);
+    samples[i] = decoded * Math.min(fadeIn, fadeOut);
+  }
+  return Math.sqrt(sumSquares / Math.max(1, bytes.length));
 }
 function useXaiVoice() {
   const [status, setStatus] = reactExports.useState("idle");
@@ -46221,6 +46252,7 @@ function useXaiVoice() {
   const monitorTokenRef = reactExports.useRef(null);
   const monitorWsRef = reactExports.useRef(null);
   const audioContextRef = reactExports.useRef(null);
+  const monitorInputNodeRef = reactExports.useRef(null);
   const gainNodeRef = reactExports.useRef(null);
   const nextPlaybackTimeRef = reactExports.useRef({
     caller: 0,
@@ -46245,6 +46277,7 @@ function useXaiVoice() {
       void audioContextRef.current.close();
     }
     audioContextRef.current = null;
+    monitorInputNodeRef.current = null;
     gainNodeRef.current = null;
     nextPlaybackTimeRef.current = { caller: 0, assistant: 0 };
     setIsListeningLive(false);
@@ -46252,27 +46285,28 @@ function useXaiVoice() {
   const playMonitorAudio = reactExports.useCallback(
     (payload, channel = "assistant") => {
       const audioContext = audioContextRef.current;
-      const gainNode = gainNodeRef.current;
-      if (!audioContext || audioContext.state === "closed" || !gainNode) return;
+      const monitorInputNode = monitorInputNodeRef.current;
+      if (!audioContext || audioContext.state === "closed" || !monitorInputNode)
+        return;
       const bytes = decodeBase64Payload(payload);
       if (bytes.length === 0) return;
-      const buffer = audioContext.createBuffer(1, bytes.length, 8e3);
+      const buffer = audioContext.createBuffer(
+        1,
+        bytes.length,
+        MONITOR_SAMPLE_RATE
+      );
       const samples = buffer.getChannelData(0);
-      for (let i = 0; i < bytes.length; i += 1) {
-        samples[i] = decodeMuLawSample(bytes[i]);
-      }
+      const rms = writeDecodedMuLawSamples(bytes, samples);
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
-      source.connect(gainNode);
+      source.connect(monitorInputNode);
       const nextByChannel = nextPlaybackTimeRef.current;
-      const startAt = Math.max(
-        audioContext.currentTime + 0.025,
-        nextByChannel[channel] || 0
-      );
+      const queuedAt = nextByChannel[channel] || 0;
+      const startAt = queuedAt > audioContext.currentTime ? queuedAt : audioContext.currentTime + MONITOR_JITTER_SECONDS;
       source.start(startAt);
       nextByChannel[channel] = startAt + buffer.duration;
       setAudioLevels((levels) => {
-        const peak = bytes.reduce((max2, byte) => Math.max(max2, byte), 0) / 255;
+        const peak = Math.min(1, rms * 3.5);
         return [...levels.slice(1), peak];
       });
     },
@@ -46293,14 +46327,32 @@ function useXaiVoice() {
       return;
     }
     const audioContext = new AudioContextCtor();
+    const highpass = audioContext.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 80;
+    highpass.Q.value = 0.7;
+    const lowpass = audioContext.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 3600;
+    lowpass.Q.value = 0.7;
+    const compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.value = -24;
+    compressor.knee.value = 18;
+    compressor.ratio.value = 3;
+    compressor.attack.value = 3e-3;
+    compressor.release.value = 0.18;
     const gainNode = audioContext.createGain();
-    gainNode.gain.value = 0.9;
+    gainNode.gain.value = 0.95;
+    highpass.connect(lowpass);
+    lowpass.connect(compressor);
+    compressor.connect(gainNode);
     gainNode.connect(audioContext.destination);
     audioContextRef.current = audioContext;
+    monitorInputNodeRef.current = highpass;
     gainNodeRef.current = gainNode;
     nextPlaybackTimeRef.current = {
-      caller: audioContext.currentTime + 0.05,
-      assistant: audioContext.currentTime + 0.05
+      caller: audioContext.currentTime + MONITOR_JITTER_SECONDS,
+      assistant: audioContext.currentTime + MONITOR_JITTER_SECONDS
     };
     await audioContext.resume();
     const ws = new WebSocket(
@@ -55199,6 +55251,23 @@ ${captionText}
 `;
   return `data:text/vtt;charset=utf-8,${encodeURIComponent(vtt)}`;
 }
+function isTwilioRecordingUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname.endsWith("twilio.com") && /\/Recordings\/RE[a-fA-F0-9]{32}/.test(parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+function withDownloadParam(url) {
+  try {
+    const parsed = new URL(url);
+    parsed.searchParams.set("download", "1");
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
 const ALL_STATUSES = [
   { value: "all", label: "All Statuses" },
   { value: CallStatus.pending, label: "Pending" },
@@ -55469,7 +55538,6 @@ function CallRow({
   onToggle
 }) {
   const artifacts = parseCallArtifacts(call.transcript);
-  const captionSrc = toCaptionDataUrl(artifacts.transcript);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-ocid": `history.call.item.${idx}`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "button",
@@ -55518,43 +55586,15 @@ function CallRow({
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-mono text-foreground text-[10px] break-all", children: call.id.toString() })
         ] })
       ] }),
-      artifacts.recordingUrl && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 mb-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium text-muted-foreground", children: "Audio Recording" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Button,
-            {
-              asChild: true,
-              variant: "outline",
-              size: "sm",
-              className: "h-7 gap-1.5 text-xs",
-              children: /* @__PURE__ */ jsxRuntimeExports.jsxs("a", { href: artifacts.recordingUrl, download: true, children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(Download, { className: "w-3.5 h-3.5" }),
-                "Save audio"
-              ] })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          "audio",
-          {
-            controls: true,
-            src: artifacts.recordingUrl,
-            className: "w-full h-9",
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              "track",
-              {
-                kind: "captions",
-                srcLang: "en",
-                label: "Transcript",
-                src: captionSrc,
-                default: true
-              }
-            )
-          }
-        ),
-        artifacts.recordingSid && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground mt-1 font-mono break-all", children: artifacts.recordingSid })
-      ] }),
+      artifacts.recordingUrl && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        RecordingArtifact,
+        {
+          recordingUrl: artifacts.recordingUrl,
+          recordingSid: artifacts.recordingSid,
+          callSid: call.callSid,
+          transcript: artifacts.transcript
+        }
+      ),
       artifacts.recordingPending && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground/70 mb-4", children: "Recording requested. The recording link has not been returned yet." }),
       artifacts.transcript ? /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 mb-2", children: [
@@ -55580,6 +55620,96 @@ function CallRow({
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "bg-background rounded-lg border border-border p-4 max-h-48 overflow-y-auto", children: /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-foreground leading-relaxed whitespace-pre-wrap", children: artifacts.transcript }) })
       ] }) : !artifacts.recordingUrl && !artifacts.recordingPending ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground/60 italic", children: "No transcript available for this call." }) : null
     ] })
+  ] });
+}
+function RecordingArtifact({
+  recordingUrl,
+  recordingSid,
+  callSid,
+  transcript
+}) {
+  const [playbackUrl, setPlaybackUrl] = reactExports.useState(null);
+  const [isResolving, setIsResolving] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState(null);
+  const captionSrc = reactExports.useMemo(() => toCaptionDataUrl(transcript), [transcript]);
+  reactExports.useEffect(() => {
+    let cancelled = false;
+    const needsProxy = isTwilioRecordingUrl(recordingUrl);
+    setError(null);
+    if (!needsProxy) {
+      setPlaybackUrl(recordingUrl);
+      setIsResolving(false);
+      return () => {
+        cancelled = true;
+      };
+    }
+    if (!recordingSid) {
+      setPlaybackUrl(null);
+      setIsResolving(false);
+      setError(
+        "This recording is missing the Twilio Recording SID needed for in-app playback."
+      );
+      return () => {
+        cancelled = true;
+      };
+    }
+    setPlaybackUrl(null);
+    setIsResolving(true);
+    getRecordingAccessUrl({ recordingSid, callSid }).then((url) => {
+      if (!cancelled) setPlaybackUrl(url);
+    }).catch((err) => {
+      if (!cancelled) {
+        const message = err instanceof Error ? err.message : "Unable to prepare recording playback.";
+        setError(message);
+      }
+    }).finally(() => {
+      if (!cancelled) setIsResolving(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [callSid, recordingSid, recordingUrl]);
+  const downloadUrl = playbackUrl ? withDownloadParam(playbackUrl) : null;
+  function handleDownload() {
+    if (!downloadUrl) return;
+    const anchor = document.createElement("a");
+    anchor.href = downloadUrl;
+    anchor.download = `voicecall-recording-${recordingSid ?? "audio"}.mp3`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-3 mb-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium text-muted-foreground", children: "Audio Recording" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        Button,
+        {
+          type: "button",
+          variant: "outline",
+          size: "sm",
+          className: "h-7 gap-1.5 text-xs",
+          onClick: handleDownload,
+          disabled: !downloadUrl || isResolving,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Download, { className: "w-3.5 h-3.5" }),
+            "Save audio"
+          ]
+        }
+      )
+    ] }),
+    isResolving ? /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-9 w-full" }) : playbackUrl ? /* @__PURE__ */ jsxRuntimeExports.jsx("audio", { controls: true, src: playbackUrl, className: "w-full h-9", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "track",
+      {
+        kind: "captions",
+        srcLang: "en",
+        label: "Transcript",
+        src: captionSrc,
+        default: true
+      }
+    ) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground/70", children: error ?? "Recording media is not available yet." }),
+    error && playbackUrl && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground mt-1", children: error }),
+    recordingSid && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground mt-1 font-mono break-all", children: recordingSid })
   ] });
 }
 function EmptyState({

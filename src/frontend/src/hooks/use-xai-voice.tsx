@@ -56,6 +56,9 @@ export interface XaiVoiceControls {
 }
 
 const WAVEFORM_BARS = 20;
+const MONITOR_SAMPLE_RATE = 8000;
+const MONITOR_JITTER_SECONDS = 0.12;
+const MONITOR_FADE_SAMPLES = 8;
 
 type MonitorChannel = "caller" | "assistant";
 
@@ -79,10 +82,22 @@ function decodeMuLawSample(value: number): number {
   const sign = sample & 0x80;
   const exponent = (sample >> 4) & 0x07;
   const mantissa = sample & 0x0f;
-  let magnitude = ((mantissa << 4) + 0x08) << exponent;
+  let magnitude = ((mantissa << 3) + 0x84) << exponent;
   magnitude -= 0x84;
   const pcm = sign ? -magnitude : magnitude;
   return Math.max(-1, Math.min(1, pcm / 32768));
+}
+
+function writeDecodedMuLawSamples(bytes: Uint8Array, samples: Float32Array) {
+  let sumSquares = 0;
+  for (let i = 0; i < bytes.length; i += 1) {
+    const decoded = decodeMuLawSample(bytes[i]);
+    sumSquares += decoded * decoded;
+    const fadeIn = Math.min(1, i / MONITOR_FADE_SAMPLES);
+    const fadeOut = Math.min(1, (bytes.length - i - 1) / MONITOR_FADE_SAMPLES);
+    samples[i] = decoded * Math.min(fadeIn, fadeOut);
+  }
+  return Math.sqrt(sumSquares / Math.max(1, bytes.length));
 }
 
 export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
@@ -107,6 +122,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const monitorTokenRef = useRef<string | null>(null);
   const monitorWsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const monitorInputNodeRef = useRef<AudioNode | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
   const nextPlaybackTimeRef = useRef<Record<MonitorChannel, number>>({
     caller: 0,
@@ -134,6 +150,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       void audioContextRef.current.close();
     }
     audioContextRef.current = null;
+    monitorInputNodeRef.current = null;
     gainNodeRef.current = null;
     nextPlaybackTimeRef.current = { caller: 0, assistant: 0 };
     setIsListeningLive(false);
@@ -142,32 +159,36 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const playMonitorAudio = useCallback(
     (payload: string, channel: MonitorChannel = "assistant") => {
       const audioContext = audioContextRef.current;
-      const gainNode = gainNodeRef.current;
-      if (!audioContext || audioContext.state === "closed" || !gainNode) return;
+      const monitorInputNode = monitorInputNodeRef.current;
+      if (!audioContext || audioContext.state === "closed" || !monitorInputNode)
+        return;
 
       const bytes = decodeBase64Payload(payload);
       if (bytes.length === 0) return;
 
-      const buffer = audioContext.createBuffer(1, bytes.length, 8000);
+      const buffer = audioContext.createBuffer(
+        1,
+        bytes.length,
+        MONITOR_SAMPLE_RATE,
+      );
       const samples = buffer.getChannelData(0);
-      for (let i = 0; i < bytes.length; i += 1) {
-        samples[i] = decodeMuLawSample(bytes[i]);
-      }
+      const rms = writeDecodedMuLawSamples(bytes, samples);
 
       const source = audioContext.createBufferSource();
       source.buffer = buffer;
-      source.connect(gainNode);
+      source.connect(monitorInputNode);
 
       const nextByChannel = nextPlaybackTimeRef.current;
-      const startAt = Math.max(
-        audioContext.currentTime + 0.025,
-        nextByChannel[channel] || 0,
-      );
+      const queuedAt = nextByChannel[channel] || 0;
+      const startAt =
+        queuedAt > audioContext.currentTime
+          ? queuedAt
+          : audioContext.currentTime + MONITOR_JITTER_SECONDS;
       source.start(startAt);
       nextByChannel[channel] = startAt + buffer.duration;
 
       setAudioLevels((levels) => {
-        const peak = bytes.reduce((max, byte) => Math.max(max, byte), 0) / 255;
+        const peak = Math.min(1, rms * 3.5);
         return [...levels.slice(1), peak];
       });
     },
@@ -193,14 +214,32 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     }
 
     const audioContext = new AudioContextCtor();
+    const highpass = audioContext.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 80;
+    highpass.Q.value = 0.7;
+    const lowpass = audioContext.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 3600;
+    lowpass.Q.value = 0.7;
+    const compressor = audioContext.createDynamicsCompressor();
+    compressor.threshold.value = -24;
+    compressor.knee.value = 18;
+    compressor.ratio.value = 3;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.18;
     const gainNode = audioContext.createGain();
-    gainNode.gain.value = 0.9;
+    gainNode.gain.value = 0.95;
+    highpass.connect(lowpass);
+    lowpass.connect(compressor);
+    compressor.connect(gainNode);
     gainNode.connect(audioContext.destination);
     audioContextRef.current = audioContext;
+    monitorInputNodeRef.current = highpass;
     gainNodeRef.current = gainNode;
     nextPlaybackTimeRef.current = {
-      caller: audioContext.currentTime + 0.05,
-      assistant: audioContext.currentTime + 0.05,
+      caller: audioContext.currentTime + MONITOR_JITTER_SECONDS,
+      assistant: audioContext.currentTime + MONITOR_JITTER_SECONDS,
     };
     await audioContext.resume();
 
