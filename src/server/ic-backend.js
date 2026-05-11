@@ -71,6 +71,11 @@ const idlFactory = ({ IDL }) =>
       [IDL.Opt(PurchaseIntentPublic)],
       ["query"],
     ),
+    getTwilioLineNumbersForServer: IDL.Func(
+      [],
+      [IDL.Vec(IDL.Text)],
+      ["query"],
+    ),
     creditPaidSeconds: IDL.Func(
       [IDL.Text, IDL.Text, IDL.Principal, IDL.Nat, StripeMode],
       [BillingMutationResult],

@@ -32,6 +32,28 @@ type CallRecord__52248411 =
     var transcript : ?Text;
     userId : Principal
   };
+type CallReservationStatus__1062823786 =
+  {#active; #canceled; #finished; #reserved};
+type CallReservation__75906890 =
+  {
+    allowedSeconds : Nat;
+    var billedSeconds : ?Nat;
+    callId : Nat;
+    var callSid : ?Text;
+    callToken : Text;
+    var canceledReason : ?Text;
+    createdAt : Int;
+    expiresAt : Int;
+    var finishedAt : ?Int;
+    id : Text;
+    presetId : Nat;
+    recipientPhone : Text;
+    var startedAt : ?Int;
+    var status : CallReservationStatus__1062823786;
+    var transcript : ?Text;
+    var usedSeconds : ?Nat;
+    user : Principal
+  };
 type CallStatus__25797007 = {#completed; #failed; #inProgress; #pending};
 type Data__791452850<K, V> =
   {var count : Nat__490723111; kvs : [var ?(K, V)]};
@@ -54,8 +76,23 @@ type Nat__920180692 = Nat;
 type Node__46230540<K, V> =
   {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
 type PresetId__8920344 = Nat;
+type PurchaseIntentStatus__438133736 = {#canceled; #paid; #pending};
+type PurchaseIntent__399492561 =
+  {
+    amountCents : Nat;
+    createdAt : Int;
+    id : Text;
+    mode : StripeMode__732299346;
+    packageId : Text;
+    var paidAt : ?Int;
+    seconds : Nat;
+    var status : PurchaseIntentStatus__438133736;
+    var stripeSessionId : ?Text;
+    user : Principal
+  };
 type SampleRate__591095646 =
   {#hz16000; #hz22050; #hz24000; #hz32000; #hz44100; #hz48000; #hz8000};
+type StripeMode__732299346 = {#live; #test};
 type SystemLog__934239505 =
   {
     callId : ?Nat;
@@ -72,6 +109,8 @@ type TurnDetection__119024512 =
     silenceDurationMs : Nat;
     threshold : Float
   };
+type TwilioLine__653727659 =
+  {enabled : Bool; name : Text; phoneNumber : Text};
 type UserRole__1073662873 = {#admin; #guest; #user};
 type Voice__817973016 = {#ara; #eve; #leo; #rex; #sal};
 actor {
@@ -79,6 +118,16 @@ actor {
     {
       var adminAssigned : Bool;
       userRoles : Map__605269027<Principal, UserRole__1073662873>
+    };
+  stable billingState :
+    {
+      balances : Map__605269027<Principal, Nat>;
+      callReservations : Map__605269027<Text, CallReservation__75906890>;
+      nextPurchaseIntentId : {var value : Nat};
+      nextReservationId : {var value : Nat};
+      processedStripeSessions : Map__605269027<Text, Bool>;
+      purchaseIntents : Map__605269027<Text, PurchaseIntent__399492561>;
+      reservedSecondsByUser : Map__605269027<Principal, Nat>
     };
   stable callsState :
     {
@@ -93,5 +142,10 @@ actor {
       adminConfig : AdminConfig__36162014;
       nextPresetId : {var value : Nat};
       presets : Map__605269027<PresetId__8920344, CallPreset__736603966>
+    };
+  stable twilioLineState :
+    {
+      var root : Node__46230540<Text, TwilioLine__653727659>;
+      var size : Nat__490723111
     }
 };

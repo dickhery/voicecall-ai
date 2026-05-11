@@ -229,6 +229,23 @@ export type BillingMutationResult = {
     __kind__: "err";
     err: string;
 };
+export interface TwilioLine {
+    enabled: boolean;
+    name: string;
+    phoneNumber: string;
+}
+export interface TwilioLineInput {
+    enabled: boolean;
+    name: string;
+    phoneNumber: string;
+}
+export type TwilioLineMutationResult = {
+    __kind__: "ok";
+    ok: Array<TwilioLine>;
+} | {
+    __kind__: "err";
+    err: string;
+};
 export interface http_header {
     value: string;
     name: string;
@@ -314,6 +331,7 @@ export interface backendInterface {
         hasTwilioAuth: boolean;
         twilioFromNumber: string;
         twilioAccountSid: string;
+        twilioPhoneNumbers: Array<TwilioLine>;
     }>;
     getBillingPackages(): Promise<Array<BillingPackage>>;
     getCallRecord(id: CallId): Promise<CallRecordPublic | null>;
@@ -327,6 +345,9 @@ export interface backendInterface {
     listMyPresets(): Promise<Array<CallPreset>>;
     reserveCall(input: InitiateCallInput): Promise<ReserveCallResult>;
     setAdminConfig(xaiApiKey: string, twilioAccountSid: string, twilioAuthToken: string, twilioFromNumber: string): Promise<void>;
+    setTwilioLine(input: TwilioLineInput): Promise<TwilioLineMutationResult>;
+    removeTwilioLine(phoneNumber: string): Promise<TwilioLineMutationResult>;
+    setTwilioLineEnabled(phoneNumber: string, enabled: boolean): Promise<TwilioLineMutationResult>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
     twilioWebhook(callSid: string, callStatus: string): Promise<string>;
     updateCallStatus(callId: CallId, status: CallStatus, transcript: string | null): Promise<boolean>;
@@ -494,6 +515,7 @@ export class Backend implements backendInterface {
         hasTwilioAuth: boolean;
         twilioFromNumber: string;
         twilioAccountSid: string;
+        twilioPhoneNumbers: Array<TwilioLine>;
     }> {
         if (this.processError) {
             try {
@@ -676,6 +698,48 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async setTwilioLine(arg0: TwilioLineInput): Promise<TwilioLineMutationResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setTwilioLine(arg0);
+                return from_candid_TwilioLineMutationResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setTwilioLine(arg0);
+            return from_candid_TwilioLineMutationResult(result);
+        }
+    }
+    async removeTwilioLine(arg0: string): Promise<TwilioLineMutationResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.removeTwilioLine(arg0);
+                return from_candid_TwilioLineMutationResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.removeTwilioLine(arg0);
+            return from_candid_TwilioLineMutationResult(result);
+        }
+    }
+    async setTwilioLineEnabled(arg0: string, arg1: boolean): Promise<TwilioLineMutationResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setTwilioLineEnabled(arg0, arg1);
+                return from_candid_TwilioLineMutationResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setTwilioLineEnabled(arg0, arg1);
+            return from_candid_TwilioLineMutationResult(result);
+        }
+    }
     async transform(arg0: TransformationInput): Promise<TransformationOutput> {
         if (this.processError) {
             try {
@@ -805,6 +869,22 @@ function from_candid_BillingMutationResult(value: any): BillingMutationResult {
     return "ok" in value ? {
         __kind__: "ok",
         ok: value.ok
+    } : {
+        __kind__: "err",
+        err: value.err
+    };
+}
+function from_candid_TwilioLine(value: any): TwilioLine {
+    return {
+        enabled: value.enabled,
+        name: value.name,
+        phoneNumber: value.phoneNumber
+    };
+}
+function from_candid_TwilioLineMutationResult(value: any): TwilioLineMutationResult {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: value.ok.map(from_candid_TwilioLine)
     } : {
         __kind__: "err",
         err: value.err

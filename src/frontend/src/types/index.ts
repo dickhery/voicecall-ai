@@ -8,6 +8,8 @@ import type {
   SystemLog,
   ToolsEnabled,
   TurnDetection,
+  TwilioLine,
+  TwilioLineInput,
   UserRole,
   Voice,
 } from "@/backend";
@@ -25,6 +27,8 @@ export type {
   SampleRate,
   TurnDetection,
   ToolsEnabled,
+  TwilioLine,
+  TwilioLineInput,
 };
 
 export type { Principal };
@@ -34,6 +38,7 @@ export interface AdminConfig {
   hasTwilioAuth: boolean;
   twilioFromNumber: string;
   twilioAccountSid: string;
+  twilioPhoneNumbers: TwilioLine[];
 }
 
 export interface CallActiveState {

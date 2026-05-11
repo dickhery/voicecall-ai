@@ -9,11 +9,13 @@ export interface VoiceServerCall {
   sessionId: string;
   monitorToken?: string;
   status?: string;
+  queued?: boolean;
+  queuePosition?: number;
   allowedSeconds?: number;
   liveAudio?: {
     codec: "audio/pcmu";
     sampleRate: 8000;
-  };
+  } | null;
 }
 
 export interface CallCaptureOptions {
@@ -26,6 +28,13 @@ export interface VoiceServerHealth {
   ok: boolean;
   publicHost: string;
   twilioConfigured: boolean;
+  twilioLines?: {
+    configured: number;
+    active: number;
+    available: number;
+    queued: number;
+    numbers: string[];
+  };
   xaiConfigured: boolean;
   billingConfigured?: boolean;
   backendCanisterId?: string;
@@ -148,8 +157,37 @@ export async function startVoiceServerCall({
   });
 }
 
-export async function endVoiceServerCall(callSid: string): Promise<void> {
-  await postJson<{ ok: true }>("/end-call", { callSid });
+export async function endVoiceServerCall({
+  callSid,
+  sessionId,
+}: {
+  callSid?: string | null;
+  sessionId?: string | null;
+}): Promise<void> {
+  await postJson<{ ok: true }>("/end-call", { callSid, sessionId });
+}
+
+export async function getVoiceServerCallSession(
+  sessionId: string,
+): Promise<VoiceServerCall> {
+  const baseUrl = await getVoiceServerUrl();
+  const response = await fetch(
+    `${baseUrl}/call-session/${encodeURIComponent(sessionId)}`,
+    { cache: "no-store" },
+  );
+  const payload = (await response.json().catch(() => ({}))) as
+    | VoiceServerCall
+    | { ok?: false; error?: string };
+
+  if (!response.ok || ("ok" in payload && payload.ok === false)) {
+    throw new Error(
+      "error" in payload && payload.error
+        ? payload.error
+        : `Call session check failed (${response.status})`,
+    );
+  }
+
+  return payload as VoiceServerCall;
 }
 
 export async function createCheckoutSession({

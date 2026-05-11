@@ -23,6 +23,23 @@ type UserRole =
    guest;
    user;
  };
+type TwilioLineMutationResult = 
+ variant {
+   err: text;
+   ok: vec TwilioLine;
+ };
+type TwilioLineInput = 
+ record {
+   enabled: bool;
+   name: text;
+   phoneNumber: text;
+ };
+type TwilioLine = 
+ record {
+   enabled: bool;
+   name: text;
+   phoneNumber: text;
+ };
 type TurnDetection = 
  record {
    prefixPaddingMs: nat;
@@ -242,6 +259,7 @@ service : {
       hasXaiKey: bool;
       twilioAccountSid: text;
       twilioFromNumber: text;
+      twilioPhoneNumbers: vec TwilioLine;
     }) query;
   getBillingPackages: () -> (vec BillingPackage) query;
   getCallRecord: (id: CallId) -> (opt CallRecordPublic) query;
@@ -251,15 +269,20 @@ service : {
   getPreset: (id: PresetId) -> (opt CallPreset) query;
   getPurchaseIntentForServer: (purchaseIntentId: text) ->
    (opt PurchaseIntentPublic) query;
+  getTwilioLineNumbersForServer: () -> (vec text) query;
   initiateCall: (input: InitiateCallInput) -> (InitiateCallResult);
   isCallerAdmin: () -> (bool) query;
   listMyCalls: () -> (vec CallRecordPublic) query;
   listMyPresets: () -> (vec CallPreset) query;
   markReservationStarted: (reservationId: text, callSid: text) ->
    (BillingMutationResult);
+  removeTwilioLine: (phoneNumber: text) -> (TwilioLineMutationResult);
   reserveCall: (input: InitiateCallInput) -> (ReserveCallResult);
   setAdminConfig: (xaiApiKey: text, twilioAccountSid: text, twilioAuthToken:
    text, twilioFromNumber: text) -> ();
+  setTwilioLine: (input: TwilioLineInput) -> (TwilioLineMutationResult);
+  setTwilioLineEnabled: (phoneNumber: text, enabled: bool) ->
+   (TwilioLineMutationResult);
   transform: (input: TransformationInput) -> (TransformationOutput) query;
   twilioWebhook: (callSid: text, callStatus: text) -> (text);
   updateCallStatus: (callId: CallId, status: CallStatus, transcript:

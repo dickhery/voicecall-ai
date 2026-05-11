@@ -180,6 +180,7 @@ Fill these values:
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_PHONE_NUMBER=+13366098857
+TWILIO_PHONE_NUMBERS=+13366098857,+17016077987
 XAI_API_KEY=xai-...
 HOSTNAME=
 FRONTEND_ORIGIN=https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
@@ -215,7 +216,9 @@ Copy the printed `ICP_SERVER_IDENTITY_JSON=...` line into `src\server\.env`. Cop
 icp canister call -e ic backend assignCallerUserRole '(principal "SERVER_PRINCIPAL_HERE", variant { admin })'
 ```
 
-You can also do this from the app: open **Admin Dashboard**, find **Payment Server**, and click **Authorize Server**. This grants the Node voice server permission to read purchase intents and credit phone time after Stripe webhooks.
+You can also do this from the app: open **Admin Dashboard**, find **Payment Server**, and click **Authorize Server**. This grants the Node voice server permission to read purchase intents, credit phone time after Stripe webhooks, and read the enabled Twilio line list.
+
+`TWILIO_PHONE_NUMBER` remains supported as a single-line fallback. For multiple outbound lines, set `TWILIO_PHONE_NUMBERS` or add numbers in **Admin Dashboard > Twilio Configuration > Outbound Lines**. Each enabled number is treated as one outbound line; when every line is busy, new paid call reservations wait in FIFO order until a line is released.
 
 In Stripe, create two webhook endpoints:
 
@@ -479,6 +482,7 @@ The `/media` WebSocket bridges Twilio audio to xAI and sends xAI audio back to T
 
 - Do not use the old `https://<accountSid>.icp0.io/twilio-webhook` URL.
 - For outbound calls made by the app, you do not need to manually set a Twilio console webhook; the server passes the TwiML URL in `calls.create`.
+- Add every outbound caller ID you want to use to the same Twilio account, then add it to the app as an enabled outbound line.
 - On a Twilio trial account, destination numbers usually must be verified.
 - If you turn on `VALIDATE_TWILIO_SIGNATURE=true`, test after your public tunnel URL is stable.
 

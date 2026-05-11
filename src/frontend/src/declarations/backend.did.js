@@ -40,6 +40,20 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const TwilioLine = IDL.Record({
+  'enabled' : IDL.Bool,
+  'name' : IDL.Text,
+  'phoneNumber' : IDL.Text,
+});
+export const TwilioLineInput = IDL.Record({
+  'enabled' : IDL.Bool,
+  'name' : IDL.Text,
+  'phoneNumber' : IDL.Text,
+});
+export const TwilioLineMutationResult = IDL.Variant({
+  'ok' : IDL.Vec(TwilioLine),
+  'err' : IDL.Text,
+});
 export const ToolsEnabled = IDL.Record({
   'xSearch' : IDL.Bool,
   'webSearch' : IDL.Bool,
@@ -241,6 +255,7 @@ export const idlService = IDL.Service({
           'hasTwilioAuth' : IDL.Bool,
           'twilioFromNumber' : IDL.Text,
           'twilioAccountSid' : IDL.Text,
+          'twilioPhoneNumbers' : IDL.Vec(TwilioLine),
         }),
       ],
       ['query'],
@@ -256,6 +271,11 @@ export const idlService = IDL.Service({
       [IDL.Opt(PurchaseIntentPublic)],
       ['query'],
     ),
+  'getTwilioLineNumbersForServer' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Text)],
+      ['query'],
+    ),
   'initiateCall' : IDL.Func([InitiateCallInput], [InitiateCallResult], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listMyCalls' : IDL.Func([], [IDL.Vec(CallRecordPublic)], ['query']),
@@ -265,8 +285,23 @@ export const idlService = IDL.Service({
       [BillingMutationResult],
       [],
     ),
+  'removeTwilioLine' : IDL.Func(
+      [IDL.Text],
+      [TwilioLineMutationResult],
+      [],
+    ),
   'reserveCall' : IDL.Func([InitiateCallInput], [ReserveCallResult], []),
   'setAdminConfig' : IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text], [], []),
+  'setTwilioLine' : IDL.Func(
+      [TwilioLineInput],
+      [TwilioLineMutationResult],
+      [],
+    ),
+  'setTwilioLineEnabled' : IDL.Func(
+      [IDL.Text, IDL.Bool],
+      [TwilioLineMutationResult],
+      [],
+    ),
   'transform' : IDL.Func(
       [TransformationInput],
       [TransformationOutput],
@@ -319,6 +354,20 @@ export const idlFactory = ({ IDL }) => {
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
+  });
+  const TwilioLine = IDL.Record({
+    'enabled' : IDL.Bool,
+    'name' : IDL.Text,
+    'phoneNumber' : IDL.Text,
+  });
+  const TwilioLineInput = IDL.Record({
+    'enabled' : IDL.Bool,
+    'name' : IDL.Text,
+    'phoneNumber' : IDL.Text,
+  });
+  const TwilioLineMutationResult = IDL.Variant({
+    'ok' : IDL.Vec(TwilioLine),
+    'err' : IDL.Text,
   });
   const ToolsEnabled = IDL.Record({
     'xSearch' : IDL.Bool,
@@ -518,6 +567,7 @@ export const idlFactory = ({ IDL }) => {
             'hasTwilioAuth' : IDL.Bool,
             'twilioFromNumber' : IDL.Text,
             'twilioAccountSid' : IDL.Text,
+            'twilioPhoneNumbers' : IDL.Vec(TwilioLine),
           }),
         ],
         ['query'],
@@ -537,6 +587,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(PurchaseIntentPublic)],
         ['query'],
       ),
+    'getTwilioLineNumbersForServer' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Text)],
+        ['query'],
+      ),
     'initiateCall' : IDL.Func([InitiateCallInput], [InitiateCallResult], []),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listMyCalls' : IDL.Func([], [IDL.Vec(CallRecordPublic)], ['query']),
@@ -546,10 +601,25 @@ export const idlFactory = ({ IDL }) => {
         [BillingMutationResult],
         [],
       ),
+    'removeTwilioLine' : IDL.Func(
+        [IDL.Text],
+        [TwilioLineMutationResult],
+        [],
+      ),
     'reserveCall' : IDL.Func([InitiateCallInput], [ReserveCallResult], []),
     'setAdminConfig' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
         [],
+        [],
+      ),
+    'setTwilioLine' : IDL.Func(
+        [TwilioLineInput],
+        [TwilioLineMutationResult],
+        [],
+      ),
+    'setTwilioLineEnabled' : IDL.Func(
+        [IDL.Text, IDL.Bool],
+        [TwilioLineMutationResult],
         [],
       ),
     'transform' : IDL.Func(

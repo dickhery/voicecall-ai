@@ -142,6 +142,13 @@ export const mockBackend: backendInterface = {
     hasTwilioAuth: true,
     twilioFromNumber: "+1 (888) 555-0100",
     twilioAccountSid: "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    twilioPhoneNumbers: [
+      {
+        phoneNumber: "+18885550100",
+        name: "Primary line",
+        enabled: true,
+      },
+    ],
   }),
 
   getBillingPackages: async () => [
@@ -211,6 +218,21 @@ export const mockBackend: backendInterface = {
     _twilioAuthToken: string,
     _twilioFromNumber: string
   ) => undefined,
+
+  setTwilioLine: async (input) => ({
+    __kind__: "ok",
+    ok: [input],
+  }),
+
+  removeTwilioLine: async (_phoneNumber: string) => ({
+    __kind__: "ok",
+    ok: [],
+  }),
+
+  setTwilioLineEnabled: async (phoneNumber: string, enabled: boolean) => ({
+    __kind__: "ok",
+    ok: [{ phoneNumber, name: phoneNumber, enabled }],
+  }),
 
   transform: async (_input) => ({
     status: BigInt(200),

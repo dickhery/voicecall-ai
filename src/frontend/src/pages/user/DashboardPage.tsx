@@ -87,6 +87,7 @@ function validateE164(phone: string): boolean {
 const STATUS_COLORS: Record<XaiCallStatus, string> = {
   idle: "text-muted-foreground",
   initiating: "text-yellow-400",
+  queued: "text-yellow-400",
   connecting: "text-blue-400",
   in_call: "text-primary",
   completed: "text-green-400",
@@ -96,6 +97,7 @@ const STATUS_COLORS: Record<XaiCallStatus, string> = {
 const STATUS_LABELS: Record<XaiCallStatus, string> = {
   idle: "Idle",
   initiating: "Initiating...",
+  queued: "Queued",
   connecting: "Connecting...",
   in_call: "Live",
   completed: "Completed",
@@ -158,7 +160,10 @@ function ActiveCallPanel({
     toggleLiveAudio,
   } = voice;
   const isActive =
-    status === "in_call" || status === "connecting" || status === "initiating";
+    status === "in_call" ||
+    status === "connecting" ||
+    status === "initiating" ||
+    status === "queued";
 
   if (status === "idle") return null;
 
@@ -192,7 +197,9 @@ function ActiveCallPanel({
                         : "bg-muted/50"
                 }`}
               >
-                {(status === "initiating" || status === "connecting") && (
+                {(status === "initiating" ||
+                  status === "connecting" ||
+                  status === "queued") && (
                   <Loader2 className="w-4 h-4 animate-spin text-primary" />
                 )}
                 {status === "in_call" && (
@@ -236,6 +243,14 @@ function ActiveCallPanel({
               <span className="truncate max-w-[140px]">{presetName}</span>
             </div>
 
+            {status === "queued" && (
+              <Badge
+                variant="outline"
+                className="text-xs border-yellow-500/40 text-yellow-400"
+              >
+                Waiting for line
+              </Badge>
+            )}
             {status === "in_call" && (
               <Badge
                 variant="outline"
@@ -727,6 +742,7 @@ export default function DashboardPage() {
                   className="w-full gap-2"
                 >
                   {voice.status === "initiating" ||
+                  voice.status === "queued" ||
                   voice.status === "connecting" ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
@@ -734,6 +750,8 @@ export default function DashboardPage() {
                   )}
                   {voice.status === "initiating"
                     ? "Initiating..."
+                    : voice.status === "queued"
+                      ? "Queued..."
                     : voice.status === "connecting"
                       ? "Connecting..."
                       : availableSeconds <= 0

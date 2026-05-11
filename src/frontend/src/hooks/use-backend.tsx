@@ -9,6 +9,8 @@ import type {
   InitiateCallResult,
   PresetId,
   ReserveCallResult,
+  TwilioLineInput,
+  TwilioLineMutationResult,
 } from "@/backend";
 import type {
   AdminConfig,
@@ -16,6 +18,7 @@ import type {
   CallPresetInput,
   CallRecordPublic,
   SystemLog,
+  TwilioLine,
   UserRole,
 } from "@/types";
 import { useActor } from "@caffeineai/core-infrastructure";
@@ -283,6 +286,46 @@ export function useSetAdminConfig() {
         twilioAuthToken,
         twilioFromNumber,
       );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminConfig"] }),
+  });
+}
+
+export function useSetTwilioLine() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<TwilioLineMutationResult, Error, TwilioLineInput>({
+    mutationFn: async (input) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.setTwilioLine(input);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminConfig"] }),
+  });
+}
+
+export function useRemoveTwilioLine() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<TwilioLineMutationResult, Error, string>({
+    mutationFn: async (phoneNumber) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.removeTwilioLine(phoneNumber);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminConfig"] }),
+  });
+}
+
+export function useSetTwilioLineEnabled() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<
+    TwilioLineMutationResult,
+    Error,
+    Pick<TwilioLine, "phoneNumber" | "enabled">
+  >({
+    mutationFn: async ({ phoneNumber, enabled }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.setTwilioLineEnabled(phoneNumber, enabled);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["adminConfig"] }),
   });

@@ -24,7 +24,9 @@ const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
 const TRANSCRIPT_FINISH_GRACE_MS = 2_500;
 const RECORDING_FINISH_GRACE_MS = 10_000;
-const SERVER_VERSION = "2026-05-10-recording-proxy-live-audio";
+const LINE_CONFIG_REFRESH_MS = Number(process.env.LINE_CONFIG_REFRESH_MS || 30_000);
+const CALL_QUEUE_MAX_WAIT_MS = Number(process.env.CALL_QUEUE_MAX_WAIT_MS || 30 * 60 * 1000);
+const SERVER_VERSION = "2026-05-10-multi-line-call-queue";
 const SERVER_STARTED_AT = new Date().toISOString();
 
 const BILLING_PACKAGES = {
@@ -148,12 +150,19 @@ app.use(express.urlencoded({ extended: false }));
 const requiredEnv = [
   "TWILIO_ACCOUNT_SID",
   "TWILIO_AUTH_TOKEN",
-  "TWILIO_PHONE_NUMBER",
   "XAI_API_KEY",
 ];
 
 const callSessions = new Map();
 const callsBySid = new Map();
+const activeLineSessions = new Map();
+const callQueue = [];
+let queueProcessing = false;
+let lineConfigCache = {
+  numbers: null,
+  fetchedAt: 0,
+  pending: null,
+};
 
 const twilioClient =
   process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
@@ -320,6 +329,78 @@ function normalizePhone(phone) {
     throw new Error("Phone number must be E.164 format, for example +15551234567.");
   }
   return cleaned;
+}
+
+function parsePhoneNumberList(value) {
+  return String(value || "")
+    .split(/[\s,;]+/)
+    .map((phone) => phone.trim())
+    .filter(Boolean)
+    .map(normalizePhone);
+}
+
+function uniquePhoneNumbers(numbers) {
+  return Array.from(new Set(numbers.filter(Boolean)));
+}
+
+function getEnvTwilioLineNumbers() {
+  const configured = [
+    ...parsePhoneNumberList(process.env.TWILIO_PHONE_NUMBERS || ""),
+    ...parsePhoneNumberList(process.env.TWILIO_PHONE_NUMBER || ""),
+  ];
+  return uniquePhoneNumbers(configured);
+}
+
+async function getConfiguredTwilioLineNumbers({ force = false } = {}) {
+  const now = Date.now();
+  if (
+    !force &&
+    lineConfigCache.numbers &&
+    now - lineConfigCache.fetchedAt < LINE_CONFIG_REFRESH_MS
+  ) {
+    return lineConfigCache.numbers;
+  }
+  if (!force && lineConfigCache.pending) return lineConfigCache.pending;
+
+  lineConfigCache.pending = (async () => {
+    const envNumbers = getEnvTwilioLineNumbers();
+    try {
+      if (process.env.BACKEND_CANISTER_ID) {
+        const actor = await getBackendActor();
+        const backendNumbers = uniquePhoneNumbers(
+          (await actor.getTwilioLineNumbersForServer()).map((number) =>
+            normalizePhone(number),
+          ),
+        );
+        const numbers = backendNumbers.length > 0 ? backendNumbers : envNumbers;
+        lineConfigCache = { numbers, fetchedAt: Date.now(), pending: null };
+        return numbers;
+      }
+    } catch (error) {
+      log("warn", "Unable to read Twilio line config from backend", {
+        error: error.message,
+      });
+    }
+    lineConfigCache = {
+      numbers: envNumbers,
+      fetchedAt: Date.now(),
+      pending: null,
+    };
+    return envNumbers;
+  })();
+
+  return lineConfigCache.pending;
+}
+
+async function getLinePoolSnapshot() {
+  const numbers = await getConfiguredTwilioLineNumbers();
+  const active = numbers.filter((number) => activeLineSessions.has(number));
+  return {
+    numbers,
+    active,
+    available: numbers.filter((number) => !activeLineSessions.has(number)),
+    queued: getQueuedSessionIds().length,
+  };
 }
 
 function toPlainPreset(input = {}) {
@@ -749,8 +830,13 @@ function callArtifactsToText(session) {
 
 async function finishPaidSession(session, reason = "completed") {
   if (!session || session.finished) return;
+  if (session.state === "queued" && !session.callSid) {
+    await cancelQueuedSession(session, reason);
+    return;
+  }
   session.finished = true;
   session.billingFinishedAt = session.billingStoppedAt || Date.now();
+  removeQueuedSession(session.id);
   if (session.cutoffTimer) {
     clearTimeout(session.cutoffTimer);
     session.cutoffTimer = null;
@@ -797,6 +883,7 @@ async function finishPaidSession(session, reason = "completed") {
   for (const client of session.monitorClients || []) {
     if (client.readyState === WebSocket.OPEN) client.close(1000, "Call ended");
   }
+  releaseSessionLine(session);
   callSessions.delete(session.id);
   if (session.callSid) callsBySid.delete(session.callSid);
 }
@@ -859,7 +946,211 @@ function isTerminalTwilioStatus(status) {
   );
 }
 
-app.get("/health", (_req, res) => {
+function getQueuedSessionIds() {
+  return callQueue.filter((sessionId) => {
+    const session = callSessions.get(sessionId);
+    return session && !session.finished && session.state === "queued";
+  });
+}
+
+function getQueuePosition(sessionId) {
+  const queued = getQueuedSessionIds();
+  const index = queued.indexOf(sessionId);
+  return index === -1 ? 0 : index + 1;
+}
+
+function removeQueuedSession(sessionId) {
+  for (let i = callQueue.length - 1; i >= 0; i -= 1) {
+    if (callQueue[i] === sessionId) callQueue.splice(i, 1);
+  }
+}
+
+function enqueueCallSession(session) {
+  if (!session || session.finished) return;
+  session.state = "queued";
+  session.queueEnteredAt ||= Date.now();
+  if (!callQueue.includes(session.id)) callQueue.push(session.id);
+}
+
+async function getAvailableLineNumber() {
+  const numbers = await getConfiguredTwilioLineNumbers();
+  return numbers.find((number) => !activeLineSessions.has(number)) || "";
+}
+
+function assignLineToSession(session, lineNumber) {
+  session.lineNumber = lineNumber;
+  activeLineSessions.set(lineNumber, session.id);
+}
+
+function releaseSessionLine(session) {
+  const lineNumber = session?.lineNumber;
+  if (!lineNumber) return;
+  if (activeLineSessions.get(lineNumber) === session.id) {
+    activeLineSessions.delete(lineNumber);
+  }
+  session.lineNumber = null;
+  setTimeout(() => {
+    dispatchQueuedSessions().catch((error) => {
+      log("error", "Queued call dispatch failed", { error: error.message });
+    });
+  }, 0).unref?.();
+}
+
+function buildCallSessionPayload(session) {
+  return {
+    ok: true,
+    sessionId: session.id,
+    callSid: session.callSid || "",
+    monitorToken: session.monitorToken || "",
+    status: session.state || (session.callSid ? "active" : "queued"),
+    queued: session.state === "queued",
+    queuePosition: getQueuePosition(session.id),
+    allowedSeconds: session.allowedSeconds,
+    liveAudio: session.callSid
+      ? {
+          codec: "audio/pcmu",
+          sampleRate: 8000,
+        }
+      : null,
+  };
+}
+
+async function cancelQueuedSession(session, reason = "queued_call_canceled") {
+  if (!session || session.finished) return;
+  removeQueuedSession(session.id);
+  session.finished = true;
+  session.state = "canceled";
+  session.billingStoppedAt ||= Date.now();
+  if (session.reservationId) {
+    try {
+      const actor = await getBackendActor();
+      await actor.cancelCallReservation(session.reservationId, reason);
+    } catch (error) {
+      log("warn", "Unable to cancel queued reservation", {
+        sessionId: session.id,
+        reservationId: session.reservationId,
+        error: error.message,
+      });
+    }
+  }
+  broadcastMonitorEvent(session, { type: "ended", reason });
+  callSessions.delete(session.id);
+}
+
+async function createTwilioCallForSession(session, lineNumber, actor) {
+  if (!lineNumber) return null;
+  if (!session || session.finished) return null;
+
+  session.state = "dialing";
+  assignLineToSession(session, lineNumber);
+
+  try {
+    const callCreateOptions = {
+      to: session.recipientPhone,
+      from: lineNumber,
+      url: session.twimlUrl,
+      method: "POST",
+      statusCallback: session.statusCallbackUrl,
+      statusCallbackMethod: "POST",
+      statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
+    };
+    if (session.recordAudio) {
+      callCreateOptions.record = true;
+      callCreateOptions.recordingTrack = "both";
+      callCreateOptions.recordingChannels = "dual";
+      callCreateOptions.recordingStatusCallback = session.recordingStatusUrl;
+      callCreateOptions.recordingStatusCallbackMethod = "POST";
+      callCreateOptions.recordingStatusCallbackEvent = [
+        "in-progress",
+        "completed",
+        "absent",
+      ];
+    }
+
+    const call = await twilioClient.calls.create(callCreateOptions);
+
+    session.callSid = call.sid;
+    session.state = "active";
+    callsBySid.set(call.sid, session.id);
+    okOrThrow(
+      await actor.markReservationStarted(session.reservationId, call.sid),
+      "Unable to mark paid reservation as started.",
+    );
+    log("info", "Twilio call created", {
+      callSid: call.sid,
+      callId: session.callId,
+      sessionId: session.id,
+      lineNumber,
+    });
+    return call;
+  } catch (error) {
+    if (session.callSid && twilioClient) {
+      try {
+        await twilioClient.calls(session.callSid).update({ status: "completed" });
+      } catch (endError) {
+        log("warn", "Unable to end failed Twilio call during dispatch", {
+          callSid: session.callSid,
+          error: endError.message,
+        });
+      }
+      callsBySid.delete(session.callSid);
+      session.callSid = null;
+    }
+    releaseSessionLine(session);
+    session.state = "failed";
+    throw error;
+  }
+}
+
+async function dispatchQueuedSessions() {
+  if (queueProcessing) return;
+  queueProcessing = true;
+  try {
+    while (callQueue.length > 0) {
+      const sessionId = callQueue[0];
+      const session = callSessions.get(sessionId);
+      if (!session || session.finished || session.state !== "queued") {
+        callQueue.shift();
+        continue;
+      }
+
+      if (Date.now() - session.queueEnteredAt > CALL_QUEUE_MAX_WAIT_MS) {
+        callQueue.shift();
+        await cancelQueuedSession(
+          session,
+          "No Twilio line became available before the queue timeout.",
+        );
+        continue;
+      }
+
+      const lineNumber = await getAvailableLineNumber();
+      if (!lineNumber) break;
+
+      callQueue.shift();
+      try {
+        const actor = await getBackendActor();
+        await createTwilioCallForSession(session, lineNumber, actor);
+      } catch (error) {
+        log("error", "Unable to dispatch queued call", {
+          sessionId,
+          error: error.message,
+        });
+        await cancelQueuedSession(session, error.message);
+      }
+    }
+  } finally {
+    queueProcessing = false;
+  }
+}
+
+app.get("/health", async (_req, res) => {
+  const linePool = await getLinePoolSnapshot().catch((error) => ({
+    numbers: getEnvTwilioLineNumbers(),
+    active: [],
+    available: [],
+    queued: getQueuedSessionIds().length,
+    error: error.message,
+  }));
   res.json({
     ok: true,
     serverVersion: SERVER_VERSION,
@@ -872,8 +1163,15 @@ app.get("/health", (_req, res) => {
     twilioConfigured: Boolean(
       process.env.TWILIO_ACCOUNT_SID &&
         process.env.TWILIO_AUTH_TOKEN &&
-        process.env.TWILIO_PHONE_NUMBER,
+        linePool.numbers.length > 0,
     ),
+    twilioLines: {
+      configured: linePool.numbers.length,
+      active: linePool.active.length,
+      available: linePool.available.length,
+      queued: linePool.queued,
+      numbers: linePool.numbers,
+    },
     xaiConfigured: Boolean(process.env.XAI_API_KEY),
     billingConfigured: Boolean(
       process.env.BACKEND_CANISTER_ID &&
@@ -1026,7 +1324,7 @@ app.post("/billing/create-checkout-session", async (req, res) => {
 app.post("/initiate-call", async (req, res) => {
   let reservationId = "";
   let reservation = null;
-  let twilioCallSid = "";
+  let session = null;
   try {
     requireServerConfig();
     reservationId = String(req.body.reservationId || "");
@@ -1035,6 +1333,12 @@ app.post("/initiate-call", async (req, res) => {
       throw new Error("A paid call reservation is required.");
     }
     const actor = await getBackendActor();
+    const configuredLines = await getConfiguredTwilioLineNumbers();
+    if (configuredLines.length === 0) {
+      throw new Error(
+        "No Twilio phone lines are configured. Add at least one enabled number in Admin Dashboard.",
+      );
+    }
     const verified = await actor.verifyCallReservation(reservationId, callToken);
     reservation = normalizeReservation(
       okOrThrow(verified, "Unable to verify paid call reservation."),
@@ -1055,7 +1359,7 @@ app.post("/initiate-call", async (req, res) => {
     statusCallbackUrl.searchParams.set("sessionId", sessionId);
     const captureOptions = normalizeCaptureOptions(req.body.captureOptions || {});
 
-    const session = {
+    session = {
       id: sessionId,
       monitorToken,
       callId,
@@ -1066,6 +1370,8 @@ app.post("/initiate-call", async (req, res) => {
       saveTranscript: captureOptions.saveTranscript,
       recordAudio: captureOptions.recordAudio,
       permissionConfirmed: captureOptions.permissionConfirmed,
+      state: "created",
+      queueEnteredAt: null,
       createdAt: Date.now(),
       billingStartedAt: null,
       billingFinishedAt: null,
@@ -1074,7 +1380,11 @@ app.post("/initiate-call", async (req, res) => {
       finishTimer: null,
       finished: false,
       callSid: null,
+      lineNumber: null,
       streamSid: null,
+      twimlUrl: twimlUrl.toString(),
+      statusCallbackUrl: statusCallbackUrl.toString(),
+      recordingStatusUrl: getPublicRecordingStatusUrl(sessionId),
       transcript: [],
       awaitingCallerTranscript: false,
       recording: null,
@@ -1082,38 +1392,26 @@ app.post("/initiate-call", async (req, res) => {
     };
     callSessions.set(sessionId, session);
 
-    const callCreateOptions = {
-      to: recipientPhone,
-      from: process.env.TWILIO_PHONE_NUMBER,
-      url: twimlUrl.toString(),
-      method: "POST",
-      statusCallback: statusCallbackUrl.toString(),
-      statusCallbackMethod: "POST",
-      statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-    };
-    if (captureOptions.recordAudio) {
-      callCreateOptions.record = true;
-      callCreateOptions.recordingTrack = "both";
-      callCreateOptions.recordingChannels = "dual";
-      callCreateOptions.recordingStatusCallback = getPublicRecordingStatusUrl(sessionId);
-      callCreateOptions.recordingStatusCallbackMethod = "POST";
-      callCreateOptions.recordingStatusCallbackEvent = [
-        "in-progress",
-        "completed",
-        "absent",
-      ];
+    const lineNumber = await getAvailableLineNumber();
+    if (!lineNumber) {
+      enqueueCallSession(session);
+      log("info", "Call queued because all Twilio lines are busy", {
+        callId,
+        sessionId,
+        queuePosition: getQueuePosition(sessionId),
+      });
+
+      res.status(202).json({
+        ...buildCallSessionPayload(session),
+        allowedSeconds: reservation.allowedSeconds,
+      });
+      return;
     }
 
-    const call = await twilioClient.calls.create(callCreateOptions);
-
-    session.callSid = call.sid;
-    twilioCallSid = call.sid;
-    callsBySid.set(call.sid, sessionId);
-    okOrThrow(
-      await actor.markReservationStarted(reservationId, call.sid),
-      "Unable to mark paid reservation as started.",
-    );
-    log("info", "Twilio call created", { callSid: call.sid, callId, sessionId });
+    const call = await createTwilioCallForSession(session, lineNumber, actor);
+    if (!call) {
+      throw new Error("No Twilio line is currently available.");
+    }
 
     res.json({
       ok: true,
@@ -1129,15 +1427,20 @@ app.post("/initiate-call", async (req, res) => {
     });
   } catch (error) {
     log("error", "Failed to initiate call", { error: error.message });
-    if (twilioCallSid && twilioClient) {
+    if (session?.callSid && twilioClient) {
       try {
-        await twilioClient.calls(twilioCallSid).update({ status: "completed" });
+        await twilioClient.calls(session.callSid).update({ status: "completed" });
       } catch (endError) {
         log("warn", "Unable to end failed Twilio call", {
-          callSid: twilioCallSid,
+          callSid: session.callSid,
           error: endError.message,
         });
       }
+    }
+    if (session) {
+      removeQueuedSession(session.id);
+      releaseSessionLine(session);
+      callSessions.delete(session.id);
     }
     if (reservationId && reservation) {
       try {
@@ -1158,13 +1461,26 @@ app.post("/end-call", async (req, res) => {
   try {
     requireServerConfig();
     const callSid = String(req.body.callSid || "");
+    const sessionId = String(req.body.sessionId || "");
+    if (!callSid && sessionId) {
+      const session = callSessions.get(sessionId);
+      if (!session) {
+        res.json({ ok: true });
+        return;
+      }
+      if (session.state === "queued" && !session.callSid) {
+        await cancelQueuedSession(session, "Caller canceled queued call.");
+        res.json({ ok: true });
+        return;
+      }
+    }
     if (!/^CA[a-fA-F0-9]{32}$/.test(callSid)) {
       throw new Error("A valid Twilio CallSid is required.");
     }
     await twilioClient.calls(callSid).update({ status: "completed" });
-    const sessionId = callsBySid.get(callSid);
-    if (sessionId) {
-      const session = callSessions.get(sessionId);
+    const activeSessionId = callsBySid.get(callSid);
+    if (activeSessionId) {
+      const session = callSessions.get(activeSessionId);
       if (session) {
         session.endedAt = Date.now();
         session.billingStoppedAt ||= session.endedAt;
@@ -1176,6 +1492,15 @@ app.post("/end-call", async (req, res) => {
     log("error", "Failed to end call", { error: error.message });
     res.status(400).json({ ok: false, error: error.message });
   }
+});
+
+app.get("/call-session/:sessionId", (req, res) => {
+  const session = callSessions.get(String(req.params.sessionId || ""));
+  if (!session) {
+    res.status(404).json({ ok: false, error: "Call session not found." });
+    return;
+  }
+  res.json(buildCallSessionPayload(session));
 });
 
 app.post("/twiml", (req, res) => {
@@ -1648,10 +1973,25 @@ mediaWss.on("connection", (twilioWs, request) => {
 setInterval(() => {
   const cutoff = Date.now() - SESSION_TTL_MS;
   for (const [sessionId, session] of callSessions.entries()) {
+    if (
+      session.state === "queued" &&
+      Date.now() - session.queueEnteredAt > CALL_QUEUE_MAX_WAIT_MS
+    ) {
+      cancelQueuedSession(
+        session,
+        "No Twilio line became available before the queue timeout.",
+      );
+      continue;
+    }
     if (session.createdAt < cutoff) {
       finishPaidSession(session, "session_ttl_cleanup");
     }
   }
+  dispatchQueuedSessions().catch((error) => {
+    log("error", "Queued call dispatch failed during cleanup", {
+      error: error.message,
+    });
+  });
 }, 15 * 60 * 1000).unref();
 
 server.listen(PORT, () => {

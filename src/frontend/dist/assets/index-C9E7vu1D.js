@@ -33027,6 +33027,20 @@ const UserRole$1 = Variant({
   "user": Null,
   "guest": Null
 });
+const TwilioLine = Record({
+  "enabled": Bool,
+  "name": Text,
+  "phoneNumber": Text
+});
+const TwilioLineInput = Record({
+  "enabled": Bool,
+  "name": Text,
+  "phoneNumber": Text
+});
+const TwilioLineMutationResult = Variant({
+  "ok": Vec(TwilioLine),
+  "err": Text
+});
 const ToolsEnabled = Record({
   "xSearch": Bool,
   "webSearch": Bool,
@@ -33226,7 +33240,8 @@ Service({
         "hasXaiKey": Bool,
         "hasTwilioAuth": Bool,
         "twilioFromNumber": Text,
-        "twilioAccountSid": Text
+        "twilioAccountSid": Text,
+        "twilioPhoneNumbers": Vec(TwilioLine)
       })
     ],
     ["query"]
@@ -33242,6 +33257,11 @@ Service({
     [Opt(PurchaseIntentPublic)],
     ["query"]
   ),
+  "getTwilioLineNumbersForServer": Func(
+    [],
+    [Vec(Text)],
+    ["query"]
+  ),
   "initiateCall": Func([InitiateCallInput], [InitiateCallResult], []),
   "isCallerAdmin": Func([], [Bool], ["query"]),
   "listMyCalls": Func([], [Vec(CallRecordPublic)], ["query"]),
@@ -33251,8 +33271,23 @@ Service({
     [BillingMutationResult],
     []
   ),
+  "removeTwilioLine": Func(
+    [Text],
+    [TwilioLineMutationResult],
+    []
+  ),
   "reserveCall": Func([InitiateCallInput], [ReserveCallResult], []),
   "setAdminConfig": Func([Text, Text, Text, Text], [], []),
+  "setTwilioLine": Func(
+    [TwilioLineInput],
+    [TwilioLineMutationResult],
+    []
+  ),
+  "setTwilioLineEnabled": Func(
+    [Text, Bool],
+    [TwilioLineMutationResult],
+    []
+  ),
   "transform": Func(
     [TransformationInput],
     [TransformationOutput],
@@ -33302,6 +33337,20 @@ const idlFactory = ({ IDL: IDL2 }) => {
     "admin": IDL2.Null,
     "user": IDL2.Null,
     "guest": IDL2.Null
+  });
+  const TwilioLine2 = IDL2.Record({
+    "enabled": IDL2.Bool,
+    "name": IDL2.Text,
+    "phoneNumber": IDL2.Text
+  });
+  const TwilioLineInput2 = IDL2.Record({
+    "enabled": IDL2.Bool,
+    "name": IDL2.Text,
+    "phoneNumber": IDL2.Text
+  });
+  const TwilioLineMutationResult2 = IDL2.Variant({
+    "ok": IDL2.Vec(TwilioLine2),
+    "err": IDL2.Text
   });
   const ToolsEnabled2 = IDL2.Record({
     "xSearch": IDL2.Bool,
@@ -33499,7 +33548,8 @@ const idlFactory = ({ IDL: IDL2 }) => {
           "hasXaiKey": IDL2.Bool,
           "hasTwilioAuth": IDL2.Bool,
           "twilioFromNumber": IDL2.Text,
-          "twilioAccountSid": IDL2.Text
+          "twilioAccountSid": IDL2.Text,
+          "twilioPhoneNumbers": IDL2.Vec(TwilioLine2)
         })
       ],
       ["query"]
@@ -33519,6 +33569,11 @@ const idlFactory = ({ IDL: IDL2 }) => {
       [IDL2.Opt(PurchaseIntentPublic2)],
       ["query"]
     ),
+    "getTwilioLineNumbersForServer": IDL2.Func(
+      [],
+      [IDL2.Vec(IDL2.Text)],
+      ["query"]
+    ),
     "initiateCall": IDL2.Func([InitiateCallInput2], [InitiateCallResult2], []),
     "isCallerAdmin": IDL2.Func([], [IDL2.Bool], ["query"]),
     "listMyCalls": IDL2.Func([], [IDL2.Vec(CallRecordPublic2)], ["query"]),
@@ -33528,10 +33583,25 @@ const idlFactory = ({ IDL: IDL2 }) => {
       [BillingMutationResult2],
       []
     ),
+    "removeTwilioLine": IDL2.Func(
+      [IDL2.Text],
+      [TwilioLineMutationResult2],
+      []
+    ),
     "reserveCall": IDL2.Func([InitiateCallInput2], [ReserveCallResult2], []),
     "setAdminConfig": IDL2.Func(
       [IDL2.Text, IDL2.Text, IDL2.Text, IDL2.Text],
       [],
+      []
+    ),
+    "setTwilioLine": IDL2.Func(
+      [TwilioLineInput2],
+      [TwilioLineMutationResult2],
+      []
+    ),
+    "setTwilioLineEnabled": IDL2.Func(
+      [IDL2.Text, IDL2.Bool],
+      [TwilioLineMutationResult2],
       []
     ),
     "transform": IDL2.Func(
@@ -33949,6 +34019,48 @@ class Backend {
       return result;
     }
   }
+  async setTwilioLine(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.setTwilioLine(arg0);
+        return from_candid_TwilioLineMutationResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.setTwilioLine(arg0);
+      return from_candid_TwilioLineMutationResult(result);
+    }
+  }
+  async removeTwilioLine(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.removeTwilioLine(arg0);
+        return from_candid_TwilioLineMutationResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.removeTwilioLine(arg0);
+      return from_candid_TwilioLineMutationResult(result);
+    }
+  }
+  async setTwilioLineEnabled(arg0, arg1) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.setTwilioLineEnabled(arg0, arg1);
+        return from_candid_TwilioLineMutationResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.setTwilioLineEnabled(arg0, arg1);
+      return from_candid_TwilioLineMutationResult(result);
+    }
+  }
   async transform(arg0) {
     if (this.processError) {
       try {
@@ -34078,6 +34190,22 @@ function from_candid_BillingMutationResult(value) {
   return "ok" in value ? {
     __kind__: "ok",
     ok: value.ok
+  } : {
+    __kind__: "err",
+    err: value.err
+  };
+}
+function from_candid_TwilioLine(value) {
+  return {
+    enabled: value.enabled,
+    name: value.name,
+    phoneNumber: value.phoneNumber
+  };
+}
+function from_candid_TwilioLineMutationResult(value) {
+  return "ok" in value ? {
+    __kind__: "ok",
+    ok: value.ok.map(from_candid_TwilioLine)
   } : {
     __kind__: "err",
     err: value.err
@@ -38285,6 +38413,493 @@ function Label({
     }
   );
 }
+function composeEventHandlers(originalEventHandler, ourEventHandler, { checkForDefaultPrevented = true } = {}) {
+  return function handleEvent(event) {
+    originalEventHandler == null ? void 0 : originalEventHandler(event);
+    if (checkForDefaultPrevented === false || !event.defaultPrevented) {
+      return ourEventHandler == null ? void 0 : ourEventHandler(event);
+    }
+  };
+}
+function createContext2(rootComponentName, defaultContext) {
+  const Context = reactExports.createContext(defaultContext);
+  const Provider = (props) => {
+    const { children, ...context } = props;
+    const value = reactExports.useMemo(() => context, Object.values(context));
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Context.Provider, { value, children });
+  };
+  Provider.displayName = rootComponentName + "Provider";
+  function useContext2(consumerName) {
+    const context = reactExports.useContext(Context);
+    if (context) return context;
+    if (defaultContext !== void 0) return defaultContext;
+    throw new Error(`\`${consumerName}\` must be used within \`${rootComponentName}\``);
+  }
+  return [Provider, useContext2];
+}
+function createContextScope(scopeName, createContextScopeDeps = []) {
+  let defaultContexts = [];
+  function createContext3(rootComponentName, defaultContext) {
+    const BaseContext = reactExports.createContext(defaultContext);
+    const index2 = defaultContexts.length;
+    defaultContexts = [...defaultContexts, defaultContext];
+    const Provider = (props) => {
+      var _a3;
+      const { scope, children, ...context } = props;
+      const Context = ((_a3 = scope == null ? void 0 : scope[scopeName]) == null ? void 0 : _a3[index2]) || BaseContext;
+      const value = reactExports.useMemo(() => context, Object.values(context));
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(Context.Provider, { value, children });
+    };
+    Provider.displayName = rootComponentName + "Provider";
+    function useContext2(consumerName, scope) {
+      var _a3;
+      const Context = ((_a3 = scope == null ? void 0 : scope[scopeName]) == null ? void 0 : _a3[index2]) || BaseContext;
+      const context = reactExports.useContext(Context);
+      if (context) return context;
+      if (defaultContext !== void 0) return defaultContext;
+      throw new Error(`\`${consumerName}\` must be used within \`${rootComponentName}\``);
+    }
+    return [Provider, useContext2];
+  }
+  const createScope = () => {
+    const scopeContexts = defaultContexts.map((defaultContext) => {
+      return reactExports.createContext(defaultContext);
+    });
+    return function useScope(scope) {
+      const contexts = (scope == null ? void 0 : scope[scopeName]) || scopeContexts;
+      return reactExports.useMemo(
+        () => ({ [`__scope${scopeName}`]: { ...scope, [scopeName]: contexts } }),
+        [scope, contexts]
+      );
+    };
+  };
+  createScope.scopeName = scopeName;
+  return [createContext3, composeContextScopes(createScope, ...createContextScopeDeps)];
+}
+function composeContextScopes(...scopes) {
+  const baseScope = scopes[0];
+  if (scopes.length === 1) return baseScope;
+  const createScope = () => {
+    const scopeHooks = scopes.map((createScope2) => ({
+      useScope: createScope2(),
+      scopeName: createScope2.scopeName
+    }));
+    return function useComposedScopes(overrideScopes) {
+      const nextScopes = scopeHooks.reduce((nextScopes2, { useScope, scopeName }) => {
+        const scopeProps = useScope(overrideScopes);
+        const currentScope = scopeProps[`__scope${scopeName}`];
+        return { ...nextScopes2, ...currentScope };
+      }, {});
+      return reactExports.useMemo(() => ({ [`__scope${baseScope.scopeName}`]: nextScopes }), [nextScopes]);
+    };
+  };
+  createScope.scopeName = baseScope.scopeName;
+  return createScope;
+}
+var useLayoutEffect2 = (globalThis == null ? void 0 : globalThis.document) ? reactExports.useLayoutEffect : () => {
+};
+var useInsertionEffect = React$5[" useInsertionEffect ".trim().toString()] || useLayoutEffect2;
+function useControllableState({
+  prop,
+  defaultProp,
+  onChange = () => {
+  },
+  caller
+}) {
+  const [uncontrolledProp, setUncontrolledProp, onChangeRef] = useUncontrolledState({
+    defaultProp,
+    onChange
+  });
+  const isControlled = prop !== void 0;
+  const value = isControlled ? prop : uncontrolledProp;
+  {
+    const isControlledRef = reactExports.useRef(prop !== void 0);
+    reactExports.useEffect(() => {
+      const wasControlled = isControlledRef.current;
+      if (wasControlled !== isControlled) {
+        const from = wasControlled ? "controlled" : "uncontrolled";
+        const to = isControlled ? "controlled" : "uncontrolled";
+        console.warn(
+          `${caller} is changing from ${from} to ${to}. Components should not switch from controlled to uncontrolled (or vice versa). Decide between using a controlled or uncontrolled value for the lifetime of the component.`
+        );
+      }
+      isControlledRef.current = isControlled;
+    }, [isControlled, caller]);
+  }
+  const setValue = reactExports.useCallback(
+    (nextValue) => {
+      var _a3;
+      if (isControlled) {
+        const value2 = isFunction$2(nextValue) ? nextValue(prop) : nextValue;
+        if (value2 !== prop) {
+          (_a3 = onChangeRef.current) == null ? void 0 : _a3.call(onChangeRef, value2);
+        }
+      } else {
+        setUncontrolledProp(nextValue);
+      }
+    },
+    [isControlled, prop, setUncontrolledProp, onChangeRef]
+  );
+  return [value, setValue];
+}
+function useUncontrolledState({
+  defaultProp,
+  onChange
+}) {
+  const [value, setValue] = reactExports.useState(defaultProp);
+  const prevValueRef = reactExports.useRef(value);
+  const onChangeRef = reactExports.useRef(onChange);
+  useInsertionEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+  reactExports.useEffect(() => {
+    var _a3;
+    if (prevValueRef.current !== value) {
+      (_a3 = onChangeRef.current) == null ? void 0 : _a3.call(onChangeRef, value);
+      prevValueRef.current = value;
+    }
+  }, [value, prevValueRef]);
+  return [value, setValue, onChangeRef];
+}
+function isFunction$2(value) {
+  return typeof value === "function";
+}
+function usePrevious(value) {
+  const ref = reactExports.useRef({ value, previous: value });
+  return reactExports.useMemo(() => {
+    if (ref.current.value !== value) {
+      ref.current.previous = ref.current.value;
+      ref.current.value = value;
+    }
+    return ref.current.previous;
+  }, [value]);
+}
+function useSize(element) {
+  const [size2, setSize] = reactExports.useState(void 0);
+  useLayoutEffect2(() => {
+    if (element) {
+      setSize({ width: element.offsetWidth, height: element.offsetHeight });
+      const resizeObserver = new ResizeObserver((entries) => {
+        if (!Array.isArray(entries)) {
+          return;
+        }
+        if (!entries.length) {
+          return;
+        }
+        const entry = entries[0];
+        let width;
+        let height;
+        if ("borderBoxSize" in entry) {
+          const borderSizeEntry = entry["borderBoxSize"];
+          const borderSize = Array.isArray(borderSizeEntry) ? borderSizeEntry[0] : borderSizeEntry;
+          width = borderSize["inlineSize"];
+          height = borderSize["blockSize"];
+        } else {
+          width = element.offsetWidth;
+          height = element.offsetHeight;
+        }
+        setSize({ width, height });
+      });
+      resizeObserver.observe(element, { box: "border-box" });
+      return () => resizeObserver.unobserve(element);
+    } else {
+      setSize(void 0);
+    }
+  }, [element]);
+  return size2;
+}
+// @__NO_SIDE_EFFECTS__
+function createSlot(ownerName) {
+  const SlotClone = /* @__PURE__ */ createSlotClone(ownerName);
+  const Slot2 = reactExports.forwardRef((props, forwardedRef) => {
+    const { children, ...slotProps } = props;
+    const childrenArray = reactExports.Children.toArray(children);
+    const slottable = childrenArray.find(isSlottable);
+    if (slottable) {
+      const newElement = slottable.props.children;
+      const newChildren = childrenArray.map((child) => {
+        if (child === slottable) {
+          if (reactExports.Children.count(newElement) > 1) return reactExports.Children.only(null);
+          return reactExports.isValidElement(newElement) ? newElement.props.children : null;
+        } else {
+          return child;
+        }
+      });
+      return /* @__PURE__ */ jsxRuntimeExports.jsx(SlotClone, { ...slotProps, ref: forwardedRef, children: reactExports.isValidElement(newElement) ? reactExports.cloneElement(newElement, void 0, newChildren) : null });
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(SlotClone, { ...slotProps, ref: forwardedRef, children });
+  });
+  Slot2.displayName = `${ownerName}.Slot`;
+  return Slot2;
+}
+// @__NO_SIDE_EFFECTS__
+function createSlotClone(ownerName) {
+  const SlotClone = reactExports.forwardRef((props, forwardedRef) => {
+    const { children, ...slotProps } = props;
+    if (reactExports.isValidElement(children)) {
+      const childrenRef = getElementRef$1(children);
+      const props2 = mergeProps(slotProps, children.props);
+      if (children.type !== reactExports.Fragment) {
+        props2.ref = forwardedRef ? composeRefs(forwardedRef, childrenRef) : childrenRef;
+      }
+      return reactExports.cloneElement(children, props2);
+    }
+    return reactExports.Children.count(children) > 1 ? reactExports.Children.only(null) : null;
+  });
+  SlotClone.displayName = `${ownerName}.SlotClone`;
+  return SlotClone;
+}
+var SLOTTABLE_IDENTIFIER = Symbol("radix.slottable");
+// @__NO_SIDE_EFFECTS__
+function createSlottable(ownerName) {
+  const Slottable2 = ({ children }) => {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children });
+  };
+  Slottable2.displayName = `${ownerName}.Slottable`;
+  Slottable2.__radixId = SLOTTABLE_IDENTIFIER;
+  return Slottable2;
+}
+function isSlottable(child) {
+  return reactExports.isValidElement(child) && typeof child.type === "function" && "__radixId" in child.type && child.type.__radixId === SLOTTABLE_IDENTIFIER;
+}
+function mergeProps(slotProps, childProps) {
+  const overrideProps = { ...childProps };
+  for (const propName in childProps) {
+    const slotPropValue = slotProps[propName];
+    const childPropValue = childProps[propName];
+    const isHandler = /^on[A-Z]/.test(propName);
+    if (isHandler) {
+      if (slotPropValue && childPropValue) {
+        overrideProps[propName] = (...args) => {
+          const result = childPropValue(...args);
+          slotPropValue(...args);
+          return result;
+        };
+      } else if (slotPropValue) {
+        overrideProps[propName] = slotPropValue;
+      }
+    } else if (propName === "style") {
+      overrideProps[propName] = { ...slotPropValue, ...childPropValue };
+    } else if (propName === "className") {
+      overrideProps[propName] = [slotPropValue, childPropValue].filter(Boolean).join(" ");
+    }
+  }
+  return { ...slotProps, ...overrideProps };
+}
+function getElementRef$1(element) {
+  var _a3, _b3;
+  let getter = (_a3 = Object.getOwnPropertyDescriptor(element.props, "ref")) == null ? void 0 : _a3.get;
+  let mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
+  if (mayWarn) {
+    return element.ref;
+  }
+  getter = (_b3 = Object.getOwnPropertyDescriptor(element, "ref")) == null ? void 0 : _b3.get;
+  mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
+  if (mayWarn) {
+    return element.props.ref;
+  }
+  return element.props.ref || element.ref;
+}
+var NODES = [
+  "a",
+  "button",
+  "div",
+  "form",
+  "h2",
+  "h3",
+  "img",
+  "input",
+  "label",
+  "li",
+  "nav",
+  "ol",
+  "p",
+  "select",
+  "span",
+  "svg",
+  "ul"
+];
+var Primitive = NODES.reduce((primitive, node) => {
+  const Slot2 = /* @__PURE__ */ createSlot(`Primitive.${node}`);
+  const Node2 = reactExports.forwardRef((props, forwardedRef) => {
+    const { asChild, ...primitiveProps } = props;
+    const Comp = asChild ? Slot2 : node;
+    if (typeof window !== "undefined") {
+      window[Symbol.for("radix-ui")] = true;
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Comp, { ...primitiveProps, ref: forwardedRef });
+  });
+  Node2.displayName = `Primitive.${node}`;
+  return { ...primitive, [node]: Node2 };
+}, {});
+function dispatchDiscreteCustomEvent(target, event) {
+  if (target) reactDomExports.flushSync(() => target.dispatchEvent(event));
+}
+var SWITCH_NAME = "Switch";
+var [createSwitchContext] = createContextScope(SWITCH_NAME);
+var [SwitchProvider, useSwitchContext] = createSwitchContext(SWITCH_NAME);
+var Switch$1 = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const {
+      __scopeSwitch,
+      name,
+      checked: checkedProp,
+      defaultChecked,
+      required,
+      disabled,
+      value = "on",
+      onCheckedChange,
+      form,
+      ...switchProps
+    } = props;
+    const [button, setButton] = reactExports.useState(null);
+    const composedRefs = useComposedRefs(forwardedRef, (node) => setButton(node));
+    const hasConsumerStoppedPropagationRef = reactExports.useRef(false);
+    const isFormControl = button ? form || !!button.closest("form") : true;
+    const [checked, setChecked] = useControllableState({
+      prop: checkedProp,
+      defaultProp: defaultChecked ?? false,
+      onChange: onCheckedChange,
+      caller: SWITCH_NAME
+    });
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(SwitchProvider, { scope: __scopeSwitch, checked, disabled, children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Primitive.button,
+        {
+          type: "button",
+          role: "switch",
+          "aria-checked": checked,
+          "aria-required": required,
+          "data-state": getState$2(checked),
+          "data-disabled": disabled ? "" : void 0,
+          disabled,
+          value,
+          ...switchProps,
+          ref: composedRefs,
+          onClick: composeEventHandlers(props.onClick, (event) => {
+            setChecked((prevChecked) => !prevChecked);
+            if (isFormControl) {
+              hasConsumerStoppedPropagationRef.current = event.isPropagationStopped();
+              if (!hasConsumerStoppedPropagationRef.current) event.stopPropagation();
+            }
+          })
+        }
+      ),
+      isFormControl && /* @__PURE__ */ jsxRuntimeExports.jsx(
+        SwitchBubbleInput,
+        {
+          control: button,
+          bubbles: !hasConsumerStoppedPropagationRef.current,
+          name,
+          value,
+          checked,
+          required,
+          disabled,
+          form,
+          style: { transform: "translateX(-100%)" }
+        }
+      )
+    ] });
+  }
+);
+Switch$1.displayName = SWITCH_NAME;
+var THUMB_NAME$1 = "SwitchThumb";
+var SwitchThumb = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeSwitch, ...thumbProps } = props;
+    const context = useSwitchContext(THUMB_NAME$1, __scopeSwitch);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.span,
+      {
+        "data-state": getState$2(context.checked),
+        "data-disabled": context.disabled ? "" : void 0,
+        ...thumbProps,
+        ref: forwardedRef
+      }
+    );
+  }
+);
+SwitchThumb.displayName = THUMB_NAME$1;
+var BUBBLE_INPUT_NAME$3 = "SwitchBubbleInput";
+var SwitchBubbleInput = reactExports.forwardRef(
+  ({
+    __scopeSwitch,
+    control,
+    checked,
+    bubbles = true,
+    ...props
+  }, forwardedRef) => {
+    const ref = reactExports.useRef(null);
+    const composedRefs = useComposedRefs(ref, forwardedRef);
+    const prevChecked = usePrevious(checked);
+    const controlSize = useSize(control);
+    reactExports.useEffect(() => {
+      const input = ref.current;
+      if (!input) return;
+      const inputProto = window.HTMLInputElement.prototype;
+      const descriptor = Object.getOwnPropertyDescriptor(
+        inputProto,
+        "checked"
+      );
+      const setChecked = descriptor.set;
+      if (prevChecked !== checked && setChecked) {
+        const event = new Event("click", { bubbles });
+        setChecked.call(input, checked);
+        input.dispatchEvent(event);
+      }
+    }, [prevChecked, checked, bubbles]);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      "input",
+      {
+        type: "checkbox",
+        "aria-hidden": true,
+        defaultChecked: checked,
+        ...props,
+        tabIndex: -1,
+        ref: composedRefs,
+        style: {
+          ...props.style,
+          ...controlSize,
+          position: "absolute",
+          pointerEvents: "none",
+          opacity: 0,
+          margin: 0
+        }
+      }
+    );
+  }
+);
+SwitchBubbleInput.displayName = BUBBLE_INPUT_NAME$3;
+function getState$2(checked) {
+  return checked ? "checked" : "unchecked";
+}
+var Root$3 = Switch$1;
+var Thumb$1 = SwitchThumb;
+function Switch({
+  className,
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Root$3,
+    {
+      "data-slot": "switch",
+      className: cn(
+        "peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
+        className
+      ),
+      ...props,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Thumb$1,
+        {
+          "data-slot": "switch-thumb",
+          className: cn(
+            "bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0"
+          )
+        }
+      )
+    }
+  );
+}
 function useBackendActor() {
   return useActor(createActor);
 }
@@ -38473,6 +39088,39 @@ function useSetAdminConfig() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["adminConfig"] })
   });
 }
+function useSetTwilioLine() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.setTwilioLine(input);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminConfig"] })
+  });
+}
+function useRemoveTwilioLine() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (phoneNumber) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.removeTwilioLine(phoneNumber);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminConfig"] })
+  });
+}
+function useSetTwilioLineEnabled() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ phoneNumber, enabled }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.setTwilioLineEnabled(phoneNumber, enabled);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["adminConfig"] })
+  });
+}
 function useUpdateCallStatus() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
@@ -38584,8 +39232,25 @@ async function startVoiceServerCall({
     captureOptions
   });
 }
-async function endVoiceServerCall(callSid) {
-  await postJson("/end-call", { callSid });
+async function endVoiceServerCall({
+  callSid,
+  sessionId
+}) {
+  await postJson("/end-call", { callSid, sessionId });
+}
+async function getVoiceServerCallSession(sessionId) {
+  const baseUrl = await getVoiceServerUrl();
+  const response = await fetch(
+    `${baseUrl}/call-session/${encodeURIComponent(sessionId)}`,
+    { cache: "no-store" }
+  );
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || "ok" in payload && payload.ok === false) {
+    throw new Error(
+      "error" in payload && payload.error ? payload.error : `Call session check failed (${response.status})`
+    );
+  }
+  return payload;
 }
 async function createCheckoutSession({
   purchaseIntentId,
@@ -38696,10 +39361,13 @@ function StatusBadge({
   );
 }
 function AdminDashboardPage() {
-  var _a3, _b3, _c2;
+  var _a3, _b3, _c2, _d2;
   const { data: config, isLoading: configLoading } = useGetAdminConfig();
   const { data: allCalls, isLoading: callsLoading } = useAdminListAllCalls();
   const setConfig = useSetAdminConfig();
+  const setTwilioLine = useSetTwilioLine();
+  const removeTwilioLine = useRemoveTwilioLine();
+  const setTwilioLineEnabled = useSetTwilioLineEnabled();
   const assignRole = useAssignUserRole();
   const addPromoMinutes = useAdminAddPromoMinutes();
   const voiceServerQuery = useQuery({
@@ -38715,6 +39383,9 @@ function AdminDashboardPage() {
   const [twilioSaving, setTwilioSaving] = reactExports.useState(false);
   const [twilioTesting, setTwilioTesting] = reactExports.useState(false);
   const [fromError, setFromError] = reactExports.useState("");
+  const [twilioLinePhone, setTwilioLinePhone] = reactExports.useState("");
+  const [twilioLineLabel, setTwilioLineLabel] = reactExports.useState("");
+  const [twilioLineError, setTwilioLineError] = reactExports.useState("");
   const [promoUserId, setPromoUserId] = reactExports.useState("");
   const [promoMinutes, setPromoMinutes] = reactExports.useState("");
   const handleSaveXai = async () => {
@@ -38788,7 +39459,66 @@ function AdminDashboardPage() {
       setFromError("");
     }
   };
+  const handleAddTwilioLine = async (event) => {
+    event.preventDefault();
+    const phoneNumber = twilioLinePhone.replace(/\s/g, "");
+    if (!E164_REGEX.test(phoneNumber)) {
+      setTwilioLineError("Must be in E.164 format: +12025551234");
+      return;
+    }
+    setTwilioLineError("");
+    try {
+      const result = await setTwilioLine.mutateAsync({
+        phoneNumber,
+        name: twilioLineLabel.trim(),
+        enabled: true
+      });
+      if (result.__kind__ === "err") {
+        ue.error(result.err);
+        return;
+      }
+      ue.success("Twilio line saved");
+      setTwilioLinePhone("");
+      setTwilioLineLabel("");
+      void voiceServerQuery.refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to save Twilio line";
+      ue.error(message);
+    }
+  };
+  const handleToggleTwilioLine = async (phoneNumber, enabled) => {
+    try {
+      const result = await setTwilioLineEnabled.mutateAsync({
+        phoneNumber,
+        enabled
+      });
+      if (result.__kind__ === "err") {
+        ue.error(result.err);
+        return;
+      }
+      void voiceServerQuery.refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update Twilio line";
+      ue.error(message);
+    }
+  };
+  const handleRemoveTwilioLine = async (phoneNumber) => {
+    try {
+      const result = await removeTwilioLine.mutateAsync(phoneNumber);
+      if (result.__kind__ === "err") {
+        ue.error(result.err);
+        return;
+      }
+      ue.success("Twilio line removed");
+      void voiceServerQuery.refetch();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to remove Twilio line";
+      ue.error(message);
+    }
+  };
   const paymentServerPrincipal = ((_b3 = (_a3 = voiceServerQuery.data) == null ? void 0 : _a3.icpServerPrincipal) == null ? void 0 : _b3.trim()) ?? "";
+  const twilioLines = (config == null ? void 0 : config.twilioPhoneNumbers) ?? [];
+  const lineStats = (_c2 = voiceServerQuery.data) == null ? void 0 : _c2.twilioLines;
   const handleAuthorizePaymentServer = async () => {
     if (!paymentServerPrincipal) {
       ue.error("Payment server principal is unavailable");
@@ -38997,6 +39727,113 @@ function AdminDashboardPage() {
                   }
                 )
               ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  className: "space-y-3 border-t border-border pt-4",
+                  "data-ocid": "admin.twilio_lines.section",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-medium text-muted-foreground", children: "Outbound Lines" }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "text-xs font-mono", children: lineStats ? `${lineStats.active}/${lineStats.configured} busy` : `${twilioLines.filter((line) => line.enabled).length} enabled` })
+                    ] }),
+                    twilioLines.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      "p",
+                      {
+                        className: "text-xs text-muted-foreground",
+                        "data-ocid": "admin.twilio_lines.empty_state",
+                        children: "No lines configured."
+                      }
+                    ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: twilioLines.map((line) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "div",
+                      {
+                        className: "flex items-center gap-2 rounded-md border border-border bg-muted/20 px-2.5 py-2",
+                        "data-ocid": `admin.twilio_line.${line.phoneNumber}`,
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            Switch,
+                            {
+                              checked: line.enabled,
+                              onCheckedChange: (enabled) => handleToggleTwilioLine(
+                                line.phoneNumber,
+                                enabled
+                              ),
+                              "aria-label": `Toggle ${line.phoneNumber}`,
+                              "data-ocid": `admin.twilio_line.toggle.${line.phoneNumber}`
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 flex-1", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate font-mono text-xs font-medium text-foreground", children: line.phoneNumber }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-[11px] text-muted-foreground", children: line.name || "Line" })
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            Button,
+                            {
+                              type: "button",
+                              variant: "ghost",
+                              size: "icon",
+                              className: "h-7 w-7 text-muted-foreground hover:text-destructive",
+                              onClick: () => handleRemoveTwilioLine(line.phoneNumber),
+                              "aria-label": `Remove ${line.phoneNumber}`,
+                              "data-ocid": `admin.twilio_line.remove.${line.phoneNumber}`,
+                              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-3.5 w-3.5" })
+                            }
+                          )
+                        ]
+                      },
+                      line.phoneNumber
+                    )) }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      "form",
+                      {
+                        onSubmit: handleAddTwilioLine,
+                        className: "grid gap-2",
+                        "data-ocid": "admin.twilio_lines.add_form",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            Input,
+                            {
+                              value: twilioLinePhone,
+                              onChange: (e) => {
+                                setTwilioLinePhone(e.target.value);
+                                if (twilioLineError) setTwilioLineError("");
+                              },
+                              placeholder: "+17016077987",
+                              "data-ocid": "admin.twilio_lines.phone.input",
+                              className: `font-mono text-sm ${twilioLineError ? "border-destructive focus-visible:ring-destructive" : ""}`
+                            }
+                          ),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(
+                            Input,
+                            {
+                              value: twilioLineLabel,
+                              onChange: (e) => setTwilioLineLabel(e.target.value),
+                              placeholder: "Line label",
+                              "data-ocid": "admin.twilio_lines.label.input",
+                              className: "text-sm"
+                            }
+                          ),
+                          twilioLineError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-destructive", children: twilioLineError }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                            Button,
+                            {
+                              type: "submit",
+                              variant: "outline",
+                              disabled: setTwilioLine.isPending,
+                              className: "gap-2",
+                              "data-ocid": "admin.twilio_lines.add_button",
+                              children: [
+                                setTwilioLine.isPending ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Plus, { className: "w-4 h-4" }),
+                                "Add Line"
+                              ]
+                            }
+                          )
+                        ]
+                      }
+                    )
+                  ]
+                }
+              ),
               /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 pt-1", children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs(
                   Button,
@@ -39045,7 +39882,7 @@ function AdminDashboardPage() {
                 voiceServerQuery.isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-5 w-20" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
                   StatusBadge,
                   {
-                    configured: Boolean(paymentServerPrincipal) && Boolean((_c2 = voiceServerQuery.data) == null ? void 0 : _c2.billingConfigured),
+                    configured: Boolean(paymentServerPrincipal) && Boolean((_d2 = voiceServerQuery.data) == null ? void 0 : _d2.billingConfigured),
                     configuredLabel: "Detected",
                     missingLabel: "Unavailable"
                   }
@@ -39236,181 +40073,6 @@ const Route$6 = createFileRoute("/admin/dashboard")({
 function clamp$2(value, [min2, max2]) {
   return Math.min(max2, Math.max(min2, value));
 }
-function composeEventHandlers(originalEventHandler, ourEventHandler, { checkForDefaultPrevented = true } = {}) {
-  return function handleEvent(event) {
-    originalEventHandler == null ? void 0 : originalEventHandler(event);
-    if (checkForDefaultPrevented === false || !event.defaultPrevented) {
-      return ourEventHandler == null ? void 0 : ourEventHandler(event);
-    }
-  };
-}
-function createContext2(rootComponentName, defaultContext) {
-  const Context = reactExports.createContext(defaultContext);
-  const Provider = (props) => {
-    const { children, ...context } = props;
-    const value = reactExports.useMemo(() => context, Object.values(context));
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Context.Provider, { value, children });
-  };
-  Provider.displayName = rootComponentName + "Provider";
-  function useContext2(consumerName) {
-    const context = reactExports.useContext(Context);
-    if (context) return context;
-    if (defaultContext !== void 0) return defaultContext;
-    throw new Error(`\`${consumerName}\` must be used within \`${rootComponentName}\``);
-  }
-  return [Provider, useContext2];
-}
-function createContextScope(scopeName, createContextScopeDeps = []) {
-  let defaultContexts = [];
-  function createContext3(rootComponentName, defaultContext) {
-    const BaseContext = reactExports.createContext(defaultContext);
-    const index2 = defaultContexts.length;
-    defaultContexts = [...defaultContexts, defaultContext];
-    const Provider = (props) => {
-      var _a3;
-      const { scope, children, ...context } = props;
-      const Context = ((_a3 = scope == null ? void 0 : scope[scopeName]) == null ? void 0 : _a3[index2]) || BaseContext;
-      const value = reactExports.useMemo(() => context, Object.values(context));
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(Context.Provider, { value, children });
-    };
-    Provider.displayName = rootComponentName + "Provider";
-    function useContext2(consumerName, scope) {
-      var _a3;
-      const Context = ((_a3 = scope == null ? void 0 : scope[scopeName]) == null ? void 0 : _a3[index2]) || BaseContext;
-      const context = reactExports.useContext(Context);
-      if (context) return context;
-      if (defaultContext !== void 0) return defaultContext;
-      throw new Error(`\`${consumerName}\` must be used within \`${rootComponentName}\``);
-    }
-    return [Provider, useContext2];
-  }
-  const createScope = () => {
-    const scopeContexts = defaultContexts.map((defaultContext) => {
-      return reactExports.createContext(defaultContext);
-    });
-    return function useScope(scope) {
-      const contexts = (scope == null ? void 0 : scope[scopeName]) || scopeContexts;
-      return reactExports.useMemo(
-        () => ({ [`__scope${scopeName}`]: { ...scope, [scopeName]: contexts } }),
-        [scope, contexts]
-      );
-    };
-  };
-  createScope.scopeName = scopeName;
-  return [createContext3, composeContextScopes(createScope, ...createContextScopeDeps)];
-}
-function composeContextScopes(...scopes) {
-  const baseScope = scopes[0];
-  if (scopes.length === 1) return baseScope;
-  const createScope = () => {
-    const scopeHooks = scopes.map((createScope2) => ({
-      useScope: createScope2(),
-      scopeName: createScope2.scopeName
-    }));
-    return function useComposedScopes(overrideScopes) {
-      const nextScopes = scopeHooks.reduce((nextScopes2, { useScope, scopeName }) => {
-        const scopeProps = useScope(overrideScopes);
-        const currentScope = scopeProps[`__scope${scopeName}`];
-        return { ...nextScopes2, ...currentScope };
-      }, {});
-      return reactExports.useMemo(() => ({ [`__scope${baseScope.scopeName}`]: nextScopes }), [nextScopes]);
-    };
-  };
-  createScope.scopeName = baseScope.scopeName;
-  return createScope;
-}
-// @__NO_SIDE_EFFECTS__
-function createSlot(ownerName) {
-  const SlotClone = /* @__PURE__ */ createSlotClone(ownerName);
-  const Slot2 = reactExports.forwardRef((props, forwardedRef) => {
-    const { children, ...slotProps } = props;
-    const childrenArray = reactExports.Children.toArray(children);
-    const slottable = childrenArray.find(isSlottable);
-    if (slottable) {
-      const newElement = slottable.props.children;
-      const newChildren = childrenArray.map((child) => {
-        if (child === slottable) {
-          if (reactExports.Children.count(newElement) > 1) return reactExports.Children.only(null);
-          return reactExports.isValidElement(newElement) ? newElement.props.children : null;
-        } else {
-          return child;
-        }
-      });
-      return /* @__PURE__ */ jsxRuntimeExports.jsx(SlotClone, { ...slotProps, ref: forwardedRef, children: reactExports.isValidElement(newElement) ? reactExports.cloneElement(newElement, void 0, newChildren) : null });
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(SlotClone, { ...slotProps, ref: forwardedRef, children });
-  });
-  Slot2.displayName = `${ownerName}.Slot`;
-  return Slot2;
-}
-// @__NO_SIDE_EFFECTS__
-function createSlotClone(ownerName) {
-  const SlotClone = reactExports.forwardRef((props, forwardedRef) => {
-    const { children, ...slotProps } = props;
-    if (reactExports.isValidElement(children)) {
-      const childrenRef = getElementRef$1(children);
-      const props2 = mergeProps(slotProps, children.props);
-      if (children.type !== reactExports.Fragment) {
-        props2.ref = forwardedRef ? composeRefs(forwardedRef, childrenRef) : childrenRef;
-      }
-      return reactExports.cloneElement(children, props2);
-    }
-    return reactExports.Children.count(children) > 1 ? reactExports.Children.only(null) : null;
-  });
-  SlotClone.displayName = `${ownerName}.SlotClone`;
-  return SlotClone;
-}
-var SLOTTABLE_IDENTIFIER = Symbol("radix.slottable");
-// @__NO_SIDE_EFFECTS__
-function createSlottable(ownerName) {
-  const Slottable2 = ({ children }) => {
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(jsxRuntimeExports.Fragment, { children });
-  };
-  Slottable2.displayName = `${ownerName}.Slottable`;
-  Slottable2.__radixId = SLOTTABLE_IDENTIFIER;
-  return Slottable2;
-}
-function isSlottable(child) {
-  return reactExports.isValidElement(child) && typeof child.type === "function" && "__radixId" in child.type && child.type.__radixId === SLOTTABLE_IDENTIFIER;
-}
-function mergeProps(slotProps, childProps) {
-  const overrideProps = { ...childProps };
-  for (const propName in childProps) {
-    const slotPropValue = slotProps[propName];
-    const childPropValue = childProps[propName];
-    const isHandler = /^on[A-Z]/.test(propName);
-    if (isHandler) {
-      if (slotPropValue && childPropValue) {
-        overrideProps[propName] = (...args) => {
-          const result = childPropValue(...args);
-          slotPropValue(...args);
-          return result;
-        };
-      } else if (slotPropValue) {
-        overrideProps[propName] = slotPropValue;
-      }
-    } else if (propName === "style") {
-      overrideProps[propName] = { ...slotPropValue, ...childPropValue };
-    } else if (propName === "className") {
-      overrideProps[propName] = [slotPropValue, childPropValue].filter(Boolean).join(" ");
-    }
-  }
-  return { ...slotProps, ...overrideProps };
-}
-function getElementRef$1(element) {
-  var _a3, _b3;
-  let getter = (_a3 = Object.getOwnPropertyDescriptor(element.props, "ref")) == null ? void 0 : _a3.get;
-  let mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
-  if (mayWarn) {
-    return element.ref;
-  }
-  getter = (_b3 = Object.getOwnPropertyDescriptor(element, "ref")) == null ? void 0 : _b3.get;
-  mayWarn = getter && "isReactWarning" in getter && getter.isReactWarning;
-  if (mayWarn) {
-    return element.props.ref;
-  }
-  return element.props.ref || element.ref;
-}
 function createCollection(name) {
   const PROVIDER_NAME = name + "CollectionProvider";
   const [createCollectionContext, createCollectionScope2] = createContextScope(PROVIDER_NAME);
@@ -39477,41 +40139,6 @@ var DirectionContext = reactExports.createContext(void 0);
 function useDirection(localDir) {
   const globalDir = reactExports.useContext(DirectionContext);
   return localDir || globalDir || "ltr";
-}
-var NODES = [
-  "a",
-  "button",
-  "div",
-  "form",
-  "h2",
-  "h3",
-  "img",
-  "input",
-  "label",
-  "li",
-  "nav",
-  "ol",
-  "p",
-  "select",
-  "span",
-  "svg",
-  "ul"
-];
-var Primitive = NODES.reduce((primitive, node) => {
-  const Slot2 = /* @__PURE__ */ createSlot(`Primitive.${node}`);
-  const Node2 = reactExports.forwardRef((props, forwardedRef) => {
-    const { asChild, ...primitiveProps } = props;
-    const Comp = asChild ? Slot2 : node;
-    if (typeof window !== "undefined") {
-      window[Symbol.for("radix-ui")] = true;
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Comp, { ...primitiveProps, ref: forwardedRef });
-  });
-  Node2.displayName = `Primitive.${node}`;
-  return { ...primitive, [node]: Node2 };
-}, {});
-function dispatchDiscreteCustomEvent(target, event) {
-  if (target) reactDomExports.flushSync(() => target.dispatchEvent(event));
 }
 function useCallbackRef$1(callback) {
   const callbackRef = reactExports.useRef(callback);
@@ -39961,8 +40588,6 @@ function arrayRemove(array, item) {
 function removeLinks(items) {
   return items.filter((item) => item.tagName !== "A");
 }
-var useLayoutEffect2 = (globalThis == null ? void 0 : globalThis.document) ? reactExports.useLayoutEffect : () => {
-};
 var useReactId = React$5[" useId ".trim().toString()] || (() => void 0);
 var count = 0;
 function useId(deterministicId) {
@@ -41904,41 +42529,7 @@ var Arrow$1 = reactExports.forwardRef((props, forwardedRef) => {
   );
 });
 Arrow$1.displayName = NAME$1;
-var Root$3 = Arrow$1;
-function useSize(element) {
-  const [size2, setSize] = reactExports.useState(void 0);
-  useLayoutEffect2(() => {
-    if (element) {
-      setSize({ width: element.offsetWidth, height: element.offsetHeight });
-      const resizeObserver = new ResizeObserver((entries) => {
-        if (!Array.isArray(entries)) {
-          return;
-        }
-        if (!entries.length) {
-          return;
-        }
-        const entry = entries[0];
-        let width;
-        let height;
-        if ("borderBoxSize" in entry) {
-          const borderSizeEntry = entry["borderBoxSize"];
-          const borderSize = Array.isArray(borderSizeEntry) ? borderSizeEntry[0] : borderSizeEntry;
-          width = borderSize["inlineSize"];
-          height = borderSize["blockSize"];
-        } else {
-          width = element.offsetWidth;
-          height = element.offsetHeight;
-        }
-        setSize({ width, height });
-      });
-      resizeObserver.observe(element, { box: "border-box" });
-      return () => resizeObserver.unobserve(element);
-    } else {
-      setSize(void 0);
-    }
-  }, [element]);
-  return size2;
-}
+var Root$2 = Arrow$1;
 var POPPER_NAME = "Popper";
 var [createPopperContext, createPopperScope] = createContextScope(POPPER_NAME);
 var [PopperProvider, usePopperContext] = createPopperContext(POPPER_NAME);
@@ -42151,7 +42742,7 @@ var PopperArrow = reactExports.forwardRef(function PopperArrow2(props, forwarded
           visibility: contentContext.shouldHideArrow ? "hidden" : void 0
         },
         children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Root$3,
+          Root$2,
           {
             ...arrowProps,
             ref: forwardedRef,
@@ -42220,82 +42811,6 @@ var Portal$2 = reactExports.forwardRef((props, forwardedRef) => {
   return container ? ReactDOM$2.createPortal(/* @__PURE__ */ jsxRuntimeExports.jsx(Primitive.div, { ...portalProps, ref: forwardedRef }), container) : null;
 });
 Portal$2.displayName = PORTAL_NAME$3;
-var useInsertionEffect = React$5[" useInsertionEffect ".trim().toString()] || useLayoutEffect2;
-function useControllableState({
-  prop,
-  defaultProp,
-  onChange = () => {
-  },
-  caller
-}) {
-  const [uncontrolledProp, setUncontrolledProp, onChangeRef] = useUncontrolledState({
-    defaultProp,
-    onChange
-  });
-  const isControlled = prop !== void 0;
-  const value = isControlled ? prop : uncontrolledProp;
-  {
-    const isControlledRef = reactExports.useRef(prop !== void 0);
-    reactExports.useEffect(() => {
-      const wasControlled = isControlledRef.current;
-      if (wasControlled !== isControlled) {
-        const from = wasControlled ? "controlled" : "uncontrolled";
-        const to = isControlled ? "controlled" : "uncontrolled";
-        console.warn(
-          `${caller} is changing from ${from} to ${to}. Components should not switch from controlled to uncontrolled (or vice versa). Decide between using a controlled or uncontrolled value for the lifetime of the component.`
-        );
-      }
-      isControlledRef.current = isControlled;
-    }, [isControlled, caller]);
-  }
-  const setValue = reactExports.useCallback(
-    (nextValue) => {
-      var _a3;
-      if (isControlled) {
-        const value2 = isFunction$2(nextValue) ? nextValue(prop) : nextValue;
-        if (value2 !== prop) {
-          (_a3 = onChangeRef.current) == null ? void 0 : _a3.call(onChangeRef, value2);
-        }
-      } else {
-        setUncontrolledProp(nextValue);
-      }
-    },
-    [isControlled, prop, setUncontrolledProp, onChangeRef]
-  );
-  return [value, setValue];
-}
-function useUncontrolledState({
-  defaultProp,
-  onChange
-}) {
-  const [value, setValue] = reactExports.useState(defaultProp);
-  const prevValueRef = reactExports.useRef(value);
-  const onChangeRef = reactExports.useRef(onChange);
-  useInsertionEffect(() => {
-    onChangeRef.current = onChange;
-  }, [onChange]);
-  reactExports.useEffect(() => {
-    var _a3;
-    if (prevValueRef.current !== value) {
-      (_a3 = onChangeRef.current) == null ? void 0 : _a3.call(onChangeRef, value);
-      prevValueRef.current = value;
-    }
-  }, [value, prevValueRef]);
-  return [value, setValue, onChangeRef];
-}
-function isFunction$2(value) {
-  return typeof value === "function";
-}
-function usePrevious(value) {
-  const ref = reactExports.useRef({ value, previous: value });
-  return reactExports.useMemo(() => {
-    if (ref.current.value !== value) {
-      ref.current.previous = ref.current.value;
-      ref.current.value = value;
-    }
-    return ref.current.previous;
-  }, [value]);
-}
 var VISUALLY_HIDDEN_STYLES = Object.freeze({
   // See: https://github.com/twbs/bootstrap/blob/main/scss/mixins/_visually-hidden.scss
   position: "absolute",
@@ -44153,7 +44668,7 @@ var SelectArrow = reactExports.forwardRef(
   }
 );
 SelectArrow.displayName = ARROW_NAME;
-var BUBBLE_INPUT_NAME$3 = "SelectBubbleInput";
+var BUBBLE_INPUT_NAME$2 = "SelectBubbleInput";
 var SelectBubbleInput = reactExports.forwardRef(
   ({ __scopeSelect, value, ...props }, forwardedRef) => {
     const ref = reactExports.useRef(null);
@@ -44185,7 +44700,7 @@ var SelectBubbleInput = reactExports.forwardRef(
     );
   }
 );
-SelectBubbleInput.displayName = BUBBLE_INPUT_NAME$3;
+SelectBubbleInput.displayName = BUBBLE_INPUT_NAME$2;
 function shouldShowPlaceholder(value) {
   return value === "" || value === void 0;
 }
@@ -45423,7 +45938,7 @@ var DialogTrigger = reactExports.forwardRef(
         "aria-haspopup": "dialog",
         "aria-expanded": context.open,
         "aria-controls": context.contentId,
-        "data-state": getState$2(context.open),
+        "data-state": getState$1(context.open),
         ...triggerProps,
         ref: composedTriggerRef,
         onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
@@ -45463,7 +45978,7 @@ var DialogOverlayImpl = reactExports.forwardRef(
       /* @__PURE__ */ jsxRuntimeExports.jsx(ReactRemoveScroll, { as: Slot, allowPinchZoom: true, shards: [context.contentRef], children: /* @__PURE__ */ jsxRuntimeExports.jsx(
         Primitive.div,
         {
-          "data-state": getState$2(context.open),
+          "data-state": getState$1(context.open),
           ...overlayProps,
           ref: forwardedRef,
           style: { pointerEvents: "auto", ...overlayProps.style }
@@ -45582,7 +46097,7 @@ var DialogContentImpl = reactExports.forwardRef(
               id: context.contentId,
               "aria-describedby": context.descriptionId,
               "aria-labelledby": context.titleId,
-              "data-state": getState$2(context.open),
+              "data-state": getState$1(context.open),
               ...contentProps,
               ref: composedRefs,
               onDismiss: () => context.onOpenChange(false)
@@ -45632,7 +46147,7 @@ var DialogClose = reactExports.forwardRef(
   }
 );
 DialogClose.displayName = CLOSE_NAME;
-function getState$2(open) {
+function getState$1(open) {
   return open ? "open" : "closed";
 }
 var TITLE_WARNING_NAME = "DialogTitleWarning";
@@ -45670,7 +46185,7 @@ var DescriptionWarning$1 = ({ contentRef, descriptionId }) => {
   }, [MESSAGE, contentRef, descriptionId]);
   return null;
 };
-var Root$2 = Dialog;
+var Root$1 = Dialog;
 var Trigger = DialogTrigger;
 var Portal = DialogPortal;
 var Overlay = DialogOverlay;
@@ -45686,7 +46201,7 @@ var useDialogScope = createDialogScope();
 var AlertDialog$1 = (props) => {
   const { __scopeAlertDialog, ...alertDialogProps } = props;
   const dialogScope = useDialogScope(__scopeAlertDialog);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(Root$2, { ...dialogScope, ...alertDialogProps, modal: true });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Root$1, { ...dialogScope, ...alertDialogProps, modal: true });
 };
 AlertDialog$1.displayName = ROOT_NAME;
 var TRIGGER_NAME$1 = "AlertDialogTrigger";
@@ -46028,7 +46543,7 @@ var CheckboxTrigger = reactExports.forwardRef(
         role: "checkbox",
         "aria-checked": isIndeterminate(checked) ? "mixed" : checked,
         "aria-required": required,
-        "data-state": getState$1(checked),
+        "data-state": getState(checked),
         "data-disabled": disabled ? "" : void 0,
         disabled,
         value,
@@ -46108,7 +46623,7 @@ var CheckboxIndicator = reactExports.forwardRef(
         children: /* @__PURE__ */ jsxRuntimeExports.jsx(
           Primitive.span,
           {
-            "data-state": getState$1(context.checked),
+            "data-state": getState(context.checked),
             "data-disabled": context.disabled ? "" : void 0,
             ...indicatorProps,
             ref: forwardedRef,
@@ -46120,7 +46635,7 @@ var CheckboxIndicator = reactExports.forwardRef(
   }
 );
 CheckboxIndicator.displayName = INDICATOR_NAME;
-var BUBBLE_INPUT_NAME$2 = "CheckboxBubbleInput";
+var BUBBLE_INPUT_NAME$1 = "CheckboxBubbleInput";
 var CheckboxBubbleInput = reactExports.forwardRef(
   ({ __scopeCheckbox, ...props }, forwardedRef) => {
     const {
@@ -46135,7 +46650,7 @@ var CheckboxBubbleInput = reactExports.forwardRef(
       form,
       bubbleInput,
       setBubbleInput
-    } = useCheckboxContext(BUBBLE_INPUT_NAME$2, __scopeCheckbox);
+    } = useCheckboxContext(BUBBLE_INPUT_NAME$1, __scopeCheckbox);
     const composedRefs = useComposedRefs(forwardedRef, setBubbleInput);
     const prevChecked = usePrevious(checked);
     const controlSize = useSize(control);
@@ -46187,14 +46702,14 @@ var CheckboxBubbleInput = reactExports.forwardRef(
     );
   }
 );
-CheckboxBubbleInput.displayName = BUBBLE_INPUT_NAME$2;
+CheckboxBubbleInput.displayName = BUBBLE_INPUT_NAME$1;
 function isFunction$1(value) {
   return typeof value === "function";
 }
 function isIndeterminate(checked) {
   return checked === "indeterminate";
 }
-function getState$1(checked) {
+function getState(checked) {
   return isIndeterminate(checked) ? "indeterminate" : checked ? "checked" : "unchecked";
 }
 function Checkbox({
@@ -46216,171 +46731,6 @@ function Checkbox({
           "data-slot": "checkbox-indicator",
           className: "flex items-center justify-center text-current transition-none",
           children: /* @__PURE__ */ jsxRuntimeExports.jsx(Check, { className: "size-3.5" })
-        }
-      )
-    }
-  );
-}
-var SWITCH_NAME = "Switch";
-var [createSwitchContext] = createContextScope(SWITCH_NAME);
-var [SwitchProvider, useSwitchContext] = createSwitchContext(SWITCH_NAME);
-var Switch$1 = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const {
-      __scopeSwitch,
-      name,
-      checked: checkedProp,
-      defaultChecked,
-      required,
-      disabled,
-      value = "on",
-      onCheckedChange,
-      form,
-      ...switchProps
-    } = props;
-    const [button, setButton] = reactExports.useState(null);
-    const composedRefs = useComposedRefs(forwardedRef, (node) => setButton(node));
-    const hasConsumerStoppedPropagationRef = reactExports.useRef(false);
-    const isFormControl = button ? form || !!button.closest("form") : true;
-    const [checked, setChecked] = useControllableState({
-      prop: checkedProp,
-      defaultProp: defaultChecked ?? false,
-      onChange: onCheckedChange,
-      caller: SWITCH_NAME
-    });
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(SwitchProvider, { scope: __scopeSwitch, checked, disabled, children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Primitive.button,
-        {
-          type: "button",
-          role: "switch",
-          "aria-checked": checked,
-          "aria-required": required,
-          "data-state": getState(checked),
-          "data-disabled": disabled ? "" : void 0,
-          disabled,
-          value,
-          ...switchProps,
-          ref: composedRefs,
-          onClick: composeEventHandlers(props.onClick, (event) => {
-            setChecked((prevChecked) => !prevChecked);
-            if (isFormControl) {
-              hasConsumerStoppedPropagationRef.current = event.isPropagationStopped();
-              if (!hasConsumerStoppedPropagationRef.current) event.stopPropagation();
-            }
-          })
-        }
-      ),
-      isFormControl && /* @__PURE__ */ jsxRuntimeExports.jsx(
-        SwitchBubbleInput,
-        {
-          control: button,
-          bubbles: !hasConsumerStoppedPropagationRef.current,
-          name,
-          value,
-          checked,
-          required,
-          disabled,
-          form,
-          style: { transform: "translateX(-100%)" }
-        }
-      )
-    ] });
-  }
-);
-Switch$1.displayName = SWITCH_NAME;
-var THUMB_NAME$1 = "SwitchThumb";
-var SwitchThumb = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeSwitch, ...thumbProps } = props;
-    const context = useSwitchContext(THUMB_NAME$1, __scopeSwitch);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.span,
-      {
-        "data-state": getState(context.checked),
-        "data-disabled": context.disabled ? "" : void 0,
-        ...thumbProps,
-        ref: forwardedRef
-      }
-    );
-  }
-);
-SwitchThumb.displayName = THUMB_NAME$1;
-var BUBBLE_INPUT_NAME$1 = "SwitchBubbleInput";
-var SwitchBubbleInput = reactExports.forwardRef(
-  ({
-    __scopeSwitch,
-    control,
-    checked,
-    bubbles = true,
-    ...props
-  }, forwardedRef) => {
-    const ref = reactExports.useRef(null);
-    const composedRefs = useComposedRefs(ref, forwardedRef);
-    const prevChecked = usePrevious(checked);
-    const controlSize = useSize(control);
-    reactExports.useEffect(() => {
-      const input = ref.current;
-      if (!input) return;
-      const inputProto = window.HTMLInputElement.prototype;
-      const descriptor = Object.getOwnPropertyDescriptor(
-        inputProto,
-        "checked"
-      );
-      const setChecked = descriptor.set;
-      if (prevChecked !== checked && setChecked) {
-        const event = new Event("click", { bubbles });
-        setChecked.call(input, checked);
-        input.dispatchEvent(event);
-      }
-    }, [prevChecked, checked, bubbles]);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      "input",
-      {
-        type: "checkbox",
-        "aria-hidden": true,
-        defaultChecked: checked,
-        ...props,
-        tabIndex: -1,
-        ref: composedRefs,
-        style: {
-          ...props.style,
-          ...controlSize,
-          position: "absolute",
-          pointerEvents: "none",
-          opacity: 0,
-          margin: 0
-        }
-      }
-    );
-  }
-);
-SwitchBubbleInput.displayName = BUBBLE_INPUT_NAME$1;
-function getState(checked) {
-  return checked ? "checked" : "unchecked";
-}
-var Root$1 = Switch$1;
-var Thumb$1 = SwitchThumb;
-function Switch({
-  className,
-  ...props
-}) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    Root$1,
-    {
-      "data-slot": "switch",
-      className: cn(
-        "peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      ),
-      ...props,
-      children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Thumb$1,
-        {
-          "data-slot": "switch-thumb",
-          className: cn(
-            "bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0"
-          )
         }
       )
     }
@@ -46433,6 +46783,7 @@ function useXaiVoice() {
   const [isListeningLive, setIsListeningLive] = reactExports.useState(false);
   const [liveAudioError, setLiveAudioError] = reactExports.useState(null);
   const timerRef = reactExports.useRef(null);
+  const queuePollRef = reactExports.useRef(null);
   const startTimeRef = reactExports.useRef(0);
   const activeCallIdRef = reactExports.useRef(null);
   const activeCallSidRef = reactExports.useRef(null);
@@ -46455,6 +46806,12 @@ function useXaiVoice() {
       timerRef.current = null;
     }
     setAudioLevels(Array(WAVEFORM_BARS).fill(0));
+  }, []);
+  const cleanupQueuePolling = reactExports.useCallback(() => {
+    if (queuePollRef.current) {
+      clearInterval(queuePollRef.current);
+      queuePollRef.current = null;
+    }
   }, []);
   const stopLiveAudio = reactExports.useCallback(() => {
     if (monitorWsRef.current) {
@@ -46595,6 +46952,59 @@ function useXaiVoice() {
       setDurationSecs(Math.floor((Date.now() - startTimeRef.current) / 1e3));
     }, 1e3);
   }, []);
+  const markServerCallConnected = reactExports.useCallback(
+    (serverCall) => {
+      activeCallSidRef.current = serverCall.callSid;
+      activeSessionIdRef.current = serverCall.sessionId;
+      monitorTokenRef.current = serverCall.monitorToken || null;
+      setLiveAudioAvailable(Boolean(serverCall.monitorToken));
+      setStatus("in_call");
+      startDurationTimer();
+    },
+    [startDurationTimer]
+  );
+  const startQueuePolling = reactExports.useCallback(
+    (sessionId) => {
+      cleanupQueuePolling();
+      const poll = async () => {
+        try {
+          const serverCall = await getVoiceServerCallSession(sessionId);
+          if (serverCall.callSid) {
+            cleanupQueuePolling();
+            markServerCallConnected({
+              callSid: serverCall.callSid,
+              sessionId: serverCall.sessionId,
+              monitorToken: serverCall.monitorToken,
+              liveAudio: serverCall.liveAudio
+            });
+            ue.success("Queued call placed");
+            return;
+          }
+          if (serverCall.queuePosition) {
+            setErrorMessage(`Waiting for a free line. Position ${serverCall.queuePosition}.`);
+          }
+        } catch (err) {
+          cleanupQueuePolling();
+          const message = err instanceof Error ? err.message : "Queued call status failed";
+          setStatus("error");
+          setErrorMessage(message);
+          ue.error(`Queued call failed: ${message}`);
+          cleanupTimer();
+          stopLiveAudio();
+          clearCall();
+        }
+      };
+      queuePollRef.current = setInterval(() => void poll(), 2e3);
+      void poll();
+    },
+    [
+      cleanupQueuePolling,
+      markServerCallConnected,
+      cleanupTimer,
+      stopLiveAudio,
+      clearCall
+    ]
+  );
   const startCall = reactExports.useCallback(
     async (preset, recipientPhone, captureOptions) => {
       stopLiveAudio();
@@ -46636,12 +47046,20 @@ function useXaiVoice() {
           callToken,
           captureOptions
         });
-        activeCallSidRef.current = serverCall.callSid;
         activeSessionIdRef.current = serverCall.sessionId;
         monitorTokenRef.current = serverCall.monitorToken || null;
-        setLiveAudioAvailable(Boolean(serverCall.monitorToken));
-        setStatus("in_call");
-        startDurationTimer();
+        if (serverCall.queued || !serverCall.callSid) {
+          setStatus("queued");
+          setErrorMessage(
+            serverCall.queuePosition ? `Waiting for a free line. Position ${serverCall.queuePosition}.` : "Waiting for a free line."
+          );
+          startQueuePolling(serverCall.sessionId);
+          ue.info("All lines are busy. Your call is queued.", {
+            description: serverCall.queuePosition ? `Queue position ${serverCall.queuePosition}` : void 0
+          });
+          return;
+        }
+        markServerCallConnected(serverCall);
         ue.success("Call placed", {
           description: `${Math.floor(Number(allowedSeconds) / 60)} paid minutes reserved`
         });
@@ -46658,6 +47076,7 @@ function useXaiVoice() {
           });
         }
         cleanupTimer();
+        cleanupQueuePolling();
         stopLiveAudio();
         setLiveAudioAvailable(false);
         clearCall();
@@ -46666,9 +47085,11 @@ function useXaiVoice() {
     [
       reserveCall,
       setActiveCall,
-      startDurationTimer,
+      markServerCallConnected,
+      startQueuePolling,
       updateCallStatus,
       cleanupTimer,
+      cleanupQueuePolling,
       stopLiveAudio,
       clearCall
     ]
@@ -46676,11 +47097,13 @@ function useXaiVoice() {
   const endCall = reactExports.useCallback(() => {
     setStatus("completed");
     cleanupTimer();
+    cleanupQueuePolling();
     stopLiveAudio();
     setLiveAudioAvailable(false);
     const callSid = activeCallSidRef.current;
-    if (callSid) {
-      endVoiceServerCall(callSid).catch((err) => {
+    const sessionId = activeSessionIdRef.current;
+    if (callSid || sessionId) {
+      endVoiceServerCall({ callSid, sessionId }).catch((err) => {
         const message = err instanceof Error ? err.message : "Unknown error";
         ue.error(`Unable to end Twilio call: ${message}`);
       });
@@ -46691,7 +47114,13 @@ function useXaiVoice() {
     monitorTokenRef.current = null;
     clearCall();
     resetAfterDelay();
-  }, [cleanupTimer, stopLiveAudio, clearCall, resetAfterDelay]);
+  }, [
+    cleanupTimer,
+    cleanupQueuePolling,
+    stopLiveAudio,
+    clearCall,
+    resetAfterDelay
+  ]);
   const toggleMute = reactExports.useCallback(() => {
     setIsMuted((value) => !value);
     ue.info("Use the phone keypad or handset mute for live call audio.");
@@ -46707,9 +47136,10 @@ function useXaiVoice() {
   reactExports.useEffect(() => {
     return () => {
       cleanupTimer();
+      cleanupQueuePolling();
       stopLiveAudio();
     };
-  }, [cleanupTimer, stopLiveAudio]);
+  }, [cleanupTimer, cleanupQueuePolling, stopLiveAudio]);
   return {
     status,
     recipient,
@@ -54587,6 +55017,7 @@ function validateE164(phone) {
 const STATUS_COLORS = {
   idle: "text-muted-foreground",
   initiating: "text-yellow-400",
+  queued: "text-yellow-400",
   connecting: "text-blue-400",
   in_call: "text-primary",
   completed: "text-green-400",
@@ -54595,6 +55026,7 @@ const STATUS_COLORS = {
 const STATUS_LABELS = {
   idle: "Idle",
   initiating: "Initiating...",
+  queued: "Queued",
   connecting: "Connecting...",
   in_call: "Live",
   completed: "Completed",
@@ -54636,7 +55068,7 @@ function ActiveCallPanel({
     endCall,
     toggleLiveAudio
   } = voice;
-  const isActive = status === "in_call" || status === "connecting" || status === "initiating";
+  const isActive = status === "in_call" || status === "connecting" || status === "initiating" || status === "queued";
   if (status === "idle") return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     motion.div,
@@ -54659,7 +55091,7 @@ function ActiveCallPanel({
                   {
                     className: `relative flex items-center justify-center w-9 h-9 rounded-full ${status === "in_call" ? "bg-primary/20" : status === "error" ? "bg-destructive/20" : status === "completed" ? "bg-green-500/20" : "bg-muted/50"}`,
                     children: [
-                      (status === "initiating" || status === "connecting") && /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin text-primary" }),
+                      (status === "initiating" || status === "connecting" || status === "queued") && /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin text-primary" }),
                       status === "in_call" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-4 h-4 text-primary" }),
                         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" })
@@ -54694,6 +55126,14 @@ function ActiveCallPanel({
                 /* @__PURE__ */ jsxRuntimeExports.jsx(Zap, { className: "w-3 h-3" }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "truncate max-w-[140px]", children: presetName })
               ] }),
+              status === "queued" && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Badge,
+                {
+                  variant: "outline",
+                  className: "text-xs border-yellow-500/40 text-yellow-400",
+                  children: "Waiting for line"
+                }
+              ),
               status === "in_call" && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 Badge,
                 {
@@ -55134,8 +55574,8 @@ function DashboardPage() {
                     "data-ocid": "dashboard.call.submit_button",
                     className: "w-full gap-2",
                     children: [
-                      voice.status === "initiating" || voice.status === "connecting" ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-4 h-4" }),
-                      voice.status === "initiating" ? "Initiating..." : voice.status === "connecting" ? "Connecting..." : availableSeconds <= 0 ? "Add Phone Time" : "Start Call"
+                      voice.status === "initiating" || voice.status === "queued" || voice.status === "connecting" ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-4 h-4" }),
+                      voice.status === "initiating" ? "Initiating..." : voice.status === "queued" ? "Queued..." : voice.status === "connecting" ? "Connecting..." : availableSeconds <= 0 ? "Add Phone Time" : "Start Call"
                     ]
                   }
                 )

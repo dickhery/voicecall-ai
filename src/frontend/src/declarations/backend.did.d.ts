@@ -156,6 +156,18 @@ export interface TurnDetection {
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
+export interface TwilioLine {
+  'enabled' : boolean,
+  'name' : string,
+  'phoneNumber' : string,
+}
+export interface TwilioLineInput {
+  'enabled' : boolean,
+  'name' : string,
+  'phoneNumber' : string,
+}
+export type TwilioLineMutationResult = { 'ok' : Array<TwilioLine> } |
+  { 'err' : string };
 export type Voice = { 'ara' : null } |
   { 'eve' : null } |
   { 'leo' : null } |
@@ -197,6 +209,7 @@ export interface _SERVICE {
       'hasTwilioAuth' : boolean,
       'twilioFromNumber' : string,
       'twilioAccountSid' : string,
+      'twilioPhoneNumbers' : Array<TwilioLine>,
     }
   >,
   'getBillingPackages' : ActorMethod<[], Array<BillingPackage>>,
@@ -209,13 +222,20 @@ export interface _SERVICE {
     [string],
     [] | [PurchaseIntentPublic]
   >,
+  'getTwilioLineNumbersForServer' : ActorMethod<[], Array<string>>,
   'initiateCall' : ActorMethod<[InitiateCallInput], InitiateCallResult>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listMyCalls' : ActorMethod<[], Array<CallRecordPublic>>,
   'listMyPresets' : ActorMethod<[], Array<CallPreset>>,
   'markReservationStarted' : ActorMethod<[string, string], BillingMutationResult>,
+  'removeTwilioLine' : ActorMethod<[string], TwilioLineMutationResult>,
   'reserveCall' : ActorMethod<[InitiateCallInput], ReserveCallResult>,
   'setAdminConfig' : ActorMethod<[string, string, string, string], undefined>,
+  'setTwilioLine' : ActorMethod<[TwilioLineInput], TwilioLineMutationResult>,
+  'setTwilioLineEnabled' : ActorMethod<
+    [string, boolean],
+    TwilioLineMutationResult
+  >,
   'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
   'twilioWebhook' : ActorMethod<[string, string], string>,
   'updateCallStatus' : ActorMethod<

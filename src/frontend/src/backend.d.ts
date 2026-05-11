@@ -68,6 +68,23 @@ export type InitiateCallResult = {
     __kind__: "err";
     err: string;
 };
+export interface TwilioLine {
+    enabled: boolean;
+    name: string;
+    phoneNumber: string;
+}
+export interface TwilioLineInput {
+    enabled: boolean;
+    name: string;
+    phoneNumber: string;
+}
+export type TwilioLineMutationResult = {
+    __kind__: "ok";
+    ok: Array<TwilioLine>;
+} | {
+    __kind__: "err";
+    err: string;
+};
 export interface http_header {
     value: string;
     name: string;
@@ -149,6 +166,7 @@ export interface backendInterface {
         hasTwilioAuth: boolean;
         twilioFromNumber: string;
         twilioAccountSid: string;
+        twilioPhoneNumbers: Array<TwilioLine>;
     }>;
     getCallRecord(id: CallId): Promise<CallRecordPublic | null>;
     getCallerUserRole(): Promise<UserRole>;
@@ -159,6 +177,9 @@ export interface backendInterface {
     listMyCalls(): Promise<Array<CallRecordPublic>>;
     listMyPresets(): Promise<Array<CallPreset>>;
     setAdminConfig(xaiApiKey: string, twilioAccountSid: string, twilioAuthToken: string, twilioFromNumber: string): Promise<void>;
+    setTwilioLine(input: TwilioLineInput): Promise<TwilioLineMutationResult>;
+    removeTwilioLine(phoneNumber: string): Promise<TwilioLineMutationResult>;
+    setTwilioLineEnabled(phoneNumber: string, enabled: boolean): Promise<TwilioLineMutationResult>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
     twilioWebhook(callSid: string, callStatus: string): Promise<string>;
     updateCallStatus(callId: CallId, status: CallStatus, transcript: string | null): Promise<boolean>;

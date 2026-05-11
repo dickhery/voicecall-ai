@@ -7,18 +7,20 @@ import Common "../types/common";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   configState : ConfigLib.State,
+  twilioLineState : ConfigLib.TwilioLineState,
 ) {
   // Admin: view current service config (masked secrets)
   public query ({ caller }) func getAdminConfig() : async {
     twilioAccountSid : Text;
     twilioFromNumber : Text;
+    twilioPhoneNumbers : [ConfigTypes.TwilioLine];
     hasXaiKey : Bool;
     hasTwilioAuth : Bool;
   } {
     if (not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: admin only");
     };
-    ConfigLib.getAdminConfig(configState);
+    ConfigLib.getAdminConfig(configState, twilioLineState);
   };
 
   // Admin: update all service credentials at once
@@ -31,7 +33,42 @@ mixin (
     if (not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: admin only");
     };
-    ConfigLib.setAdminConfig(configState, xaiApiKey, twilioAccountSid, twilioAuthToken, twilioFromNumber);
+    ConfigLib.setAdminConfig(configState, twilioLineState, xaiApiKey, twilioAccountSid, twilioAuthToken, twilioFromNumber);
+  };
+
+  public shared ({ caller }) func setTwilioLine(
+    input : ConfigTypes.TwilioLineInput,
+  ) : async ConfigTypes.TwilioLineMutationResult {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: admin only");
+    };
+    ConfigLib.setTwilioLine(configState, twilioLineState, input);
+  };
+
+  public shared ({ caller }) func removeTwilioLine(
+    phoneNumber : Text,
+  ) : async ConfigTypes.TwilioLineMutationResult {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: admin only");
+    };
+    ConfigLib.removeTwilioLine(configState, twilioLineState, phoneNumber);
+  };
+
+  public shared ({ caller }) func setTwilioLineEnabled(
+    phoneNumber : Text,
+    enabled : Bool,
+  ) : async ConfigTypes.TwilioLineMutationResult {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: admin only");
+    };
+    ConfigLib.setTwilioLineEnabled(configState, twilioLineState, phoneNumber, enabled);
+  };
+
+  public query ({ caller }) func getTwilioLineNumbersForServer() : async [Text] {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
+    ConfigLib.listEnabledTwilioNumbers(configState, twilioLineState);
   };
 
   // Preset CRUD

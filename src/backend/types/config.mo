@@ -65,6 +65,23 @@ module {
     toolsEnabled : ToolsEnabled;
   };
 
+  public type TwilioLine = {
+    phoneNumber : Text;
+    name : Text;
+    enabled : Bool;
+  };
+
+  public type TwilioLineInput = {
+    phoneNumber : Text;
+    name : Text;
+    enabled : Bool;
+  };
+
+  public type TwilioLineMutationResult = {
+    #ok : [TwilioLine];
+    #err : Text;
+  };
+
   // Admin-stored service credentials
   public type AdminConfig = {
     var xaiApiKey : Text;

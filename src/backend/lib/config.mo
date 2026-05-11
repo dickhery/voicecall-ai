@@ -3,6 +3,10 @@ import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 import Nat "mo:core/Nat";
 import Iter "mo:core/Iter";
+import Text "mo:core/Text";
+import Char "mo:core/Char";
+import Array "mo:core/Array";
+import Order "mo:core/Order";
 import Types "../types/config";
 import Common "../types/common";
 
@@ -12,6 +16,8 @@ module {
     presets : Map.Map<Common.PresetId, Types.CallPreset>;
     nextPresetId : { var value : Nat };
   };
+
+  public type TwilioLineState = Map.Map<Text, Types.TwilioLine>;
 
   public func initState() : State {
     {
@@ -26,16 +32,113 @@ module {
     };
   };
 
+  public func initTwilioLineState() : TwilioLineState {
+    Map.empty<Text, Types.TwilioLine>();
+  };
+
+  private func isDigit(c : Char) : Bool {
+    let code = c.toNat32();
+    code >= 48 and code <= 57;
+  };
+
+  private func isNonZeroDigit(c : Char) : Bool {
+    let code = c.toNat32();
+    code >= 49 and code <= 57;
+  };
+
+  private func isE164(phoneNumber : Text) : Bool {
+    let chars = phoneNumber.toArray();
+    let size = chars.size();
+    if (size < 3 or size > 16) {
+      return false;
+    };
+    if (chars[0] != '+') {
+      return false;
+    };
+    if (not isNonZeroDigit(chars[1])) {
+      return false;
+    };
+    var i = 2;
+    while (i < size) {
+      if (not isDigit(chars[i])) {
+        return false;
+      };
+      i += 1;
+    };
+    true;
+  };
+
+  private func compareLines(a : Types.TwilioLine, b : Types.TwilioLine) : Order.Order {
+    Text.compare(a.phoneNumber, b.phoneNumber);
+  };
+
+  private func legacyTwilioLine(state : State) : ?Types.TwilioLine {
+    let phoneNumber = state.adminConfig.twilioFromNumber;
+    if (phoneNumber == "" or not isE164(phoneNumber)) {
+      return null;
+    };
+    ?{
+      phoneNumber;
+      name = "Primary line";
+      enabled = true;
+    };
+  };
+
+  private func sanitizeLineInput(input : Types.TwilioLineInput) : {
+    #ok : Types.TwilioLine;
+    #err : Text;
+  } {
+    if (not isE164(input.phoneNumber)) {
+      return #err("Phone number must be E.164 format, for example +15551234567.");
+    };
+    #ok({
+      phoneNumber = input.phoneNumber;
+      name = if (input.name == "") { input.phoneNumber } else { input.name };
+      enabled = input.enabled;
+    });
+  };
+
+  public func listTwilioLines(
+    state : State,
+    twilioLineState : TwilioLineState,
+  ) : [Types.TwilioLine] {
+    let configured = twilioLineState.values().toArray();
+    if (configured.size() == 0) {
+      switch (legacyTwilioLine(state)) {
+        case null { [] };
+        case (?line) { [line] };
+      };
+    } else {
+      Array.sort(configured, compareLines);
+    };
+  };
+
+  public func listEnabledTwilioNumbers(
+    state : State,
+    twilioLineState : TwilioLineState,
+  ) : [Text] {
+    listTwilioLines(state, twilioLineState)
+      .values()
+      .filter(func(line) { line.enabled })
+      .map(func(line) { line.phoneNumber })
+      .toArray();
+  };
+
   // Admin config
-  public func getAdminConfig(state : State) : {
+  public func getAdminConfig(
+    state : State,
+    twilioLineState : TwilioLineState,
+  ) : {
     twilioAccountSid : Text;
     twilioFromNumber : Text;
+    twilioPhoneNumbers : [Types.TwilioLine];
     hasXaiKey : Bool;
     hasTwilioAuth : Bool;
   } {
     {
       twilioAccountSid = state.adminConfig.twilioAccountSid;
       twilioFromNumber = state.adminConfig.twilioFromNumber;
+      twilioPhoneNumbers = listTwilioLines(state, twilioLineState);
       hasXaiKey = state.adminConfig.xaiApiKey != "";
       hasTwilioAuth = state.adminConfig.twilioAuthToken != "";
     };
@@ -43,6 +146,7 @@ module {
 
   public func setAdminConfig(
     state : State,
+    twilioLineState : TwilioLineState,
     xaiApiKey : Text,
     twilioAccountSid : Text,
     twilioAuthToken : Text,
@@ -60,6 +164,84 @@ module {
     };
     if (twilioFromNumber != "") {
       state.adminConfig.twilioFromNumber := twilioFromNumber;
+      if (isE164(twilioFromNumber)) {
+        twilioLineState.add(twilioFromNumber, {
+          phoneNumber = twilioFromNumber;
+          name = "Primary line";
+          enabled = true;
+        });
+      };
+    };
+  };
+
+  public func setTwilioLine(
+    state : State,
+    twilioLineState : TwilioLineState,
+    input : Types.TwilioLineInput,
+  ) : Types.TwilioLineMutationResult {
+    switch (sanitizeLineInput(input)) {
+      case (#err(message)) { #err(message) };
+      case (#ok(line)) {
+        twilioLineState.add(line.phoneNumber, line);
+        if (state.adminConfig.twilioFromNumber == "") {
+          state.adminConfig.twilioFromNumber := line.phoneNumber;
+        };
+        #ok(listTwilioLines(state, twilioLineState));
+      };
+    };
+  };
+
+  public func removeTwilioLine(
+    state : State,
+    twilioLineState : TwilioLineState,
+    phoneNumber : Text,
+  ) : Types.TwilioLineMutationResult {
+    if (not isE164(phoneNumber)) {
+      return #err("Phone number must be E.164 format, for example +15551234567.");
+    };
+    switch (twilioLineState.get(phoneNumber)) {
+      case null {
+        if (state.adminConfig.twilioFromNumber == phoneNumber) {
+          state.adminConfig.twilioFromNumber := "";
+        };
+        #ok(listTwilioLines(state, twilioLineState));
+      };
+      case (?_) {
+        twilioLineState.remove(phoneNumber);
+        if (state.adminConfig.twilioFromNumber == phoneNumber) {
+          state.adminConfig.twilioFromNumber := "";
+        };
+        #ok(listTwilioLines(state, twilioLineState));
+      };
+    };
+  };
+
+  public func setTwilioLineEnabled(
+    state : State,
+    twilioLineState : TwilioLineState,
+    phoneNumber : Text,
+    enabled : Bool,
+  ) : Types.TwilioLineMutationResult {
+    if (not isE164(phoneNumber)) {
+      return #err("Phone number must be E.164 format, for example +15551234567.");
+    };
+    switch (twilioLineState.get(phoneNumber)) {
+      case null {
+        switch (legacyTwilioLine(state)) {
+          case (?line) {
+            if (line.phoneNumber == phoneNumber) {
+              twilioLineState.add(phoneNumber, { line with enabled });
+              return #ok(listTwilioLines(state, twilioLineState));
+            };
+          };
+          case null {};
+        };
+        #err("Twilio line not found");
+      };
+      case (?line) {
+        twilioLineState.add(phoneNumber, { line with enabled });
+        #ok(listTwilioLines(state, twilioLineState));
+      };
     };
   };
 

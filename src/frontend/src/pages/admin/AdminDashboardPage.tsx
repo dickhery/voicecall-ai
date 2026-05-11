@@ -14,12 +14,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   useAdminAddPromoMinutes,
   useAdminListAllCalls,
   useAssignUserRole,
   useGetAdminConfig,
+  useRemoveTwilioLine,
   useSetAdminConfig,
+  useSetTwilioLine,
+  useSetTwilioLineEnabled,
 } from "@/hooks/use-backend";
 import { getVoiceServerHealth } from "@/lib/voice-server";
 import { Principal } from "@icp-sdk/core/principal";
@@ -33,8 +37,10 @@ import {
   KeyRound,
   Loader2,
   Phone,
+  Plus,
   Radio,
   ShieldCheck,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import { type FormEvent, useState } from "react";
@@ -111,6 +117,9 @@ export default function AdminDashboardPage() {
   const { data: config, isLoading: configLoading } = useGetAdminConfig();
   const { data: allCalls, isLoading: callsLoading } = useAdminListAllCalls();
   const setConfig = useSetAdminConfig();
+  const setTwilioLine = useSetTwilioLine();
+  const removeTwilioLine = useRemoveTwilioLine();
+  const setTwilioLineEnabled = useSetTwilioLineEnabled();
   const assignRole = useAssignUserRole();
   const addPromoMinutes = useAdminAddPromoMinutes();
   const voiceServerQuery = useQuery({
@@ -130,6 +139,9 @@ export default function AdminDashboardPage() {
   const [twilioSaving, setTwilioSaving] = useState(false);
   const [twilioTesting, setTwilioTesting] = useState(false);
   const [fromError, setFromError] = useState("");
+  const [twilioLinePhone, setTwilioLinePhone] = useState("");
+  const [twilioLineLabel, setTwilioLineLabel] = useState("");
+  const [twilioLineError, setTwilioLineError] = useState("");
 
   const [promoUserId, setPromoUserId] = useState("");
   const [promoMinutes, setPromoMinutes] = useState("");
@@ -210,8 +222,76 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const handleAddTwilioLine = async (event: FormEvent) => {
+    event.preventDefault();
+    const phoneNumber = twilioLinePhone.replace(/\s/g, "");
+    if (!E164_REGEX.test(phoneNumber)) {
+      setTwilioLineError("Must be in E.164 format: +12025551234");
+      return;
+    }
+    setTwilioLineError("");
+    try {
+      const result = await setTwilioLine.mutateAsync({
+        phoneNumber,
+        name: twilioLineLabel.trim(),
+        enabled: true,
+      });
+      if (result.__kind__ === "err") {
+        toast.error(result.err);
+        return;
+      }
+      toast.success("Twilio line saved");
+      setTwilioLinePhone("");
+      setTwilioLineLabel("");
+      void voiceServerQuery.refetch();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to save Twilio line";
+      toast.error(message);
+    }
+  };
+
+  const handleToggleTwilioLine = async (
+    phoneNumber: string,
+    enabled: boolean,
+  ) => {
+    try {
+      const result = await setTwilioLineEnabled.mutateAsync({
+        phoneNumber,
+        enabled,
+      });
+      if (result.__kind__ === "err") {
+        toast.error(result.err);
+        return;
+      }
+      void voiceServerQuery.refetch();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to update Twilio line";
+      toast.error(message);
+    }
+  };
+
+  const handleRemoveTwilioLine = async (phoneNumber: string) => {
+    try {
+      const result = await removeTwilioLine.mutateAsync(phoneNumber);
+      if (result.__kind__ === "err") {
+        toast.error(result.err);
+        return;
+      }
+      toast.success("Twilio line removed");
+      void voiceServerQuery.refetch();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to remove Twilio line";
+      toast.error(message);
+    }
+  };
+
   const paymentServerPrincipal =
     voiceServerQuery.data?.icpServerPrincipal?.trim() ?? "";
+  const twilioLines = config?.twilioPhoneNumbers ?? [];
+  const lineStats = voiceServerQuery.data?.twilioLines;
 
   const handleAuthorizePaymentServer = async () => {
     if (!paymentServerPrincipal) {
@@ -437,6 +517,118 @@ export default function AdminDashboardPage() {
                       {fromError}
                     </p>
                   )}
+                </div>
+                <div
+                  className="space-y-3 border-t border-border pt-4"
+                  data-ocid="admin.twilio_lines.section"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-xs font-medium text-muted-foreground">
+                      Outbound Lines
+                    </Label>
+                    <Badge variant="outline" className="text-xs font-mono">
+                      {lineStats
+                        ? `${lineStats.active}/${lineStats.configured} busy`
+                        : `${twilioLines.filter((line) => line.enabled).length} enabled`}
+                    </Badge>
+                  </div>
+                  {twilioLines.length === 0 ? (
+                    <p
+                      className="text-xs text-muted-foreground"
+                      data-ocid="admin.twilio_lines.empty_state"
+                    >
+                      No lines configured.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {twilioLines.map((line) => (
+                        <div
+                          key={line.phoneNumber}
+                          className="flex items-center gap-2 rounded-md border border-border bg-muted/20 px-2.5 py-2"
+                          data-ocid={`admin.twilio_line.${line.phoneNumber}`}
+                        >
+                          <Switch
+                            checked={line.enabled}
+                            onCheckedChange={(enabled) =>
+                              handleToggleTwilioLine(
+                                line.phoneNumber,
+                                enabled,
+                              )
+                            }
+                            aria-label={`Toggle ${line.phoneNumber}`}
+                            data-ocid={`admin.twilio_line.toggle.${line.phoneNumber}`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-mono text-xs font-medium text-foreground">
+                              {line.phoneNumber}
+                            </p>
+                            <p className="truncate text-[11px] text-muted-foreground">
+                              {line.name || "Line"}
+                            </p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() =>
+                              handleRemoveTwilioLine(line.phoneNumber)
+                            }
+                            aria-label={`Remove ${line.phoneNumber}`}
+                            data-ocid={`admin.twilio_line.remove.${line.phoneNumber}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <form
+                    onSubmit={handleAddTwilioLine}
+                    className="grid gap-2"
+                    data-ocid="admin.twilio_lines.add_form"
+                  >
+                    <Input
+                      value={twilioLinePhone}
+                      onChange={(e) => {
+                        setTwilioLinePhone(e.target.value);
+                        if (twilioLineError) setTwilioLineError("");
+                      }}
+                      placeholder="+17016077987"
+                      data-ocid="admin.twilio_lines.phone.input"
+                      className={`font-mono text-sm ${
+                        twilioLineError
+                          ? "border-destructive focus-visible:ring-destructive"
+                          : ""
+                      }`}
+                    />
+                    <Input
+                      value={twilioLineLabel}
+                      onChange={(e) => setTwilioLineLabel(e.target.value)}
+                      placeholder="Line label"
+                      data-ocid="admin.twilio_lines.label.input"
+                      className="text-sm"
+                    />
+                    {twilioLineError && (
+                      <p className="text-xs text-destructive">
+                        {twilioLineError}
+                      </p>
+                    )}
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      disabled={setTwilioLine.isPending}
+                      className="gap-2"
+                      data-ocid="admin.twilio_lines.add_button"
+                    >
+                      {setTwilioLine.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
+                      Add Line
+                    </Button>
+                  </form>
                 </div>
                 <div className="flex gap-2 pt-1">
                   <Button
