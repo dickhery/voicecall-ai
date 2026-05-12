@@ -72,6 +72,19 @@ module {
     Text.compare(a.phoneNumber, b.phoneNumber);
   };
 
+  private func withPresetDefaults(preset : Types.CallPreset) : Types.CallPreset {
+    {
+      preset with
+      audioFormat = #pcmu;
+      sampleRate = #hz8000;
+      toolsEnabled = {
+        webSearch = false;
+        xSearch = false;
+        functionCalling = false;
+      };
+    };
+  };
+
   private func legacyTwilioLine(state : State) : ?Types.TwilioLine {
     let phoneNumber = state.adminConfig.twilioFromNumber;
     if (phoneNumber == "" or not isE164(phoneNumber)) {
@@ -269,7 +282,7 @@ module {
   ) : Types.CallPreset {
     let id = state.nextPresetId.value;
     state.nextPresetId.value += 1;
-    let preset : Types.CallPreset = {
+    let preset : Types.CallPreset = withPresetDefaults({
       id;
       ownerId = owner;
       name = input.name;
@@ -279,13 +292,16 @@ module {
       audioFormat = input.audioFormat;
       sampleRate = input.sampleRate;
       toolsEnabled = input.toolsEnabled;
-    };
+    });
     state.presets.add(id, preset);
     preset;
   };
 
   public func getPreset(state : State, id : Common.PresetId) : ?Types.CallPreset {
-    state.presets.get(id);
+    switch (state.presets.get(id)) {
+      case null { null };
+      case (?preset) { ?withPresetDefaults(preset) };
+    };
   };
 
   public func listPresetsForUser(
@@ -294,6 +310,7 @@ module {
   ) : [Types.CallPreset] {
     state.presets.values()
       .filter(func(p) { Principal.equal(p.ownerId, userId) })
+      .map(withPresetDefaults)
       .toArray();
   };
 
@@ -309,7 +326,7 @@ module {
         if (not Principal.equal(existing.ownerId, caller)) {
           Runtime.trap("Unauthorized: not the owner");
         };
-        let updated : Types.CallPreset = {
+        let updated : Types.CallPreset = withPresetDefaults({
           id = existing.id;
           ownerId = existing.ownerId;
           name = input.name;
@@ -319,7 +336,7 @@ module {
           audioFormat = input.audioFormat;
           sampleRate = input.sampleRate;
           toolsEnabled = input.toolsEnabled;
-        };
+        });
         state.presets.add(id, updated);
         ?updated;
       };
@@ -353,7 +370,7 @@ module {
       case (?existing) {
         let newId = state.nextPresetId.value;
         state.nextPresetId.value += 1;
-        let copy : Types.CallPreset = {
+        let copy : Types.CallPreset = withPresetDefaults({
           id = newId;
           ownerId = caller;
           name = existing.name # " (copy)";
@@ -363,7 +380,7 @@ module {
           audioFormat = existing.audioFormat;
           sampleRate = existing.sampleRate;
           toolsEnabled = existing.toolsEnabled;
-        };
+        });
         state.presets.add(newId, copy);
         ?copy;
       };

@@ -58781,40 +58781,51 @@ function useForm(props = {}) {
   _formControl.current.formState = React$4.useMemo(() => getProxyFormState(formState, control), [control, formState]);
   return _formControl.current;
 }
-const defaultPreset = {
-  name: "",
-  voice: Voice.eve,
-  systemPrompt: "",
-  audioFormat: AudioFormat.pcmu,
-  sampleRate: SampleRate.hz8000,
-  turnDetection: {
-    serverVad: true,
-    threshold: 0.5,
-    prefixPaddingMs: 200n,
-    silenceDurationMs: 500n
-  },
-  toolsEnabled: { xSearch: false, webSearch: false, functionCalling: false }
+const DEFAULT_AUDIO_FORMAT = AudioFormat.pcmu;
+const DEFAULT_SAMPLE_RATE = SampleRate.hz8000;
+const DEFAULT_TOOLS_ENABLED = {
+  xSearch: false,
+  webSearch: false,
+  functionCalling: false
 };
+function createDefaultPreset() {
+  return {
+    name: "",
+    voice: Voice.eve,
+    systemPrompt: "",
+    audioFormat: DEFAULT_AUDIO_FORMAT,
+    sampleRate: DEFAULT_SAMPLE_RATE,
+    turnDetection: {
+      serverVad: true,
+      threshold: 0.5,
+      prefixPaddingMs: 200n,
+      silenceDurationMs: 500n
+    },
+    toolsEnabled: { ...DEFAULT_TOOLS_ENABLED }
+  };
+}
+function applyHiddenPresetDefaults(input) {
+  return {
+    ...input,
+    audioFormat: DEFAULT_AUDIO_FORMAT,
+    sampleRate: DEFAULT_SAMPLE_RATE,
+    toolsEnabled: { ...DEFAULT_TOOLS_ENABLED }
+  };
+}
+const defaultPreset = createDefaultPreset();
+const defaultTurnDetection = defaultPreset.turnDetection;
+const defaultTimingText = {
+  threshold: `Default: ${defaultTurnDetection.threshold.toFixed(2)}`,
+  silenceDuration: `Default: ${Number(defaultTurnDetection.silenceDurationMs)}ms`,
+  prefixPadding: `Default: ${Number(defaultTurnDetection.prefixPaddingMs)}ms`
+};
+const TURN_DETECTION_HELP = "These settings control when the AI decides the caller has finished speaking and can respond. The defaults work well for most calls; adjust them if the AI interrupts too quickly or waits too long.";
 const VOICE_META = {
   [Voice.eve]: { label: "Eve", description: "Warm, conversational" },
   [Voice.ara]: { label: "Ara", description: "Clear, professional" },
   [Voice.rex]: { label: "Rex", description: "Deep, authoritative" },
   [Voice.sal]: { label: "Sal", description: "Friendly, upbeat" },
   [Voice.leo]: { label: "Leo", description: "Calm, deliberate" }
-};
-const SAMPLE_RATE_LABELS = {
-  [SampleRate.hz8000]: "8,000 Hz (8 kHz)",
-  [SampleRate.hz16000]: "16,000 Hz (16 kHz)",
-  [SampleRate.hz22050]: "22,050 Hz (22.05 kHz)",
-  [SampleRate.hz24000]: "24,000 Hz (24 kHz)",
-  [SampleRate.hz32000]: "32,000 Hz (32 kHz)",
-  [SampleRate.hz44100]: "44,100 Hz (44.1 kHz)",
-  [SampleRate.hz48000]: "48,000 Hz (48 kHz)"
-};
-const AUDIO_FORMAT_LABELS = {
-  [AudioFormat.pcmu]: "PCMU (G.711 µ-law)",
-  [AudioFormat.pcm]: "PCM (Linear)",
-  [AudioFormat.pcma]: "PCMA (G.711 A-law)"
 };
 function VoiceCardSelector({
   value,
@@ -58861,16 +58872,19 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
       name: initial.name,
       voice: initial.voice,
       systemPrompt: initial.systemPrompt,
-      audioFormat: initial.audioFormat,
-      sampleRate: initial.sampleRate,
+      audioFormat: DEFAULT_AUDIO_FORMAT,
+      sampleRate: DEFAULT_SAMPLE_RATE,
       turnDetection: initial.turnDetection,
-      toolsEnabled: initial.toolsEnabled
-    } : defaultPreset
+      toolsEnabled: { ...DEFAULT_TOOLS_ENABLED }
+    } : createDefaultPreset()
   });
   const values = watch();
+  const submitPreset = handleSubmit(
+    (input) => onSave(applyHiddenPresetDefaults(input))
+  );
   const silenceMs = ((_a3 = values.turnDetection) == null ? void 0 : _a3.silenceDurationMs) ?? 500n;
   const prefixMs = ((_b3 = values.turnDetection) == null ? void 0 : _b3.prefixPaddingMs) ?? 200n;
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: handleSubmit(onSave), className: "space-y-6", children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: submitPreset, className: "space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold text-muted-foreground uppercase tracking-wide", children: "Preset Name" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -58924,24 +58938,31 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
         }
       )
     ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4 rounded-xl bg-muted/20 border border-border", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-foreground uppercase tracking-wide", children: "Turn Detection" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Server VAD" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4 rounded-lg bg-muted/20 border border-border", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-foreground uppercase tracking-wide", children: "Turn Detection" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground leading-relaxed", children: TURN_DETECTION_HELP })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 rounded-md border border-border bg-background/60 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-0.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-foreground", children: "Auto-detect end of speech" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground leading-tight", children: "Leave this on for normal calls so the AI answers after the caller pauses." })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Switch,
             {
               checked: ((_c2 = values.turnDetection) == null ? void 0 : _c2.serverVad) ?? true,
               onCheckedChange: (v2) => setValue("turnDetection.serverVad", v2),
-              "data-ocid": "settings.preset.server_vad.switch"
+              "data-ocid": "settings.preset.server_vad.switch",
+              className: "shrink-0"
             }
           )
         ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "VAD Threshold" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Speech Sensitivity" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono text-primary tabular-nums", children: (((_d2 = values.turnDetection) == null ? void 0 : _d2.threshold) ?? 0.5).toFixed(2) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -58956,11 +58977,15 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
             className: "py-1"
           }
         ),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground", children: "Sensitivity for detecting end-of-speech. Lower = more sensitive (0.0–1.0)." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] text-muted-foreground leading-relaxed", children: [
+          "Lower values make the AI more sensitive to quieter speech. Raise it if background noise keeps the AI from responding.",
+          " ",
+          defaultTimingText.threshold
+        ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Silence Duration (ms)" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Pause Before Reply (ms)" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
@@ -58977,10 +59002,13 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
               className: "font-mono text-sm"
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground", children: "Default: 500ms" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] text-muted-foreground leading-relaxed", children: [
+            "How long the caller should be quiet before the AI starts answering. Increase this if it cuts people off; decrease it if it feels slow. ",
+            defaultTimingText.silenceDuration
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Prefix Padding (ms)" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Speech Start Buffer (ms)" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Input,
             {
@@ -58997,75 +59025,12 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
               className: "font-mono text-sm"
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground", children: "Default: 200ms" })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] text-muted-foreground leading-relaxed", children: [
+            "Keeps a small amount of audio from just before speech starts so first words do not get clipped. ",
+            defaultTimingText.prefixPadding
+          ] })
         ] })
       ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 gap-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold text-muted-foreground uppercase tracking-wide", children: "Output Format" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          Select,
-          {
-            value: values.audioFormat,
-            onValueChange: (v2) => setValue("audioFormat", v2),
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectTrigger, { "data-ocid": "settings.preset.audio_format.select", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectValue, {}) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectContent, { children: Object.values(AudioFormat).map((f) => /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: f, children: AUDIO_FORMAT_LABELS[f] }, f)) })
-            ]
-          }
-        )
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold text-muted-foreground uppercase tracking-wide", children: "Sample Rate" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs(
-          Select,
-          {
-            value: values.sampleRate,
-            onValueChange: (v2) => setValue("sampleRate", v2),
-            children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectTrigger, { "data-ocid": "settings.preset.sample_rate.select", children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectValue, {}) }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectContent, { children: Object.values(SampleRate).map((r2) => /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: r2, children: SAMPLE_RATE_LABELS[r2] }, r2)) })
-            ]
-          }
-        )
-      ] })
-    ] }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 p-4 rounded-xl bg-muted/20 border border-border", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-foreground uppercase tracking-wide", children: "Enabled Tools" }),
-      [
-        {
-          key: "webSearch",
-          label: "Web Search",
-          description: "AI can search the internet during the call"
-        },
-        {
-          key: "xSearch",
-          label: "X (Twitter) Search",
-          description: "AI can search X/Twitter for real-time info"
-        },
-        {
-          key: "functionCalling",
-          label: "Function Calling",
-          description: "AI can invoke custom functions you define"
-        }
-      ].map(({ key, label, description }) => {
-        var _a4;
-        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-4", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium text-foreground", children: label }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground leading-tight", children: description })
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Switch,
-            {
-              checked: ((_a4 = values.toolsEnabled) == null ? void 0 : _a4[key]) ?? false,
-              onCheckedChange: (v2) => setValue(`toolsEnabled.${key}`, v2),
-              "data-ocid": `settings.preset.${key}.switch`
-            }
-          )
-        ] }, key);
-      })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2 pt-1", children: [
       onCancel && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59210,7 +59175,7 @@ function SettingsPage() {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("h2", { className: "font-display text-lg font-semibold text-foreground", children: "Call Presets" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground mt-0.5", children: "Configure AI voice, prompts, and audio settings for your calls" })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground mt-0.5", children: "Configure AI voice, instructions, and conversation timing for your calls" })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           Button,
@@ -59234,7 +59199,7 @@ function SettingsPage() {
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs(CardHeader, { className: "pb-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(CardTitle, { className: "text-base", children: "New Preset" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { children: "Configure a new AI call profile with voice, audio, and tool settings" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { children: "Configure a new AI call profile with voice, instructions, and conversation timing" })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               PresetForm,
@@ -59307,10 +59272,8 @@ function SettingsPage() {
                           (_c2 = VOICE_META[preset.voice]) == null ? void 0 : _c2.label,
                           " ·",
                           " ",
-                          AUDIO_FORMAT_LABELS[preset.audioFormat],
-                          " ·",
-                          " ",
-                          SAMPLE_RATE_LABELS[preset.sampleRate]
+                          preset.systemPrompt.substring(0, 70),
+                          preset.systemPrompt.length > 70 ? "..." : ""
                         ] })
                       ] })
                     ]

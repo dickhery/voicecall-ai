@@ -11,13 +11,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -48,20 +41,50 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 // ── Default preset values ──────────────────────────────────────────────────────
-const defaultPreset: CallPresetInput = {
-  name: "",
-  voice: Voice.eve,
-  systemPrompt: "",
-  audioFormat: AudioFormat.pcmu,
-  sampleRate: SampleRate.hz8000,
-  turnDetection: {
-    serverVad: true,
-    threshold: 0.5,
-    prefixPaddingMs: 200n,
-    silenceDurationMs: 500n,
-  },
-  toolsEnabled: { xSearch: false, webSearch: false, functionCalling: false },
+const DEFAULT_AUDIO_FORMAT = AudioFormat.pcmu;
+const DEFAULT_SAMPLE_RATE = SampleRate.hz8000;
+const DEFAULT_TOOLS_ENABLED: CallPresetInput["toolsEnabled"] = {
+  xSearch: false,
+  webSearch: false,
+  functionCalling: false,
 };
+
+function createDefaultPreset(): CallPresetInput {
+  return {
+    name: "",
+    voice: Voice.eve,
+    systemPrompt: "",
+    audioFormat: DEFAULT_AUDIO_FORMAT,
+    sampleRate: DEFAULT_SAMPLE_RATE,
+    turnDetection: {
+      serverVad: true,
+      threshold: 0.5,
+      prefixPaddingMs: 200n,
+      silenceDurationMs: 500n,
+    },
+    toolsEnabled: { ...DEFAULT_TOOLS_ENABLED },
+  };
+}
+
+function applyHiddenPresetDefaults(input: CallPresetInput): CallPresetInput {
+  return {
+    ...input,
+    audioFormat: DEFAULT_AUDIO_FORMAT,
+    sampleRate: DEFAULT_SAMPLE_RATE,
+    toolsEnabled: { ...DEFAULT_TOOLS_ENABLED },
+  };
+}
+
+const defaultPreset = createDefaultPreset();
+const defaultTurnDetection = defaultPreset.turnDetection;
+const defaultTimingText = {
+  threshold: `Default: ${defaultTurnDetection.threshold.toFixed(2)}`,
+  silenceDuration: `Default: ${Number(defaultTurnDetection.silenceDurationMs)}ms`,
+  prefixPadding: `Default: ${Number(defaultTurnDetection.prefixPaddingMs)}ms`,
+};
+
+const TURN_DETECTION_HELP =
+  "These settings control when the AI decides the caller has finished speaking and can respond. The defaults work well for most calls; adjust them if the AI interrupts too quickly or waits too long.";
 
 // ── Voice metadata ─────────────────────────────────────────────────────────────
 const VOICE_META: Record<Voice, { label: string; description: string }> = {
@@ -70,24 +93,6 @@ const VOICE_META: Record<Voice, { label: string; description: string }> = {
   [Voice.rex]: { label: "Rex", description: "Deep, authoritative" },
   [Voice.sal]: { label: "Sal", description: "Friendly, upbeat" },
   [Voice.leo]: { label: "Leo", description: "Calm, deliberate" },
-};
-
-// ── Sample rate display labels ─────────────────────────────────────────────────
-const SAMPLE_RATE_LABELS: Record<SampleRate, string> = {
-  [SampleRate.hz8000]: "8,000 Hz (8 kHz)",
-  [SampleRate.hz16000]: "16,000 Hz (16 kHz)",
-  [SampleRate.hz22050]: "22,050 Hz (22.05 kHz)",
-  [SampleRate.hz24000]: "24,000 Hz (24 kHz)",
-  [SampleRate.hz32000]: "32,000 Hz (32 kHz)",
-  [SampleRate.hz44100]: "44,100 Hz (44.1 kHz)",
-  [SampleRate.hz48000]: "48,000 Hz (48 kHz)",
-};
-
-// ── Audio format labels ────────────────────────────────────────────────────────
-const AUDIO_FORMAT_LABELS: Record<AudioFormat, string> = {
-  [AudioFormat.pcmu]: "PCMU (G.711 µ-law)",
-  [AudioFormat.pcm]: "PCM (Linear)",
-  [AudioFormat.pcma]: "PCMA (G.711 A-law)",
 };
 
 // ── Voice Card Selector ────────────────────────────────────────────────────────
@@ -152,21 +157,24 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
           name: initial.name,
           voice: initial.voice,
           systemPrompt: initial.systemPrompt,
-          audioFormat: initial.audioFormat,
-          sampleRate: initial.sampleRate,
+          audioFormat: DEFAULT_AUDIO_FORMAT,
+          sampleRate: DEFAULT_SAMPLE_RATE,
           turnDetection: initial.turnDetection,
-          toolsEnabled: initial.toolsEnabled,
+          toolsEnabled: { ...DEFAULT_TOOLS_ENABLED },
         }
-      : defaultPreset,
+      : createDefaultPreset(),
   });
 
   const values = watch();
+  const submitPreset = handleSubmit((input) =>
+    onSave(applyHiddenPresetDefaults(input)),
+  );
 
   const silenceMs = values.turnDetection?.silenceDurationMs ?? 500n;
   const prefixMs = values.turnDetection?.prefixPaddingMs ?? 200n;
 
   return (
-    <form onSubmit={handleSubmit(onSave)} className="space-y-6">
+    <form onSubmit={submitPreset} className="space-y-6">
       {/* Preset Name */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -226,17 +234,31 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
       </div>
 
       {/* Turn Detection */}
-      <div className="space-y-4 p-4 rounded-xl bg-muted/20 border border-border">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
-            Turn Detection
-          </p>
-          <div className="flex items-center gap-2">
-            <Label className="text-xs text-muted-foreground">Server VAD</Label>
+      <div className="space-y-4 p-4 rounded-lg bg-muted/20 border border-border">
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
+              Turn Detection
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {TURN_DETECTION_HELP}
+            </p>
+          </div>
+          <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-background/60 p-3">
+            <div className="space-y-0.5">
+              <Label className="text-xs text-foreground">
+                Auto-detect end of speech
+              </Label>
+              <p className="text-[10px] text-muted-foreground leading-tight">
+                Leave this on for normal calls so the AI answers after the
+                caller pauses.
+              </p>
+            </div>
             <Switch
               checked={values.turnDetection?.serverVad ?? true}
               onCheckedChange={(v) => setValue("turnDetection.serverVad", v)}
               data-ocid="settings.preset.server_vad.switch"
+              className="shrink-0"
             />
           </div>
         </div>
@@ -245,7 +267,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <Label className="text-xs text-muted-foreground">
-              VAD Threshold
+              Speech Sensitivity
             </Label>
             <span className="text-xs font-mono text-primary tabular-nums">
               {(values.turnDetection?.threshold ?? 0.5).toFixed(2)}
@@ -260,17 +282,18 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
             data-ocid="settings.preset.threshold.slider"
             className="py-1"
           />
-          <p className="text-[10px] text-muted-foreground">
-            Sensitivity for detecting end-of-speech. Lower = more sensitive
-            (0.0–1.0).
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            Lower values make the AI more sensitive to quieter speech. Raise it
+            if background noise keeps the AI from responding.{" "}
+            {defaultTimingText.threshold}
           </p>
         </div>
 
         {/* Silence Duration + Prefix Padding */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">
-              Silence Duration (ms)
+              Pause Before Reply (ms)
             </Label>
             <Input
               type="number"
@@ -287,11 +310,15 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
               data-ocid="settings.preset.silence_duration.input"
               className="font-mono text-sm"
             />
-            <p className="text-[10px] text-muted-foreground">Default: 500ms</p>
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              How long the caller should be quiet before the AI starts
+              answering. Increase this if it cuts people off; decrease it if it
+              feels slow. {defaultTimingText.silenceDuration}
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs text-muted-foreground">
-              Prefix Padding (ms)
+              Speech Start Buffer (ms)
             </Label>
             <Input
               type="number"
@@ -308,91 +335,12 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
               data-ocid="settings.preset.prefix_padding.input"
               className="font-mono text-sm"
             />
-            <p className="text-[10px] text-muted-foreground">Default: 200ms</p>
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              Keeps a small amount of audio from just before speech starts so
+              first words do not get clipped. {defaultTimingText.prefixPadding}
+            </p>
           </div>
         </div>
-      </div>
-
-      {/* Audio Output */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Output Format
-          </Label>
-          <Select
-            value={values.audioFormat}
-            onValueChange={(v) => setValue("audioFormat", v as AudioFormat)}
-          >
-            <SelectTrigger data-ocid="settings.preset.audio_format.select">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.values(AudioFormat) as AudioFormat[]).map((f) => (
-                <SelectItem key={f} value={f}>
-                  {AUDIO_FORMAT_LABELS[f]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-            Sample Rate
-          </Label>
-          <Select
-            value={values.sampleRate}
-            onValueChange={(v) => setValue("sampleRate", v as SampleRate)}
-          >
-            <SelectTrigger data-ocid="settings.preset.sample_rate.select">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.values(SampleRate) as SampleRate[]).map((r) => (
-                <SelectItem key={r} value={r}>
-                  {SAMPLE_RATE_LABELS[r]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Tools */}
-      <div className="space-y-3 p-4 rounded-xl bg-muted/20 border border-border">
-        <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
-          Enabled Tools
-        </p>
-        {[
-          {
-            key: "webSearch" as const,
-            label: "Web Search",
-            description: "AI can search the internet during the call",
-          },
-          {
-            key: "xSearch" as const,
-            label: "X (Twitter) Search",
-            description: "AI can search X/Twitter for real-time info",
-          },
-          {
-            key: "functionCalling" as const,
-            label: "Function Calling",
-            description: "AI can invoke custom functions you define",
-          },
-        ].map(({ key, label, description }) => (
-          <div key={key} className="flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-xs font-medium text-foreground">{label}</p>
-              <p className="text-[10px] text-muted-foreground leading-tight">
-                {description}
-              </p>
-            </div>
-            <Switch
-              checked={values.toolsEnabled?.[key] ?? false}
-              onCheckedChange={(v) => setValue(`toolsEnabled.${key}`, v)}
-              data-ocid={`settings.preset.${key}.switch`}
-            />
-          </div>
-        ))}
       </div>
 
       {/* Actions */}
@@ -560,7 +508,8 @@ export default function SettingsPage() {
                   Call Presets
                 </h2>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Configure AI voice, prompts, and audio settings for your calls
+                  Configure AI voice, instructions, and conversation timing for
+                  your calls
                 </p>
               </div>
               <Button
@@ -583,8 +532,8 @@ export default function SettingsPage() {
                 <CardHeader className="pb-4">
                   <CardTitle className="text-base">New Preset</CardTitle>
                   <CardDescription>
-                    Configure a new AI call profile with voice, audio, and tool
-                    settings
+                    Configure a new AI call profile with voice, instructions,
+                    and conversation timing
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -674,8 +623,8 @@ export default function SettingsPage() {
                             </p>
                             <p className="text-[11px] text-muted-foreground mt-0.5">
                               {VOICE_META[preset.voice]?.label} ·{" "}
-                              {AUDIO_FORMAT_LABELS[preset.audioFormat]} ·{" "}
-                              {SAMPLE_RATE_LABELS[preset.sampleRate]}
+                              {preset.systemPrompt.substring(0, 70)}
+                              {preset.systemPrompt.length > 70 ? "..." : ""}
                             </p>
                           </div>
                         </button>

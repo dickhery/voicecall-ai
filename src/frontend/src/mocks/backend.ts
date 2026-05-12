@@ -25,12 +25,12 @@ const samplePreset = {
   voice: Voice.eve,
   systemPrompt:
     "You are a professional sales assistant. Greet the customer warmly, ask how you can assist them with their recent order, and guide them to relevant support articles if needed.",
-  sampleRate: SampleRate.hz24000,
-  audioFormat: AudioFormat.pcm,
+  sampleRate: SampleRate.hz8000,
+  audioFormat: AudioFormat.pcmu,
   toolsEnabled: {
-    xSearch: true,
+    xSearch: false,
     webSearch: false,
-    functionCalling: true,
+    functionCalling: false,
   },
   turnDetection: {
     prefixPaddingMs: BigInt(300),
@@ -47,11 +47,11 @@ const samplePreset2 = {
   voice: Voice.ara,
   systemPrompt:
     "You are a helpful customer support agent. Listen carefully and resolve issues efficiently.",
-  sampleRate: SampleRate.hz16000,
+  sampleRate: SampleRate.hz8000,
   audioFormat: AudioFormat.pcmu,
   toolsEnabled: {
     xSearch: false,
-    webSearch: true,
+    webSearch: false,
     functionCalling: false,
   },
   turnDetection: {

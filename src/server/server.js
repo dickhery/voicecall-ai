@@ -405,7 +405,6 @@ async function getLinePoolSnapshot() {
 
 function toPlainPreset(input = {}) {
   const turnDetection = input.turnDetection || {};
-  const toolsEnabled = input.toolsEnabled || {};
   return {
     id: String(input.id ?? ""),
     name: String(input.name || "VoiceCall AI"),
@@ -421,9 +420,9 @@ function toPlainPreset(input = {}) {
       prefixPaddingMs: Number(turnDetection.prefixPaddingMs ?? 200),
     },
     toolsEnabled: {
-      webSearch: Boolean(toolsEnabled.webSearch),
-      xSearch: Boolean(toolsEnabled.xSearch),
-      functionCalling: Boolean(toolsEnabled.functionCalling),
+      webSearch: false,
+      xSearch: false,
+      functionCalling: false,
     },
   };
 }
