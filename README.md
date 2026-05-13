@@ -129,7 +129,6 @@ If you do edit `src/frontend/env.json` directly, set:
 
 - `backend_canister_id`: your Motoko backend canister ID
 - `backend_host`: `https://icp-api.io` for mainnet, or your local IC gateway for local development
-- `ii_derivation_origin`: usually `https://<frontend-canister-id>.icp0.io`
 - `voice_server_url`: your Cloudflare Tunnel or deployed Node server URL
 
 The frontend build now fails if `src/frontend/env.json` still contains `undefined`, `replace-with...`, or a local voice server URL for a mainnet frontend. That is intentional: it prevents another upload with a broken runtime config.
@@ -458,7 +457,7 @@ If Chrome shows a certificate warning on `*.icp-api.io`, you are on the wrong ho
 2. Keep the Cloudflare tunnel running.
 3. Open the IC frontend.
 4. Sign in with Internet Identity.
-5. Create a preset with `PCMU` and `8,000 Hz`.
+5. Create a preset.
 6. Buy phone time from the dashboard.
 7. Enter a recipient phone number in E.164 format, for example `+17753794797`.
 8. Start the call.

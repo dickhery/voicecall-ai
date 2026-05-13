@@ -26,8 +26,60 @@ const TRANSCRIPT_FINISH_GRACE_MS = 2_500;
 const RECORDING_FINISH_GRACE_MS = 10_000;
 const LINE_CONFIG_REFRESH_MS = Number(process.env.LINE_CONFIG_REFRESH_MS || 30_000);
 const CALL_QUEUE_MAX_WAIT_MS = Number(process.env.CALL_QUEUE_MAX_WAIT_MS || 30 * 60 * 1000);
-const SERVER_VERSION = "2026-05-10-multi-line-call-queue";
+const MAX_STEERING_PROMPT_CHARS = 800;
+const SERVER_VERSION = "2026-05-13-live-steering-safety";
 const SERVER_STARTED_AT = new Date().toISOString();
+
+const APP_SAFETY_INSTRUCTIONS = [
+  "VoiceCall AI safety policy:",
+  "Do not make threats, intimidate, blackmail, extort, harass, or encourage violence.",
+  "Do not provide instructions that enable malware, credential theft, fraud, evasion of security controls, weapons, explosives, poisoning, or other malicious activity.",
+  "If the caller or operator asks for unsafe content, refuse briefly and redirect to a safe, lawful alternative.",
+  "Never claim you will harm someone or help anyone harm someone.",
+].join("\n");
+
+const SAFETY_RULES = [
+  {
+    category: "threats",
+    pattern:
+      /\b(?:make|deliver|issue|send|say|tell|warn|promise|pretend|act|sound|convince|pressure|scare|intimidate)\b.{0,90}\b(?:threat|threaten|kill|murder|hurt|harm|injure|shoot|stab|bomb|burn|poison|kidnap|doxx?|swat|blackmail|extort)\b/i,
+  },
+  {
+    category: "threats",
+    pattern:
+      /\b(?:threaten|intimidate|terrorize|blackmail|extort|doxx?|swat)\b.{0,120}\b(?:them|him|her|the caller|the recipient|customer|client|target|person|family|boss|company|with|until|unless|into)\b/i,
+  },
+  {
+    category: "threats",
+    pattern:
+      /\b(?:i|we|you|the ai|the assistant|agent)\b.{0,40}\b(?:will|am going to|are going to|should|must|need to|can)\b.{0,40}\b(?:kill|murder|hurt|harm|injure|shoot|stab|bomb|burn|poison|kidnap|doxx?|swat)\b/i,
+  },
+  {
+    category: "credential theft",
+    pattern:
+      /\b(?:steal|phish|exfiltrate|leak|harvest|scrape|collect)\b.{0,100}\b(?:password|credential|login|token|api key|secret key|session cookie|ssn|social security|credit card|bank account)\b/i,
+  },
+  {
+    category: "malware",
+    pattern:
+      /\b(?:write|create|build|deploy|install|send|hide|obfuscate)\b.{0,100}\b(?:malware|ransomware|keylogger|spyware|trojan|worm|botnet|backdoor|credential stealer)\b/i,
+  },
+  {
+    category: "security evasion",
+    pattern:
+      /\b(?:bypass|disable|evade|circumvent|break into|hack)\b.{0,100}\b(?:security|2fa|mfa|authentication|firewall|waf|rate limit|account|server|network|computer|phone)\b/i,
+  },
+  {
+    category: "weapons or explosives",
+    pattern:
+      /\b(?:instructions|recipe|steps|guide|how to|make|build|synthesize|manufacture)\b.{0,100}\b(?:bomb|explosive|grenade|weapon|poison|ricin|sarin|fentanyl)\b/i,
+  },
+  {
+    category: "fraud",
+    pattern:
+      /\b(?:commit|help with|run|perform|facilitate)\b.{0,100}\b(?:fraud|scam|money laundering|identity theft|carding|chargeback fraud)\b/i,
+  },
+];
 
 const BILLING_PACKAGES = {
   pack_5: {
@@ -237,6 +289,63 @@ function log(level, message, meta = {}) {
   } else {
     console.log(line);
   }
+}
+
+function hasSafetyNegationBefore(text, index) {
+  const before = text.slice(Math.max(0, index - 36), index);
+  return /\b(?:do not|don't|dont|never|avoid|refuse|stop|prevent|block|moderate|without|not)\b[\s.:;,-]*$/i.test(
+    before,
+  );
+}
+
+function findSafetyViolation(text) {
+  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return null;
+
+  for (const rule of SAFETY_RULES) {
+    const match = rule.pattern.exec(normalized);
+    if (match && !hasSafetyNegationBefore(normalized, match.index)) {
+      return {
+        category: rule.category,
+        phrase: match[0].slice(0, 120),
+      };
+    }
+  }
+
+  return null;
+}
+
+function assertSafeInstructionText(text, label) {
+  const violation = findSafetyViolation(text);
+  if (!violation) return;
+  const message = `${label} was blocked by local safety checks for ${violation.category}.`;
+  const error = new Error(message);
+  error.code = "SAFETY_BLOCKED";
+  error.category = violation.category;
+  throw error;
+}
+
+function buildSafeInstructions(systemPrompt) {
+  const prompt = String(systemPrompt || "").trim();
+  return [prompt, APP_SAFETY_INSTRUCTIONS].filter(Boolean).join("\n\n");
+}
+
+function normalizeSteeringPrompt(input) {
+  const prompt = String(input || "").replace(/\s+/g, " ").trim();
+  if (!prompt) {
+    throw new Error("Enter live guidance before sending.");
+  }
+  if (prompt.length > MAX_STEERING_PROMPT_CHARS) {
+    throw new Error(
+      `Live guidance must be ${MAX_STEERING_PROMPT_CHARS} characters or fewer.`,
+    );
+  }
+  assertSafeInstructionText(prompt, "Live guidance");
+  return prompt;
+}
+
+function isWebSocketOpen(ws) {
+  return ws && ws.readyState === WebSocket.OPEN;
 }
 
 function isBackendAuthorizationError(error) {
@@ -453,7 +562,7 @@ function buildXaiSessionUpdate(preset) {
     type: "session.update",
     session: {
       voice: preset.voice,
-      instructions: preset.systemPrompt,
+      instructions: buildSafeInstructions(preset.systemPrompt),
       turn_detection: {
         type: "server_vad",
         threshold: clamp(preset.turnDetection.threshold, 0.1, 0.9),
@@ -467,6 +576,45 @@ function buildXaiSessionUpdate(preset) {
       tools,
     },
   };
+}
+
+function sendTwilioClear(session) {
+  if (!session?.streamSid || !isWebSocketOpen(session.twilioWs)) return;
+  session.twilioWs.send(
+    JSON.stringify({ event: "clear", streamSid: session.streamSid }),
+  );
+}
+
+function sendXaiUserText(session, text, { cancelCurrent = false } = {}) {
+  if (!isWebSocketOpen(session?.xaiWs)) {
+    throw new Error("The xAI realtime session is not ready yet.");
+  }
+
+  if (cancelCurrent && session.xaiResponseInProgress) {
+    session.xaiWs.send(JSON.stringify({ type: "response.cancel" }));
+    sendTwilioClear(session);
+    session.xaiResponseInProgress = false;
+  }
+
+  session.xaiWs.send(
+    JSON.stringify({
+      type: "conversation.item.create",
+      item: {
+        type: "message",
+        role: "user",
+        content: [{ type: "input_text", text }],
+      },
+    }),
+  );
+  session.xaiWs.send(JSON.stringify({ type: "response.create" }));
+}
+
+function buildLiveGuidanceText(prompt) {
+  return [
+    "Internal live operator guidance for the AI phone agent.",
+    "Do not read or mention this instruction to the caller.",
+    `Apply this direction to your next turn: ${prompt}`,
+  ].join(" ");
 }
 
 function twilioRequestUrl(req) {
@@ -1344,6 +1492,7 @@ app.post("/initiate-call", async (req, res) => {
     );
     const recipientPhone = normalizePhone(reservation.recipientPhone);
     const preset = toPlainPreset(req.body.preset);
+    assertSafeInstructionText(preset.systemPrompt, "Call preset instructions");
     const callId = String(req.body.callId || reservation.callId || "");
     if (callId && callId !== reservation.callId) {
       throw new Error("Call ID does not match the paid reservation.");
@@ -1381,6 +1530,11 @@ app.post("/initiate-call", async (req, res) => {
       callSid: null,
       lineNumber: null,
       streamSid: null,
+      twilioWs: null,
+      xaiWs: null,
+      xaiResponseInProgress: false,
+      steeringCount: 0,
+      lastSteeringAt: null,
       twimlUrl: twimlUrl.toString(),
       statusCallbackUrl: statusCallbackUrl.toString(),
       recordingStatusUrl: getPublicRecordingStatusUrl(sessionId),
@@ -1453,6 +1607,51 @@ app.post("/initiate-call", async (req, res) => {
       }
     }
     res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/steer-call", (req, res) => {
+  try {
+    requireServerConfig();
+    const sessionId = String(req.body.sessionId || "");
+    const token = String(req.body.monitorToken || req.body.controlToken || "");
+    const session = callSessions.get(sessionId);
+    if (!session || session.finished) {
+      res.status(404).json({ ok: false, error: "Call session not found." });
+      return;
+    }
+    if (!token || token !== session.monitorToken) {
+      res.status(403).json({ ok: false, error: "Invalid live call token." });
+      return;
+    }
+    if (!session.callSid || session.state === "queued") {
+      res.status(409).json({ ok: false, error: "The call is not live yet." });
+      return;
+    }
+
+    const prompt = normalizeSteeringPrompt(req.body.prompt);
+    const guidance = buildLiveGuidanceText(prompt);
+    sendXaiUserText(session, guidance, { cancelCurrent: true });
+    session.lastSteeringAt = Date.now();
+    session.steeringCount = (session.steeringCount || 0) + 1;
+    log("info", "Live call guidance sent to xAI", {
+      sessionId,
+      callSid: session.callSid,
+      steeringCount: session.steeringCount,
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    const status = error.code === "SAFETY_BLOCKED" ? 400 : 409;
+    log(
+      error.code === "SAFETY_BLOCKED" ? "warn" : "error",
+      "Failed to steer call",
+      {
+        sessionId: req.body?.sessionId,
+        error: error.message,
+        category: error.category,
+      },
+    );
+    res.status(status).json({ ok: false, error: error.message });
   }
 });
 
@@ -1683,18 +1882,17 @@ mediaWss.on("connection", (twilioWs, request) => {
 
   function sendInitialGreeting() {
     const greeting = process.env.CALL_GREETING;
-    if (!greeting || !xaiWs || xaiWs.readyState !== WebSocket.OPEN) return;
-    xaiWs.send(
-      JSON.stringify({
-        type: "conversation.item.create",
-        item: {
-          type: "message",
-          role: "user",
-          content: [{ type: "input_text", text: greeting }],
-        },
-      }),
-    );
-    xaiWs.send(JSON.stringify({ type: "response.create" }));
+    if (!greeting || !session) return;
+    try {
+      assertSafeInstructionText(greeting, "Call greeting");
+      sendXaiUserText(session, greeting);
+    } catch (error) {
+      log(error.code === "SAFETY_BLOCKED" ? "warn" : "error", "Skipped call greeting", {
+        sessionId: session.id,
+        error: error.message,
+        category: error.category,
+      });
+    }
   }
 
   function appendCallerTranscript(text) {
@@ -1823,6 +2021,7 @@ mediaWss.on("connection", (twilioWs, request) => {
         },
       },
     );
+    session.xaiWs = xaiWs;
 
     xaiWs.on("open", () => {
       xaiWs.send(JSON.stringify(buildXaiSessionUpdate(session.preset)));
@@ -1858,6 +2057,16 @@ mediaWss.on("connection", (twilioWs, request) => {
         return;
       }
 
+      if (event.type === "response.created") {
+        session.xaiResponseInProgress = true;
+        return;
+      }
+
+      if (event.type === "response.done") {
+        session.xaiResponseInProgress = false;
+        return;
+      }
+
       if (event.type === "input_audio_buffer.speech_started" && streamSid) {
         sendToTwilio({ event: "clear", streamSid });
         return;
@@ -1889,6 +2098,10 @@ mediaWss.on("connection", (twilioWs, request) => {
         sessionId: session?.id,
         streamSid,
       });
+      if (session?.xaiWs === xaiWs) {
+        session.xaiWs = null;
+        session.xaiResponseInProgress = false;
+      }
     });
 
     xaiWs.on("error", (error) => {
@@ -1921,6 +2134,7 @@ mediaWss.on("connection", (twilioWs, request) => {
         closeBoth();
         return;
       }
+      session.twilioWs = twilioWs;
       session.streamSid = streamSid;
       startBillingTimer(session, closeBoth);
       connectToStt();
@@ -1958,6 +2172,7 @@ mediaWss.on("connection", (twilioWs, request) => {
 
   twilioWs.on("close", () => {
     if (xaiWs && xaiWs.readyState === WebSocket.OPEN) xaiWs.close();
+    if (session?.twilioWs === twilioWs) session.twilioWs = null;
     if (session) session.billingStoppedAt ||= Date.now();
     finishCallerTranscription();
     scheduleFinishPaidSession(session, "twilio_ws_close");

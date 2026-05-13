@@ -138,7 +138,6 @@ const nextEnv = {
   project_id: existingEnv.project_id && existingEnv.project_id !== "undefined"
     ? existingEnv.project_id
     : "voicecall-ai",
-  ii_derivation_origin: frontendUrl,
   storage_gateway_url:
     existingEnv.storage_gateway_url && existingEnv.storage_gateway_url !== "undefined"
       ? existingEnv.storage_gateway_url

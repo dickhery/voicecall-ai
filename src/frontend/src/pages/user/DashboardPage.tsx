@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   useCreatePurchaseIntent,
   useDeletePreset,
@@ -47,10 +48,12 @@ import {
   CreditCard,
   FileText,
   Loader2,
+  MessageSquareMore,
   Phone,
   PhoneOff,
   Plus,
   RefreshCw,
+  Send,
   Settings2,
   Trash2,
   Volume2,
@@ -58,7 +61,7 @@ import {
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 function formatDuration(secs: number): string {
@@ -103,6 +106,7 @@ const STATUS_LABELS: Record<XaiCallStatus, string> = {
   completed: "Completed",
   error: "Error",
 };
+const MAX_STEERING_PROMPT_CHARS = 800;
 
 function StatCard({
   icon,
@@ -156,14 +160,34 @@ function ActiveCallPanel({
     liveAudioAvailable,
     isListeningLive,
     liveAudioError,
+    isSendingSteeringPrompt,
+    steeringError,
     endCall,
+    steerConversation,
     toggleLiveAudio,
   } = voice;
+  const [steeringPrompt, setSteeringPrompt] = useState("");
   const isActive =
     status === "in_call" ||
     status === "connecting" ||
     status === "initiating" ||
     status === "queued";
+  const canSendSteeringPrompt =
+    status === "in_call" &&
+    !isSendingSteeringPrompt &&
+    steeringPrompt.trim().length > 0;
+
+  const handleSteeringSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const prompt = steeringPrompt.trim();
+    if (!prompt) return;
+    try {
+      await steerConversation(prompt);
+      setSteeringPrompt("");
+    } catch {
+      // The hook surfaces the failure through toast and steeringError.
+    }
+  };
 
   if (status === "idle") return null;
 
@@ -308,6 +332,66 @@ function ActiveCallPanel({
               )}
             </div>
           </div>
+          {status === "in_call" && (
+            <form
+              className="mt-4 border-t border-border pt-4"
+              onSubmit={handleSteeringSubmit}
+              data-ocid="dashboard.active_call.steering_form"
+            >
+              <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-end">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="live-steering-prompt"
+                    className="text-xs font-medium text-muted-foreground flex items-center gap-1.5"
+                  >
+                    <MessageSquareMore className="w-3.5 h-3.5 text-primary" />
+                    Steer AI
+                  </Label>
+                  <Textarea
+                    id="live-steering-prompt"
+                    value={steeringPrompt}
+                    onChange={(event) => setSteeringPrompt(event.target.value)}
+                    placeholder="Add live guidance"
+                    maxLength={MAX_STEERING_PROMPT_CHARS}
+                    rows={2}
+                    aria-invalid={Boolean(steeringError)}
+                    disabled={isSendingSteeringPrompt}
+                    data-ocid="dashboard.active_call.steering_input"
+                    className="min-h-16 resize-none text-sm"
+                  />
+                  <div className="flex items-center justify-between gap-3">
+                    {steeringError ? (
+                      <p
+                        className="text-xs text-destructive"
+                        data-ocid="dashboard.active_call.steering_error"
+                      >
+                        {steeringError}
+                      </p>
+                    ) : (
+                      <span className="text-xs text-muted-foreground" />
+                    )}
+                    <span className="text-[11px] text-muted-foreground font-mono">
+                      {steeringPrompt.length}/{MAX_STEERING_PROMPT_CHARS}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!canSendSteeringPrompt}
+                  data-ocid="dashboard.active_call.steering_send"
+                  className="gap-1.5 h-9 md:mb-6"
+                >
+                  {isSendingSteeringPrompt ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  Send
+                </Button>
+              </div>
+            </form>
+          )}
         </CardContent>
       </Card>
     </motion.div>

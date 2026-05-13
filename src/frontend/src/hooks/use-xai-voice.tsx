@@ -16,6 +16,7 @@ import {
   getLiveAudioMonitorUrl,
   getVoiceServerCallSession,
   startVoiceServerCall,
+  steerVoiceServerCall,
 } from "@/lib/voice-server";
 import type { CallCaptureOptions } from "@/lib/voice-server";
 import { useCallStore } from "@/stores/call-store";
@@ -43,6 +44,8 @@ export interface XaiVoiceState {
   liveAudioAvailable: boolean;
   isListeningLive: boolean;
   liveAudioError: string | null;
+  isSendingSteeringPrompt: boolean;
+  steeringError: string | null;
 }
 
 export interface XaiVoiceControls {
@@ -55,6 +58,7 @@ export interface XaiVoiceControls {
   toggleMute: () => void;
   toggleLiveAudio: () => Promise<void>;
   stopLiveAudio: () => void;
+  steerConversation: (prompt: string) => Promise<void>;
 }
 
 const WAVEFORM_BARS = 20;
@@ -115,6 +119,8 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const [liveAudioAvailable, setLiveAudioAvailable] = useState(false);
   const [isListeningLive, setIsListeningLive] = useState(false);
   const [liveAudioError, setLiveAudioError] = useState<string | null>(null);
+  const [isSendingSteeringPrompt, setIsSendingSteeringPrompt] = useState(false);
+  const [steeringError, setSteeringError] = useState<string | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const queuePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -301,6 +307,8 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       setIsMuted(false);
       setLiveAudioAvailable(false);
       setLiveAudioError(null);
+      setIsSendingSteeringPrompt(false);
+      setSteeringError(null);
     }, 3000);
   }, []);
 
@@ -388,6 +396,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       setErrorMessage(null);
       setLiveAudioAvailable(false);
       setLiveAudioError(null);
+      setSteeringError(null);
       activeCallIdRef.current = null;
       activeCallSidRef.current = null;
       activeSessionIdRef.current = null;
@@ -464,6 +473,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
         cleanupQueuePolling();
         stopLiveAudio();
         setLiveAudioAvailable(false);
+        setSteeringError(null);
         clearCall();
       }
     },
@@ -486,6 +496,8 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     cleanupQueuePolling();
     stopLiveAudio();
     setLiveAudioAvailable(false);
+    setIsSendingSteeringPrompt(false);
+    setSteeringError(null);
 
     const callSid = activeCallSidRef.current;
     const sessionId = activeSessionIdRef.current;
@@ -524,6 +536,40 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     await startLiveAudio();
   }, [isListeningLive, startLiveAudio, stopLiveAudio]);
 
+  const steerConversation = useCallback(async (prompt: string) => {
+    const cleanPrompt = prompt.trim();
+    const sessionId = activeSessionIdRef.current;
+    const monitorToken = monitorTokenRef.current;
+
+    if (!cleanPrompt) {
+      setSteeringError("Enter live guidance before sending.");
+      return;
+    }
+    if (status !== "in_call" || !sessionId || !monitorToken) {
+      setSteeringError("Live guidance is available once the call is connected.");
+      return;
+    }
+
+    setIsSendingSteeringPrompt(true);
+    setSteeringError(null);
+    try {
+      await steerVoiceServerCall({
+        sessionId,
+        monitorToken,
+        prompt: cleanPrompt,
+      });
+      toast.success("Live guidance sent");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unable to send live guidance.";
+      setSteeringError(message);
+      toast.error(message);
+      throw err;
+    } finally {
+      setIsSendingSteeringPrompt(false);
+    }
+  }, [status]);
+
   useEffect(() => {
     return () => {
       cleanupTimer();
@@ -543,10 +589,13 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     liveAudioAvailable,
     isListeningLive,
     liveAudioError,
+    isSendingSteeringPrompt,
+    steeringError,
     startCall,
     endCall,
     toggleMute,
     toggleLiveAudio,
     stopLiveAudio,
+    steerConversation,
   };
 }

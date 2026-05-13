@@ -5,8 +5,8 @@ import environment from "vite-plugin-environment";
 
 const ii_url =
   process.env.DFX_NETWORK === "local"
-    ? `http://rdmx6-jaaaa-aaaaa-aaadq-cai.localhost:8081/`
-    : `https://identity.internetcomputer.org/`;
+    ? "http://id.ai.localhost:8000"
+    : "https://id.ai";
 
 process.env.II_URL = process.env.II_URL || ii_url;
 process.env.STORAGE_GATEWAY_URL =
@@ -55,6 +55,6 @@ export default defineConfig({
         replacement: fileURLToPath(new URL("./src", import.meta.url)),
       },
     ],
-    dedupe: ["@dfinity/agent"]
+    dedupe: ["@dfinity/agent"],
   },
 });

@@ -167,6 +167,22 @@ export async function endVoiceServerCall({
   await postJson<{ ok: true }>("/end-call", { callSid, sessionId });
 }
 
+export async function steerVoiceServerCall({
+  sessionId,
+  monitorToken,
+  prompt,
+}: {
+  sessionId: string;
+  monitorToken: string;
+  prompt: string;
+}): Promise<void> {
+  await postJson<{ ok: true }>("/steer-call", {
+    sessionId,
+    monitorToken,
+    prompt,
+  });
+}
+
 export async function getVoiceServerCallSession(
   sessionId: string,
 ): Promise<VoiceServerCall> {

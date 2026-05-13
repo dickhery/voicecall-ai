@@ -31,10 +31,6 @@ function isLocalUrl(value) {
   );
 }
 
-function looksLikeMainnetOrigin(value) {
-  return /^https:\/\/[^/]+\.(icp0\.io|ic0\.app)$/i.test(String(value || ""));
-}
-
 function getCspDirective(cspText, directive) {
   const match = cspText.match(new RegExp(`${directive}\\s+([^";]+)`));
   return match?.[1] || "";
@@ -49,7 +45,6 @@ const requiredKeys = [
   "backend_host",
   "backend_canister_id",
   "project_id",
-  "ii_derivation_origin",
   "storage_gateway_url",
   "voice_server_url",
 ];
@@ -62,21 +57,18 @@ for (const key of requiredKeys) {
   }
 }
 
-if (
-  looksLikeMainnetOrigin(env.ii_derivation_origin) &&
-  isLocalUrl(env.voice_server_url)
-) {
+const usesMainnetBackend =
+  String(env.backend_host || "").replace(/\/+$/, "") === "https://icp-api.io";
+
+if (usesMainnetBackend && isLocalUrl(env.voice_server_url)) {
   throw new Error(
-    `${source} points at a mainnet IC frontend but voice_server_url is local. Use your Cloudflare Tunnel or deployed server URL.`,
+    `${source} points at mainnet IC but voice_server_url is local. Use your Cloudflare Tunnel or deployed server URL.`,
   );
 }
 
-if (
-  looksLikeMainnetOrigin(env.ii_derivation_origin) &&
-  !String(env.voice_server_url).startsWith("https://")
-) {
+if (usesMainnetBackend && !String(env.voice_server_url).startsWith("https://")) {
   throw new Error(
-    `${source} points at a mainnet IC frontend but voice_server_url is not https.`,
+    `${source} points at mainnet IC but voice_server_url is not https.`,
   );
 }
 
