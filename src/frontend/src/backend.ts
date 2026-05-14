@@ -134,6 +134,13 @@ export interface CallPreset {
     turnDetection: TurnDetection;
     audioFormat: AudioFormat;
 }
+export type CallPresetMutationResult = {
+    __kind__: "ok";
+    ok: CallPreset;
+} | {
+    __kind__: "err";
+    err: string;
+};
 export enum AnsweringPresetStatus {
     pendingVerification = "pendingVerification",
     verified = "verified"
@@ -418,7 +425,9 @@ export interface backendInterface {
     twilioWebhook(callSid: string, callStatus: string): Promise<string>;
     updateCallStatus(callId: CallId, status: CallStatus, transcript: string | null): Promise<boolean>;
     updateAnsweringPreset(id: PresetId, input: AnsweringPresetInput): Promise<AnsweringPresetMutationResult>;
+    updateAnsweringPresetInstructions(id: PresetId, systemPrompt: string): Promise<AnsweringPresetMutationResult>;
     updatePreset(id: PresetId, input: CallPresetInput): Promise<CallPreset | null>;
+    updatePresetInstructions(id: PresetId, systemPrompt: string): Promise<CallPresetMutationResult>;
 }
 import type { AudioFormat as _AudioFormat, CallPreset as _CallPreset, CallPresetInput as _CallPresetInput, CallRecordPublic as _CallRecordPublic, CallStatus as _CallStatus, EphemeralTokenResult as _EphemeralTokenResult, InitiateCallResult as _InitiateCallResult, SampleRate as _SampleRate, SystemLog as _SystemLog, ToolsEnabled as _ToolsEnabled, TurnDetection as _TurnDetection, UserRole as _UserRole, Voice as _Voice } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -947,6 +956,20 @@ export class Backend implements backendInterface {
             return from_candid_AnsweringPresetMutationResult(result);
         }
     }
+    async updateAnsweringPresetInstructions(arg0: PresetId, arg1: string): Promise<AnsweringPresetMutationResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateAnsweringPresetInstructions(arg0, arg1);
+                return from_candid_AnsweringPresetMutationResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateAnsweringPresetInstructions(arg0, arg1);
+            return from_candid_AnsweringPresetMutationResult(result);
+        }
+    }
     async updatePreset(arg0: PresetId, arg1: CallPresetInput): Promise<CallPreset | null> {
         if (this.processError) {
             try {
@@ -959,6 +982,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.updatePreset(arg0, to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg1));
             return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async updatePresetInstructions(arg0: PresetId, arg1: string): Promise<CallPresetMutationResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updatePresetInstructions(arg0, arg1);
+                return from_candid_CallPresetMutationResult(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updatePresetInstructions(arg0, arg1);
+            return from_candid_CallPresetMutationResult(this._uploadFile, this._downloadFile, result);
         }
     }
 }
@@ -1084,6 +1121,15 @@ function from_candid_AnsweringPresetMutationResult(value: any): AnsweringPresetM
     return "ok" in value ? {
         __kind__: "ok",
         ok: from_candid_AnsweringPreset(value.ok)
+    } : {
+        __kind__: "err",
+        err: value.err
+    };
+}
+function from_candid_CallPresetMutationResult(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: any): CallPresetMutationResult {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_CallPreset_n23(_uploadFile, _downloadFile, value.ok)
     } : {
         __kind__: "err",
         err: value.err

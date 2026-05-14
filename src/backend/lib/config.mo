@@ -14,6 +14,8 @@ import Types "../types/config";
 import Common "../types/common";
 
 module {
+  private let MAX_AI_INSTRUCTIONS_CHARS : Nat = 8000;
+
   public type State = {
     adminConfig : Types.AdminConfig;
     presets : Map.Map<Common.PresetId, Types.CallPreset>;
@@ -113,6 +115,46 @@ module {
     };
   };
 
+  private func sanitizeInstructions(
+    input : Text,
+    requiredMessage : Text,
+  ) : {
+    #ok : Text;
+    #err : Text;
+  } {
+    let prompt = input.trim(#char ' ');
+    if (prompt == "") {
+      return #err(requiredMessage);
+    };
+    if (prompt.toArray().size() > MAX_AI_INSTRUCTIONS_CHARS) {
+      return #err("AI instructions must be 8000 characters or fewer.");
+    };
+    #ok(prompt);
+  };
+
+  private func requireCallPresetInput(input : Types.CallPresetInput) : Types.CallPresetInput {
+    let name = input.name.trim(#char ' ');
+    if (name == "") {
+      Runtime.trap("Preset name is required.");
+    };
+    let prompt = switch (sanitizeInstructions(input.systemPrompt, "AI instructions are required.")) {
+      case (#err(message)) { Runtime.trap(message) };
+      case (#ok(value)) { value };
+    };
+    {
+      input with
+      name = name;
+      systemPrompt = prompt;
+      audioFormat = #pcmu;
+      sampleRate = #hz8000;
+      toolsEnabled = {
+        webSearch = false;
+        xSearch = false;
+        functionCalling = false;
+      };
+    };
+  };
+
   private func legacyTwilioLine(state : State) : ?Types.TwilioLine {
     let phoneNumber = state.adminConfig.twilioFromNumber;
     if (phoneNumber == "" or not isE164(phoneNumber)) {
@@ -168,12 +210,12 @@ module {
     #err : Text;
   } {
     let name = input.name.trim(#char ' ');
-    let prompt = input.systemPrompt.trim(#char ' ');
     if (name == "") {
       return #err("Preset name is required.");
     };
-    if (prompt == "") {
-      return #err("AI answering instructions are required.");
+    let prompt = switch (sanitizeInstructions(input.systemPrompt, "AI answering instructions are required.")) {
+      case (#err(message)) { return #err(message) };
+      case (#ok(value)) { value };
     };
     if (not isE164(input.phoneNumber)) {
       return #err("Twilio phone number must be E.164 format, for example +15551234567.");
@@ -385,18 +427,19 @@ module {
     owner : Principal,
     input : Types.CallPresetInput,
   ) : Types.CallPreset {
+    let cleanInput = requireCallPresetInput(input);
     let id = state.nextPresetId.value;
     state.nextPresetId.value += 1;
     let preset : Types.CallPreset = withPresetDefaults({
       id;
       ownerId = owner;
-      name = input.name;
-      systemPrompt = input.systemPrompt;
-      voice = input.voice;
-      turnDetection = input.turnDetection;
-      audioFormat = input.audioFormat;
-      sampleRate = input.sampleRate;
-      toolsEnabled = input.toolsEnabled;
+      name = cleanInput.name;
+      systemPrompt = cleanInput.systemPrompt;
+      voice = cleanInput.voice;
+      turnDetection = cleanInput.turnDetection;
+      audioFormat = cleanInput.audioFormat;
+      sampleRate = cleanInput.sampleRate;
+      toolsEnabled = cleanInput.toolsEnabled;
     });
     state.presets.add(id, preset);
     preset;
@@ -431,19 +474,47 @@ module {
         if (not Principal.equal(existing.ownerId, caller)) {
           Runtime.trap("Unauthorized: not the owner");
         };
+        let cleanInput = requireCallPresetInput(input);
         let updated : Types.CallPreset = withPresetDefaults({
           id = existing.id;
           ownerId = existing.ownerId;
-          name = input.name;
-          systemPrompt = input.systemPrompt;
-          voice = input.voice;
-          turnDetection = input.turnDetection;
-          audioFormat = input.audioFormat;
-          sampleRate = input.sampleRate;
-          toolsEnabled = input.toolsEnabled;
+          name = cleanInput.name;
+          systemPrompt = cleanInput.systemPrompt;
+          voice = cleanInput.voice;
+          turnDetection = cleanInput.turnDetection;
+          audioFormat = cleanInput.audioFormat;
+          sampleRate = cleanInput.sampleRate;
+          toolsEnabled = cleanInput.toolsEnabled;
         });
         state.presets.add(id, updated);
         ?updated;
+      };
+    };
+  };
+
+  public func updatePresetInstructions(
+    state : State,
+    caller : Principal,
+    id : Common.PresetId,
+    systemPrompt : Text,
+  ) : Types.CallPresetMutationResult {
+    switch (state.presets.get(id)) {
+      case null { #err("Preset not found.") };
+      case (?existing) {
+        if (not Principal.equal(existing.ownerId, caller)) {
+          Runtime.trap("Unauthorized: not the owner");
+        };
+        switch (sanitizeInstructions(systemPrompt, "AI instructions are required.")) {
+          case (#err(message)) { #err(message) };
+          case (#ok(prompt)) {
+            let updated : Types.CallPreset = withPresetDefaults({
+              existing with
+              systemPrompt = prompt;
+            });
+            state.presets.add(id, updated);
+            #ok(updated);
+          };
+        };
       };
     };
   };
@@ -683,6 +754,34 @@ module {
               updatedAt = Time.now();
               verifiedAt = if (phoneChanged) { null } else { existing.verifiedAt };
               lastIncomingAt = existing.lastIncomingAt;
+            };
+            state.presets.add(id, updated);
+            #ok(updated);
+          };
+        };
+      };
+    };
+  };
+
+  public func updateAnsweringPresetInstructions(
+    state : AnsweringState,
+    caller : Principal,
+    id : Common.PresetId,
+    systemPrompt : Text,
+  ) : Types.AnsweringPresetMutationResult {
+    switch (state.presets.get(id)) {
+      case null { #err("Answering preset not found.") };
+      case (?existing) {
+        if (not Principal.equal(existing.ownerId, caller)) {
+          Runtime.trap("Unauthorized: not the owner");
+        };
+        switch (sanitizeInstructions(systemPrompt, "AI answering instructions are required.")) {
+          case (#err(message)) { #err(message) };
+          case (#ok(prompt)) {
+            let updated : Types.AnsweringPreset = {
+              existing with
+              systemPrompt = prompt;
+              updatedAt = Time.now();
             };
             state.presets.add(id, updated);
             #ok(updated);

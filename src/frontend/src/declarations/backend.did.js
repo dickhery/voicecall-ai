@@ -106,6 +106,10 @@ export const CallPreset = IDL.Record({
   'turnDetection' : TurnDetection,
   'audioFormat' : AudioFormat,
 });
+export const CallPresetMutationResult = IDL.Variant({
+  'ok' : CallPreset,
+  'err' : IDL.Text,
+});
 export const AnsweringPresetStatus = IDL.Variant({
   'pendingVerification' : IDL.Null,
   'verified' : IDL.Null,
@@ -411,9 +415,19 @@ export const idlService = IDL.Service({
       [AnsweringPresetMutationResult],
       [],
     ),
+  'updateAnsweringPresetInstructions' : IDL.Func(
+      [PresetId, IDL.Text],
+      [AnsweringPresetMutationResult],
+      [],
+    ),
   'updatePreset' : IDL.Func(
       [PresetId, CallPresetInput],
       [IDL.Opt(CallPreset)],
+      [],
+    ),
+  'updatePresetInstructions' : IDL.Func(
+      [PresetId, IDL.Text],
+      [CallPresetMutationResult],
       [],
     ),
   'verifyAnsweringPresetForServer' : IDL.Func(
@@ -533,6 +547,10 @@ export const idlFactory = ({ IDL }) => {
     'systemPrompt' : IDL.Text,
     'turnDetection' : TurnDetection,
     'audioFormat' : AudioFormat,
+  });
+  const CallPresetMutationResult = IDL.Variant({
+    'ok' : CallPreset,
+    'err' : IDL.Text,
   });
   const AnsweringPresetStatus = IDL.Variant({
     'pendingVerification' : IDL.Null,
@@ -844,9 +862,19 @@ export const idlFactory = ({ IDL }) => {
         [AnsweringPresetMutationResult],
         [],
       ),
+    'updateAnsweringPresetInstructions' : IDL.Func(
+        [PresetId, IDL.Text],
+        [AnsweringPresetMutationResult],
+        [],
+      ),
     'updatePreset' : IDL.Func(
         [PresetId, CallPresetInput],
         [IDL.Opt(CallPreset)],
+        [],
+      ),
+    'updatePresetInstructions' : IDL.Func(
+        [PresetId, IDL.Text],
+        [CallPresetMutationResult],
         [],
       ),
     'verifyAnsweringPresetForServer' : IDL.Func(

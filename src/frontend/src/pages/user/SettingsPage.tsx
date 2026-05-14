@@ -43,6 +43,7 @@ import { toast } from "sonner";
 // ── Default preset values ──────────────────────────────────────────────────────
 const DEFAULT_AUDIO_FORMAT = AudioFormat.pcmu;
 const DEFAULT_SAMPLE_RATE = SampleRate.hz8000;
+const MAX_AI_INSTRUCTIONS_CHARS = 8000;
 const DEFAULT_TOOLS_ENABLED: CallPresetInput["toolsEnabled"] = {
   xSearch: false,
   webSearch: false,
@@ -204,9 +205,16 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
         <Textarea
           {...register("systemPrompt", {
             required: "System prompt is required",
+            validate: (value) =>
+              value.trim().length > 0 || "System prompt is required",
+            maxLength: {
+              value: MAX_AI_INSTRUCTIONS_CHARS,
+              message: "System prompt is too long",
+            },
           })}
           placeholder="You are a professional sales representative. Greet the customer warmly, ask how you can help them today, and guide them through..."
           rows={5}
+          maxLength={MAX_AI_INSTRUCTIONS_CHARS}
           data-ocid="settings.preset.system_prompt.textarea"
           className={`resize-none font-mono text-xs leading-relaxed ${
             errors.systemPrompt ? "border-destructive" : ""

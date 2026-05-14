@@ -34,6 +34,8 @@ export interface CallPresetInput {
   'turnDetection' : TurnDetection,
   'audioFormat' : AudioFormat,
 }
+export type CallPresetMutationResult = { 'ok' : CallPreset } |
+  { 'err' : string };
 export type AnsweringPresetStatus = { 'pendingVerification' : null } |
   { 'verified' : null };
 export interface AnsweringCaptureOptions {
@@ -322,7 +324,15 @@ export interface _SERVICE {
     [PresetId, AnsweringPresetInput],
     AnsweringPresetMutationResult
   >,
+  'updateAnsweringPresetInstructions' : ActorMethod<
+    [PresetId, string],
+    AnsweringPresetMutationResult
+  >,
   'updatePreset' : ActorMethod<[PresetId, CallPresetInput], [] | [CallPreset]>,
+  'updatePresetInstructions' : ActorMethod<
+    [PresetId, string],
+    CallPresetMutationResult
+  >,
   'verifyAnsweringPresetForServer' : ActorMethod<
     [string, string],
     AnsweringPresetMutationResult

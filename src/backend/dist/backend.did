@@ -187,6 +187,11 @@ type CallRecordPublic =
    transcript: opt text;
    userId: principal;
  };
+type CallPresetMutationResult = 
+ variant {
+   err: text;
+   ok: CallPreset;
+ };
 type CallPresetInput = 
  record {
    audioFormat: AudioFormat;
@@ -365,9 +370,13 @@ service : {
   twilioWebhook: (callSid: text, callStatus: text) -> (text);
   updateAnsweringPreset: (id: PresetId, input: AnsweringPresetInput) ->
    (AnsweringPresetMutationResult);
+  updateAnsweringPresetInstructions: (id: PresetId, systemPrompt: text) ->
+   (AnsweringPresetMutationResult);
   updateCallStatus: (callId: CallId, status: CallStatus, transcript:
    opt text) -> (bool);
   updatePreset: (id: PresetId, input: CallPresetInput) -> (opt CallPreset);
+  updatePresetInstructions: (id: PresetId, systemPrompt: text) ->
+   (CallPresetMutationResult);
   verifyAnsweringPresetForServer: (webhookSecret: text, phoneNumber: 
    text) -> (AnsweringPresetMutationResult);
   verifyCallReservation: (reservationId: text, callToken: text) ->

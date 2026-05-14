@@ -7,6 +7,7 @@ import type {
   AudioFormat,
   CallPreset,
   CallPresetInput,
+  CallPresetMutationResult,
   CallRecordPublic,
   CallStatus,
   SampleRate,
@@ -23,6 +24,7 @@ import type { Principal } from "@icp-sdk/core/principal";
 export type {
   CallPreset,
   CallPresetInput,
+  CallPresetMutationResult,
   CallRecordPublic,
   CallStatus,
   SystemLog,

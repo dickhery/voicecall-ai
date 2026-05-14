@@ -314,5 +314,18 @@ export const mockBackend: backendInterface = {
     ok: { ...sampleAnsweringPreset, ...input },
   }),
 
+  updateAnsweringPresetInstructions: async (
+    _id: bigint,
+    systemPrompt: string,
+  ) => ({
+    __kind__: "ok",
+    ok: { ...sampleAnsweringPreset, systemPrompt },
+  }),
+
+  updatePresetInstructions: async (_id: bigint, systemPrompt: string) => ({
+    __kind__: "ok",
+    ok: { ...samplePreset, systemPrompt },
+  }),
+
   updatePreset: async (_id: bigint, _input) => samplePreset,
 };

@@ -65,6 +65,11 @@ module {
     toolsEnabled : ToolsEnabled;
   };
 
+  public type CallPresetMutationResult = {
+    #ok : CallPreset;
+    #err : Text;
+  };
+
   public type AnsweringPresetStatus = {
     #pendingVerification;
     #verified;

@@ -109,6 +109,16 @@ mixin (
     ConfigLib.updatePreset(configState, caller, id, input);
   };
 
+  public shared ({ caller }) func updatePresetInstructions(
+    id : Common.PresetId,
+    systemPrompt : Text,
+  ) : async ConfigTypes.CallPresetMutationResult {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: must be logged in");
+    };
+    ConfigLib.updatePresetInstructions(configState, caller, id, systemPrompt);
+  };
+
   public shared ({ caller }) func deletePreset(
     id : Common.PresetId,
   ) : async Bool {
@@ -168,6 +178,16 @@ mixin (
       Runtime.trap("Unauthorized: must be logged in");
     };
     ConfigLib.updateAnsweringPreset(answeringState, caller, id, input);
+  };
+
+  public shared ({ caller }) func updateAnsweringPresetInstructions(
+    id : Common.PresetId,
+    systemPrompt : Text,
+  ) : async ConfigTypes.AnsweringPresetMutationResult {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: must be logged in");
+    };
+    ConfigLib.updateAnsweringPresetInstructions(answeringState, caller, id, systemPrompt);
   };
 
   public shared ({ caller }) func deleteAnsweringPreset(

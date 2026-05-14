@@ -5,6 +5,7 @@ import type {
   BillingMutationResult,
   BillingStatus,
   CallId,
+  CallPresetMutationResult,
   CreatePurchaseIntentResult,
   EphemeralTokenResult,
   InitiateCallInput,
@@ -104,6 +105,25 @@ export function useUpdatePreset() {
   });
 }
 
+export function useUpdatePresetInstructions() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<
+    CallPresetMutationResult,
+    Error,
+    { id: PresetId; systemPrompt: string }
+  >({
+    mutationFn: async ({ id, systemPrompt }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.updatePresetInstructions(id, systemPrompt);
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ["myPresets"] });
+      qc.invalidateQueries({ queryKey: ["preset", vars.id.toString()] });
+    },
+  });
+}
+
 export function useDeletePreset() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
@@ -168,6 +188,22 @@ export function useUpdateAnsweringPreset() {
     mutationFn: async ({ id, input }) => {
       if (!actor) throw new Error("Actor not available");
       return actor.updateAnsweringPreset(id, input);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myAnsweringPresets"] }),
+  });
+}
+
+export function useUpdateAnsweringPresetInstructions() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<
+    AnsweringPresetMutationResult,
+    Error,
+    { id: PresetId; systemPrompt: string }
+  >({
+    mutationFn: async ({ id, systemPrompt }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.updateAnsweringPresetInstructions(id, systemPrompt);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["myAnsweringPresets"] }),
   });

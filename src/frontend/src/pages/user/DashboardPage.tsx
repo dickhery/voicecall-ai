@@ -15,6 +15,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -34,6 +42,7 @@ import {
   useGetMyBillingStatus,
   useListMyCalls,
   useListMyPresets,
+  useUpdatePresetInstructions,
 } from "@/hooks/use-backend";
 import type { XaiCallStatus } from "@/hooks/use-xai-voice";
 import { useXaiVoice } from "@/hooks/use-xai-voice";
@@ -49,6 +58,7 @@ import {
   FileText,
   Loader2,
   MessageSquareMore,
+  Pencil,
   Phone,
   PhoneOff,
   Plus,
@@ -106,6 +116,7 @@ const STATUS_LABELS: Record<XaiCallStatus, string> = {
   completed: "Completed",
   error: "Error",
 };
+const MAX_AI_INSTRUCTIONS_CHARS = 8000;
 const MAX_STEERING_PROMPT_CHARS = 800;
 
 function StatCard({
@@ -404,6 +415,9 @@ export default function DashboardPage() {
   const [recipientError, setRecipientError] = useState("");
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
   const [deletePresetId, setDeletePresetId] = useState<bigint | null>(null);
+  const [instructionEditorPreset, setInstructionEditorPreset] =
+    useState<CallPreset | null>(null);
+  const [instructionDraft, setInstructionDraft] = useState("");
   const [saveTranscript, setSaveTranscript] = useState(false);
   const [recordAudio, setRecordAudio] = useState(false);
   const [capturePermissionConfirmed, setCapturePermissionConfirmed] =
@@ -422,6 +436,7 @@ export default function DashboardPage() {
   } = useGetMyBillingStatus();
   const deletePreset = useDeletePreset();
   const duplicatePreset = useDuplicatePreset();
+  const updatePresetInstructions = useUpdatePresetInstructions();
   const createPurchaseIntent = useCreatePurchaseIntent();
   const voice = useXaiVoice();
   const [buyingPackageId, setBuyingPackageId] = useState<string | null>(null);
@@ -448,6 +463,12 @@ export default function DashboardPage() {
     voice.status !== "completed" &&
     voice.status !== "error";
   const savesCallArtifacts = saveTranscript || recordAudio;
+  const trimmedInstructionDraft = instructionDraft.trim();
+  const canSaveInstructions =
+    instructionEditorPreset !== null &&
+    trimmedInstructionDraft.length > 0 &&
+    trimmedInstructionDraft.length <= MAX_AI_INSTRUCTIONS_CHARS &&
+    trimmedInstructionDraft !== instructionEditorPreset.systemPrompt.trim();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -493,6 +514,34 @@ export default function DashboardPage() {
       permissionConfirmed: capturePermissionConfirmed,
     });
     refetchBilling();
+  };
+
+  const openInstructionEditor = (preset: CallPreset) => {
+    setInstructionEditorPreset(preset);
+    setInstructionDraft(preset.systemPrompt);
+  };
+
+  const savePresetInstructions = async () => {
+    if (!instructionEditorPreset) return;
+    if (!trimmedInstructionDraft) {
+      toast.error("AI instructions are required");
+      return;
+    }
+    if (trimmedInstructionDraft.length > MAX_AI_INSTRUCTIONS_CHARS) {
+      toast.error("AI instructions must be 8000 characters or fewer");
+      return;
+    }
+    const result = await updatePresetInstructions.mutateAsync({
+      id: instructionEditorPreset.id,
+      systemPrompt: trimmedInstructionDraft,
+    });
+    if (result.__kind__ === "err") {
+      toast.error(result.err);
+      return;
+    }
+    toast.success("Preset instructions updated");
+    setInstructionEditorPreset(null);
+    setInstructionDraft("");
   };
 
   const handleBuyPackage = async (packageId: string) => {
@@ -732,9 +781,23 @@ export default function DashboardPage() {
                 {/* Selected preset preview */}
                 {selectedPreset && (
                   <div className="rounded-lg bg-muted/30 border border-border p-3 space-y-1">
-                    <p className="text-xs font-medium text-foreground">
-                      {selectedPreset.name}
-                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-foreground truncate">
+                        {selectedPreset.name}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 shrink-0 gap-1.5 px-2 text-xs"
+                        onClick={() => openInstructionEditor(selectedPreset)}
+                        disabled={isCallActive}
+                        data-ocid="dashboard.selected_preset.edit_instructions_button"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        Edit
+                      </Button>
+                    </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">
                       {selectedPreset.systemPrompt}
                     </p>
@@ -836,11 +899,11 @@ export default function DashboardPage() {
                     ? "Initiating..."
                     : voice.status === "queued"
                       ? "Queued..."
-                    : voice.status === "connecting"
-                      ? "Connecting..."
-                      : availableSeconds <= 0
-                        ? "Add Phone Time"
-                        : "Start Call"}
+                      : voice.status === "connecting"
+                        ? "Connecting..."
+                        : availableSeconds <= 0
+                          ? "Add Phone Time"
+                          : "Start Call"}
                 </Button>
               </CardContent>
             </Card>
@@ -900,45 +963,61 @@ export default function DashboardPage() {
                       const isSelected =
                         selectedPresetId === preset.id.toString();
                       return (
-                        <button
-                          type="button"
+                        <div
                           key={preset.id.toString()}
                           data-ocid={`dashboard.preset.item.${idx + 1}`}
-                          onClick={() =>
-                            setSelectedPresetId(preset.id.toString())
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ")
-                              setSelectedPresetId(preset.id.toString());
-                          }}
-                          className={`flex w-full text-left items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-smooth border ${
+                          className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 transition-smooth ${
                             isSelected
                               ? "bg-primary/10 border-primary/40"
                               : "bg-muted/30 hover:bg-muted/50 border-transparent hover:border-border"
                           }`}
                         >
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-sm font-medium text-foreground truncate">
-                                {preset.name}
+                          <button
+                            type="button"
+                            className="flex flex-1 min-w-0 cursor-pointer items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            onClick={() =>
+                              setSelectedPresetId(preset.id.toString())
+                            }
+                            data-ocid={`dashboard.preset.select_button.${idx + 1}`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <p className="text-sm font-medium text-foreground truncate">
+                                  {preset.name}
+                                </p>
+                                {isSelected && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs h-4 px-1 border-primary/40 text-primary shrink-0"
+                                  >
+                                    Selected
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {preset.voice} ·{" "}
+                                {preset.systemPrompt.substring(0, 60)}
+                                {preset.systemPrompt.length > 60 ? "..." : ""}
                               </p>
-                              {isSelected && (
-                                <Badge
-                                  variant="outline"
-                                  className="text-xs h-4 px-1 border-primary/40 text-primary shrink-0"
-                                >
-                                  Selected
-                                </Badge>
-                              )}
                             </div>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {preset.voice} ·{" "}
-                              {preset.systemPrompt.substring(0, 60)}
-                              {preset.systemPrompt.length > 60 ? "..." : ""}
-                            </p>
-                          </div>
+                          </button>
                           <div className="flex items-center gap-1 shrink-0">
                             <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openInstructionEditor(preset);
+                              }}
+                              aria-label="Edit preset instructions"
+                              data-ocid={`dashboard.preset.edit_instructions_button.${idx + 1}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-muted-foreground hover:text-foreground"
@@ -952,6 +1031,7 @@ export default function DashboardPage() {
                               <Copy className="w-3.5 h-3.5" />
                             </Button>
                             <Button
+                              type="button"
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-muted-foreground hover:text-destructive"
@@ -965,7 +1045,7 @@ export default function DashboardPage() {
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -1054,6 +1134,71 @@ export default function DashboardPage() {
           </Card>
         </div>
       </AppLayout>
+
+      <Dialog
+        open={instructionEditorPreset !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setInstructionEditorPreset(null);
+            setInstructionDraft("");
+          }
+        }}
+      >
+        <DialogContent data-ocid="dashboard.preset.instructions_dialog">
+          <DialogHeader>
+            <DialogTitle>Edit AI Instructions</DialogTitle>
+            <DialogDescription>
+              {instructionEditorPreset?.name ?? "Call preset"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="dashboard-preset-instructions">Instructions</Label>
+            <Textarea
+              id="dashboard-preset-instructions"
+              value={instructionDraft}
+              onChange={(event) => setInstructionDraft(event.target.value)}
+              rows={8}
+              maxLength={MAX_AI_INSTRUCTIONS_CHARS}
+              data-ocid="dashboard.preset.instructions_textarea"
+              className="resize-none font-mono text-xs leading-relaxed"
+            />
+            <div className="flex items-center justify-end gap-3">
+              <span className="text-[11px] text-muted-foreground font-mono">
+                {trimmedInstructionDraft.length}/{MAX_AI_INSTRUCTIONS_CHARS}
+              </span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setInstructionEditorPreset(null);
+                setInstructionDraft("");
+              }}
+              data-ocid="dashboard.preset.instructions_cancel_button"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void savePresetInstructions()}
+              disabled={
+                !canSaveInstructions || updatePresetInstructions.isPending
+              }
+              data-ocid="dashboard.preset.instructions_save_button"
+              className="gap-2"
+            >
+              {updatePresetInstructions.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Pencil className="w-4 h-4" />
+              )}
+              Save Instructions
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete preset dialog */}
       <AlertDialog

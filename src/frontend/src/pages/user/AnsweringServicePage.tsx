@@ -16,6 +16,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +35,7 @@ import {
   useListMyAnsweringLiveSessions,
   useListMyAnsweringPresets,
   useSetAnsweringPresetEnabled,
+  useUpdateAnsweringPresetInstructions,
 } from "@/hooks/use-backend";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { getLiveAudioMonitorUrl, getVoiceServerUrl } from "@/lib/voice-server";
@@ -36,6 +45,7 @@ import {
   Copy,
   Headphones,
   Loader2,
+  Pencil,
   PhoneCall,
   PhoneOff,
   Plus,
@@ -59,6 +69,7 @@ const DEFAULT_TOOLS = {
   xSearch: false,
   functionCalling: false,
 };
+const MAX_AI_INSTRUCTIONS_CHARS = 8000;
 
 const VOICES: Array<{ value: Voice; label: string }> = [
   { value: Voice.eve, label: "Eve" },
@@ -281,9 +292,25 @@ function AnsweringPresetCard({
 }) {
   const setEnabled = useSetAnsweringPresetEnabled();
   const deletePreset = useDeleteAnsweringPreset();
+  const updateInstructions = useUpdateAnsweringPresetInstructions();
+  const [isEditingInstructions, setIsEditingInstructions] = useState(false);
+  const [draftInstructions, setDraftInstructions] = useState(
+    preset.systemPrompt,
+  );
   const isVerified =
     preset.verificationStatus === AnsweringPresetStatus.verified;
   const url = webhookUrl(baseUrl, preset);
+  const trimmedDraftInstructions = draftInstructions.trim();
+  const canSaveInstructions =
+    trimmedDraftInstructions.length > 0 &&
+    trimmedDraftInstructions.length <= MAX_AI_INSTRUCTIONS_CHARS &&
+    trimmedDraftInstructions !== preset.systemPrompt.trim();
+
+  useEffect(() => {
+    if (!isEditingInstructions) {
+      setDraftInstructions(preset.systemPrompt);
+    }
+  }, [isEditingInstructions, preset.systemPrompt]);
 
   const toggleEnabled = async (enabled: boolean) => {
     const result = await setEnabled.mutateAsync({ id: preset.id, enabled });
@@ -299,112 +326,233 @@ function AnsweringPresetCard({
     toast.success("Answering preset deleted");
   };
 
+  const saveInstructions = async () => {
+    if (!trimmedDraftInstructions) {
+      toast.error("AI answering instructions are required");
+      return;
+    }
+    if (trimmedDraftInstructions.length > MAX_AI_INSTRUCTIONS_CHARS) {
+      toast.error("AI instructions must be 8000 characters or fewer");
+      return;
+    }
+    const result = await updateInstructions.mutateAsync({
+      id: preset.id,
+      systemPrompt: trimmedDraftInstructions,
+    });
+    if (result.__kind__ === "err") {
+      toast.error(result.err);
+      return;
+    }
+    toast.success("Answering instructions updated");
+    setIsEditingInstructions(false);
+  };
+
   return (
-    <Card className="border-border bg-card">
-      <CardHeader className="pb-3">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-lg">{preset.name}</CardTitle>
-            <CardDescription className="font-mono">
-              {preset.phoneNumber}
-            </CardDescription>
+    <>
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-lg">{preset.name}</CardTitle>
+              <CardDescription className="font-mono">
+                {preset.phoneNumber}
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge
+                variant="outline"
+                className={
+                  isVerified
+                    ? "border-green-500/40 text-green-400"
+                    : "border-yellow-500/40 text-yellow-400"
+                }
+              >
+                {isVerified ? "Verified" : "Pending"}
+              </Badge>
+              <div className="flex items-center gap-2 rounded-md border border-border px-2 py-1">
+                <Switch
+                  checked={preset.enabled}
+                  disabled={!isVerified || setEnabled.isPending}
+                  onCheckedChange={(enabled) => void toggleEnabled(enabled)}
+                />
+                <span className="text-xs text-muted-foreground">
+                  {preset.enabled ? "On" : "Off"}
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsEditingInstructions(true)}
+                aria-label="Edit answering instructions"
+                data-ocid={`answering.preset.edit_instructions.${preset.id.toString()}`}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => void remove()}
+                disabled={deletePreset.isPending}
+                aria-label="Delete answering preset"
+              >
+                {deletePreset.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge
-              variant="outline"
-              className={
-                isVerified
-                  ? "border-green-500/40 text-green-400"
-                  : "border-yellow-500/40 text-yellow-400"
-              }
-            >
-              {isVerified ? "Verified" : "Pending"}
-            </Badge>
-            <div className="flex items-center gap-2 rounded-md border border-border px-2 py-1">
-              <Switch
-                checked={preset.enabled}
-                disabled={!isVerified || setEnabled.isPending}
-                onCheckedChange={(enabled) => void toggleEnabled(enabled)}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs font-medium uppercase text-muted-foreground">
+                Voice
+              </p>
+              <p className="mt-1 text-sm font-semibold">{preset.voice}</p>
+            </div>
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs font-medium uppercase text-muted-foreground">
+                Capture
+              </p>
+              <p className="mt-1 text-sm">
+                {[
+                  preset.captureOptions.saveTranscript ? "Transcript" : "",
+                  preset.captureOptions.recordAudio ? "Audio" : "",
+                ]
+                  .filter(Boolean)
+                  .join(" + ") || "Off"}
+              </p>
+            </div>
+            <div className="rounded-md border border-border p-3">
+              <p className="text-xs font-medium uppercase text-muted-foreground">
+                Last Call
+              </p>
+              <p className="mt-1 text-sm">
+                {formatDate(preset.lastIncomingAt)}
+              </p>
+            </div>
+          </div>
+          <div className="rounded-md border border-border p-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                AI Instructions
+              </Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5 px-2 text-xs"
+                onClick={() => setIsEditingInstructions(true)}
+                data-ocid={`answering.preset.instructions_edit_button.${preset.id.toString()}`}
+              >
+                <Pencil className="h-3 w-3" />
+                Edit
+              </Button>
+            </div>
+            <p className="line-clamp-3 whitespace-pre-line text-sm text-muted-foreground">
+              {preset.systemPrompt}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold uppercase text-muted-foreground">
+              Twilio Voice Webhook
+            </Label>
+            <div className="flex gap-2">
+              <Input
+                value={url || "Voice server URL is not configured"}
+                readOnly
               />
-              <span className="text-xs text-muted-foreground">
-                {preset.enabled ? "On" : "Off"}
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={!url}
+                onClick={() => {
+                  void copyTextToClipboard(url);
+                  toast.success("Webhook URL copied");
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            {!isVerified && (
+              <p className="text-xs text-muted-foreground">
+                Set this URL as the number’s Voice webhook in Twilio, then call
+                the number once. The first webhook confirms the number.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      <Dialog
+        open={isEditingInstructions}
+        onOpenChange={(open) => {
+          setIsEditingInstructions(open);
+          if (!open) setDraftInstructions(preset.systemPrompt);
+        }}
+      >
+        <DialogContent
+          data-ocid={`answering.preset.instructions_dialog.${preset.id.toString()}`}
+        >
+          <DialogHeader>
+            <DialogTitle>Edit AI Instructions</DialogTitle>
+            <DialogDescription>{preset.name}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label
+              htmlFor={`answering-preset-instructions-${preset.id.toString()}`}
+            >
+              Instructions
+            </Label>
+            <Textarea
+              id={`answering-preset-instructions-${preset.id.toString()}`}
+              value={draftInstructions}
+              onChange={(event) => setDraftInstructions(event.target.value)}
+              rows={8}
+              maxLength={MAX_AI_INSTRUCTIONS_CHARS}
+              data-ocid={`answering.preset.instructions_textarea.${preset.id.toString()}`}
+              className="resize-none font-mono text-xs leading-relaxed"
+            />
+            <div className="flex justify-end">
+              <span className="text-[11px] text-muted-foreground font-mono">
+                {trimmedDraftInstructions.length}/{MAX_AI_INSTRUCTIONS_CHARS}
               </span>
             </div>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              onClick={() => void remove()}
-              disabled={deletePreset.isPending}
-            >
-              {deletePreset.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-            </Button>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-md border border-border p-3">
-            <p className="text-xs font-medium uppercase text-muted-foreground">
-              Voice
-            </p>
-            <p className="mt-1 text-sm font-semibold">{preset.voice}</p>
-          </div>
-          <div className="rounded-md border border-border p-3">
-            <p className="text-xs font-medium uppercase text-muted-foreground">
-              Capture
-            </p>
-            <p className="mt-1 text-sm">
-              {[
-                preset.captureOptions.saveTranscript ? "Transcript" : "",
-                preset.captureOptions.recordAudio ? "Audio" : "",
-              ]
-                .filter(Boolean)
-                .join(" + ") || "Off"}
-            </p>
-          </div>
-          <div className="rounded-md border border-border p-3">
-            <p className="text-xs font-medium uppercase text-muted-foreground">
-              Last Call
-            </p>
-            <p className="mt-1 text-sm">{formatDate(preset.lastIncomingAt)}</p>
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label className="text-xs font-semibold uppercase text-muted-foreground">
-            Twilio Voice Webhook
-          </Label>
-          <div className="flex gap-2">
-            <Input
-              value={url || "Voice server URL is not configured"}
-              readOnly
-            />
+          <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              size="icon"
-              disabled={!url}
               onClick={() => {
-                void copyTextToClipboard(url);
-                toast.success("Webhook URL copied");
+                setIsEditingInstructions(false);
+                setDraftInstructions(preset.systemPrompt);
               }}
+              data-ocid={`answering.preset.instructions_cancel_button.${preset.id.toString()}`}
             >
-              <Copy className="h-4 w-4" />
+              Cancel
             </Button>
-          </div>
-          {!isVerified && (
-            <p className="text-xs text-muted-foreground">
-              Set this URL as the number’s Voice webhook in Twilio, then call
-              the number once. The first webhook confirms the number.
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            <Button
+              type="button"
+              onClick={() => void saveInstructions()}
+              disabled={!canSaveInstructions || updateInstructions.isPending}
+              data-ocid={`answering.preset.instructions_save_button.${preset.id.toString()}`}
+              className="gap-2"
+            >
+              {updateInstructions.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Pencil className="h-4 w-4" />
+              )}
+              Save Instructions
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -431,6 +579,15 @@ export default function AnsweringServicePage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const systemPrompt = input.systemPrompt.trim();
+    if (!systemPrompt) {
+      toast.error("AI answering instructions are required");
+      return;
+    }
+    if (systemPrompt.length > MAX_AI_INSTRUCTIONS_CHARS) {
+      toast.error("AI instructions must be 8000 characters or fewer");
+      return;
+    }
     if (!validateE164(input.phoneNumber)) {
       toast.error("Enter the Twilio number in E.164 format");
       return;
@@ -439,7 +596,11 @@ export default function AnsweringServicePage() {
       toast.error("Confirm caller consent before saving call artifacts");
       return;
     }
-    const result = await createPreset.mutateAsync(input);
+    const result = await createPreset.mutateAsync({
+      ...input,
+      name: input.name.trim(),
+      systemPrompt,
+    });
     if (result.__kind__ === "err") {
       toast.error(result.err);
       return;
@@ -534,6 +695,7 @@ export default function AnsweringServicePage() {
                           })
                         }
                         rows={5}
+                        maxLength={MAX_AI_INSTRUCTIONS_CHARS}
                         className="resize-none font-mono text-xs"
                         placeholder="You answer calls for a small design studio. Ask for the caller's name, reason for calling, and preferred callback time."
                         required
