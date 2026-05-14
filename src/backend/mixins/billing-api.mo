@@ -13,7 +13,10 @@ mixin (
   billingState : BillingLib.State,
   callsState : CallsLib.State,
   configState : ConfigLib.State,
+  answeringState : ConfigLib.AnsweringState,
 ) {
+  let ANSWERING_PRESET_ID_OFFSET : Nat = 1_000_000_000;
+
   public query ({ caller }) func getMyBillingStatus() : async BillingTypes.BillingStatus {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: must be logged in");
@@ -160,6 +163,72 @@ mixin (
       };
     };
     reservation;
+  };
+
+  public shared ({ caller }) func reserveIncomingAnsweringCall(
+    webhookSecret : Text,
+    callerPhone : Text,
+    twilioToNumber : Text,
+    callSid : Text,
+  ) : async BillingTypes.ReserveCallResult {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
+    switch (ConfigLib.getAnsweringPresetForIncoming(answeringState, webhookSecret, twilioToNumber)) {
+      case (#err(message)) { return #err(message) };
+      case (#ok(preset)) {
+        let available = BillingLib.getAvailableSeconds(billingState, preset.ownerId);
+        if (available == 0) {
+          return #err("No prepaid phone time is available for this answering preset.");
+        };
+
+        let callPresetId = preset.id + ANSWERING_PRESET_ID_OFFSET;
+        let callRecord = CallsLib.createCallRecord(
+          callsState,
+          preset.ownerId,
+          callerPhone,
+          callPresetId,
+        );
+        let reservation = BillingLib.createReservation(
+          billingState,
+          preset.ownerId,
+          callerPhone,
+          callPresetId,
+          callRecord.id,
+        );
+        switch (reservation) {
+          case (#ok(reserved)) {
+            ignore BillingLib.markReservationStarted(billingState, reserved.id, callSid);
+            ignore CallsLib.updateCallRecord(
+              callsState,
+              callRecord.id,
+              #inProgress,
+              ?callSid,
+              null,
+              null,
+            );
+            ConfigLib.markAnsweringPresetIncoming(answeringState, preset.id);
+            CallsLib.addSystemLog(
+              callsState,
+              #info,
+              "Reserved " # debug_show(reserved.allowedSeconds) # " paid seconds for incoming answering call " # callSid,
+              ?callRecord.id,
+            );
+          };
+          case (#err(message)) {
+            ignore CallsLib.updateCallRecord(
+              callsState,
+              callRecord.id,
+              #failed,
+              ?callSid,
+              ?Time.now(),
+              ?message,
+            );
+          };
+        };
+        reservation;
+      };
+    };
   };
 
   public shared ({ caller }) func verifyCallReservation(

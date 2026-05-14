@@ -7,6 +7,8 @@ import Nat "mo:core/Nat";
 import Int "mo:core/Int";
 import Array "mo:core/Array";
 import Order "mo:core/Order";
+import Text "mo:core/Text";
+import Iter "mo:core/Iter";
 import Types "../types/calls";
 import Common "../types/common";
 
@@ -18,12 +20,22 @@ module {
     systemLogs : List.List<Types.SystemLog>;
   };
 
+  public type AnsweringLiveState = {
+    activeSessions : Map.Map<Text, Types.AnsweringLiveSession>;
+  };
+
   public func initState() : State {
     {
       callRecords = Map.empty<Common.CallId, Types.CallRecord>();
       userCallIndex = Map.empty<Principal, List.List<Common.CallId>>();
       nextCallId = { var value = 1 };
       systemLogs = List.empty<Types.SystemLog>();
+    };
+  };
+
+  public func initAnsweringLiveState() : AnsweringLiveState {
+    {
+      activeSessions = Map.empty<Text, Types.AnsweringLiveSession>();
     };
   };
 
@@ -150,5 +162,34 @@ module {
     let total = state.systemLogs.size();
     let start : Nat = if (total > limit) { total - limit } else { 0 };
     Array.reverse(state.systemLogs.sliceToArray(start, total));
+  };
+
+  public func registerAnsweringLiveSession(
+    state : AnsweringLiveState,
+    session : Types.AnsweringLiveSession,
+  ) {
+    state.activeSessions.add(session.sessionId, session);
+  };
+
+  public func removeAnsweringLiveSession(
+    state : AnsweringLiveState,
+    sessionId : Text,
+  ) : Bool {
+    switch (state.activeSessions.get(sessionId)) {
+      case null { false };
+      case (?_) {
+        state.activeSessions.remove(sessionId);
+        true;
+      };
+    };
+  };
+
+  public func listAnsweringLiveSessionsForUser(
+    state : AnsweringLiveState,
+    userId : Principal,
+  ) : [Types.AnsweringLiveSession] {
+    state.activeSessions.values()
+      .filter(func(session) { Principal.equal(session.userId, userId) })
+      .toArray();
   };
 };

@@ -12,7 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useListMyCalls, useListMyPresets } from "@/hooks/use-backend";
+import {
+  useListMyAnsweringPresets,
+  useListMyCalls,
+  useListMyPresets,
+} from "@/hooks/use-backend";
 import { getRecordingAccessUrl } from "@/lib/voice-server";
 import type { CallRecordPublic } from "@/types";
 import { useNavigate } from "@tanstack/react-router";
@@ -29,6 +33,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 const PAGE_SIZE = 15;
+const ANSWERING_PRESET_ID_OFFSET = 1_000_000_000n;
 
 function formatDuration(start: bigint, end?: bigint): string {
   if (!end) return "—";
@@ -183,12 +188,19 @@ export default function HistoryPage() {
   const navigate = useNavigate();
   const { data: calls, isLoading } = useListMyCalls();
   const { data: presets } = useListMyPresets();
+  const { data: answeringPresets } = useListMyAnsweringPresets();
 
   const presetMap = useMemo(() => {
     const m = new Map<string, string>();
     for (const p of presets ?? []) m.set(p.id.toString(), p.name);
+    for (const p of answeringPresets ?? []) {
+      m.set(
+        (p.id + ANSWERING_PRESET_ID_OFFSET).toString(),
+        `${p.name} (answering)`,
+      );
+    }
     return m;
-  }, [presets]);
+  }, [presets, answeringPresets]);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CallStatus | "all">("all");

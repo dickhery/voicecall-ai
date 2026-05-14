@@ -14,6 +14,7 @@ import { Route as AdminDashboardImport } from "./routes/admin/dashboard";
 import { Route as AdminLogsImport } from "./routes/admin/logs";
 import { Route as AdminUsersImport } from "./routes/admin/users";
 import { Route as IndexImport } from "./routes/index";
+import { Route as UserAnsweringImport } from "./routes/user/answering";
 import { Route as UserDashboardImport } from "./routes/user/dashboard";
 import { Route as UserHistoryImport } from "./routes/user/history";
 import { Route as UserSettingsImport } from "./routes/user/settings";
@@ -27,6 +28,12 @@ const IndexRoute = IndexImport.update({
 const UserDashboardRoute = UserDashboardImport.update({
   id: "/user/dashboard",
   path: "/user/dashboard",
+  getParentRoute: () => rootRoute,
+} as never);
+
+const UserAnsweringRoute = UserAnsweringImport.update({
+  id: "/user/answering",
+  path: "/user/answering",
   getParentRoute: () => rootRoute,
 } as never);
 
@@ -62,6 +69,7 @@ const AdminLogsRoute = AdminLogsImport.update({
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute;
+  "/user/answering": typeof UserAnsweringRoute;
   "/user/dashboard": typeof UserDashboardRoute;
   "/user/history": typeof UserHistoryRoute;
   "/user/settings": typeof UserSettingsRoute;
@@ -72,6 +80,7 @@ export interface FileRoutesByFullPath {
 
 export interface FileRoutesByTo {
   "/": typeof IndexRoute;
+  "/user/answering": typeof UserAnsweringRoute;
   "/user/dashboard": typeof UserDashboardRoute;
   "/user/history": typeof UserHistoryRoute;
   "/user/settings": typeof UserSettingsRoute;
@@ -83,6 +92,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRoute;
   "/": typeof IndexRoute;
+  "/user/answering": typeof UserAnsweringRoute;
   "/user/dashboard": typeof UserDashboardRoute;
   "/user/history": typeof UserHistoryRoute;
   "/user/settings": typeof UserSettingsRoute;
@@ -95,6 +105,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
     | "/"
+    | "/user/answering"
     | "/user/dashboard"
     | "/user/history"
     | "/user/settings"
@@ -104,6 +115,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo;
   to:
     | "/"
+    | "/user/answering"
     | "/user/dashboard"
     | "/user/history"
     | "/user/settings"
@@ -113,6 +125,7 @@ export interface FileRouteTypes {
   id:
     | "__root__"
     | "/"
+    | "/user/answering"
     | "/user/dashboard"
     | "/user/history"
     | "/user/settings"
@@ -124,6 +137,7 @@ export interface FileRouteTypes {
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute;
+  UserAnsweringRoute: typeof UserAnsweringRoute;
   UserDashboardRoute: typeof UserDashboardRoute;
   UserHistoryRoute: typeof UserHistoryRoute;
   UserSettingsRoute: typeof UserSettingsRoute;
@@ -134,6 +148,7 @@ export interface RootRouteChildren {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute,
+  UserAnsweringRoute,
   UserDashboardRoute,
   UserHistoryRoute,
   UserSettingsRoute,

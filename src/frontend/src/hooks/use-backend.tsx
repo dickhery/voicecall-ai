@@ -1,5 +1,7 @@
 import { type CallStatus, createActor } from "@/backend";
 import type {
+  AnsweringPresetInput,
+  AnsweringPresetMutationResult,
   BillingMutationResult,
   BillingStatus,
   CallId,
@@ -14,6 +16,8 @@ import type {
 } from "@/backend";
 import type {
   AdminConfig,
+  AnsweringLiveSession,
+  AnsweringPreset,
   CallPreset,
   CallPresetInput,
   CallRecordPublic,
@@ -121,6 +125,92 @@ export function useDuplicatePreset() {
       return actor.duplicatePreset(id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["myPresets"] }),
+  });
+}
+
+export function useListMyAnsweringPresets() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery<AnsweringPreset[]>({
+    queryKey: ["myAnsweringPresets"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.listMyAnsweringPresets();
+    },
+    enabled: !!actor && !isFetching,
+    refetchInterval: 5000,
+  });
+}
+
+export function useCreateAnsweringPreset() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<
+    AnsweringPresetMutationResult,
+    Error,
+    AnsweringPresetInput
+  >({
+    mutationFn: async (input) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.createAnsweringPreset(input);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myAnsweringPresets"] }),
+  });
+}
+
+export function useUpdateAnsweringPreset() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<
+    AnsweringPresetMutationResult,
+    Error,
+    { id: PresetId; input: AnsweringPresetInput }
+  >({
+    mutationFn: async ({ id, input }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.updateAnsweringPreset(id, input);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myAnsweringPresets"] }),
+  });
+}
+
+export function useDeleteAnsweringPreset() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<boolean, Error, PresetId>({
+    mutationFn: async (id) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.deleteAnsweringPreset(id);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myAnsweringPresets"] }),
+  });
+}
+
+export function useSetAnsweringPresetEnabled() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation<
+    AnsweringPresetMutationResult,
+    Error,
+    { id: PresetId; enabled: boolean }
+  >({
+    mutationFn: async ({ id, enabled }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.setAnsweringPresetEnabled(id, enabled);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myAnsweringPresets"] }),
+  });
+}
+
+export function useListMyAnsweringLiveSessions() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery<AnsweringLiveSession[]>({
+    queryKey: ["myAnsweringLiveSessions"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.listMyAnsweringLiveSessions();
+    },
+    enabled: !!actor && !isFetching,
+    refetchInterval: 3000,
   });
 }
 

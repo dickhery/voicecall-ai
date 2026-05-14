@@ -106,6 +106,63 @@ export const CallPreset = IDL.Record({
   'turnDetection' : TurnDetection,
   'audioFormat' : AudioFormat,
 });
+export const AnsweringPresetStatus = IDL.Variant({
+  'pendingVerification' : IDL.Null,
+  'verified' : IDL.Null,
+});
+export const AnsweringCaptureOptions = IDL.Record({
+  'saveTranscript' : IDL.Bool,
+  'recordAudio' : IDL.Bool,
+  'consentConfirmed' : IDL.Bool,
+});
+export const AnsweringPreset = IDL.Record({
+  'id' : IDL.Nat,
+  'ownerId' : IDL.Principal,
+  'name' : IDL.Text,
+  'phoneNumber' : IDL.Text,
+  'systemPrompt' : IDL.Text,
+  'voice' : Voice,
+  'turnDetection' : TurnDetection,
+  'audioFormat' : AudioFormat,
+  'sampleRate' : SampleRate,
+  'toolsEnabled' : ToolsEnabled,
+  'captureOptions' : AnsweringCaptureOptions,
+  'enabled' : IDL.Bool,
+  'verificationStatus' : AnsweringPresetStatus,
+  'webhookSecret' : IDL.Text,
+  'createdAt' : IDL.Int,
+  'updatedAt' : IDL.Int,
+  'verifiedAt' : IDL.Opt(IDL.Int),
+  'lastIncomingAt' : IDL.Opt(IDL.Int),
+});
+export const AnsweringPresetInput = IDL.Record({
+  'name' : IDL.Text,
+  'phoneNumber' : IDL.Text,
+  'systemPrompt' : IDL.Text,
+  'voice' : Voice,
+  'turnDetection' : TurnDetection,
+  'audioFormat' : AudioFormat,
+  'sampleRate' : SampleRate,
+  'toolsEnabled' : ToolsEnabled,
+  'captureOptions' : AnsweringCaptureOptions,
+  'enabled' : IDL.Bool,
+  'webhookSecret' : IDL.Text,
+});
+export const AnsweringPresetMutationResult = IDL.Variant({
+  'ok' : AnsweringPreset,
+  'err' : IDL.Text,
+});
+export const AnsweringLiveSession = IDL.Record({
+  'sessionId' : IDL.Text,
+  'monitorToken' : IDL.Text,
+  'callSid' : IDL.Text,
+  'userId' : IDL.Principal,
+  'answeringPresetId' : IDL.Nat,
+  'answeringPresetName' : IDL.Text,
+  'callerPhone' : IDL.Text,
+  'startedAt' : IDL.Int,
+  'allowedSeconds' : IDL.Nat,
+});
 export const PresetId = IDL.Nat;
 export const CallId = IDL.Nat;
 export const EphemeralTokenResult = IDL.Variant({
@@ -229,6 +286,11 @@ export const idlService = IDL.Service({
       [BillingMutationResult],
       [],
     ),
+  'createAnsweringPreset' : IDL.Func(
+      [AnsweringPresetInput],
+      [AnsweringPresetMutationResult],
+      [],
+    ),
   'createPreset' : IDL.Func([CallPresetInput], [CallPreset], []),
   'createPurchaseIntent' : IDL.Func(
       [IDL.Text],
@@ -240,6 +302,7 @@ export const idlService = IDL.Service({
       [BillingMutationResult],
       [],
     ),
+  'deleteAnsweringPreset' : IDL.Func([PresetId], [IDL.Bool], []),
   'deletePreset' : IDL.Func([PresetId], [IDL.Bool], []),
   'duplicatePreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], []),
   'finishCallAndDebit' : IDL.Func(
@@ -264,6 +327,11 @@ export const idlService = IDL.Service({
   'getBillingPackages' : IDL.Func([], [IDL.Vec(BillingPackage)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getEphemeralToken' : IDL.Func([PresetId], [EphemeralTokenResult], []),
+  'getAnsweringPreset' : IDL.Func(
+      [PresetId],
+      [IDL.Opt(AnsweringPreset)],
+      ['query'],
+    ),
   'getMyBillingStatus' : IDL.Func([], [BillingStatus], ['query']),
   'getPreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], ['query']),
   'getPurchaseIntentForServer' : IDL.Func(
@@ -276,8 +344,23 @@ export const idlService = IDL.Service({
       [IDL.Vec(IDL.Text)],
       ['query'],
     ),
+  'getAnsweringPresetForServer' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Opt(AnsweringPreset)],
+      ['query'],
+    ),
   'initiateCall' : IDL.Func([InitiateCallInput], [InitiateCallResult], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'listMyAnsweringLiveSessions' : IDL.Func(
+      [],
+      [IDL.Vec(AnsweringLiveSession)],
+      ['query'],
+    ),
+  'listMyAnsweringPresets' : IDL.Func(
+      [],
+      [IDL.Vec(AnsweringPreset)],
+      ['query'],
+    ),
   'listMyCalls' : IDL.Func([], [IDL.Vec(CallRecordPublic)], ['query']),
   'listMyPresets' : IDL.Func([], [IDL.Vec(CallPreset)], ['query']),
   'markReservationStarted' : IDL.Func(
@@ -291,7 +374,17 @@ export const idlService = IDL.Service({
       [],
     ),
   'reserveCall' : IDL.Func([InitiateCallInput], [ReserveCallResult], []),
+  'reserveIncomingAnsweringCall' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [ReserveCallResult],
+      [],
+    ),
   'setAdminConfig' : IDL.Func([IDL.Text, IDL.Text, IDL.Text, IDL.Text], [], []),
+  'setAnsweringPresetEnabled' : IDL.Func(
+      [PresetId, IDL.Bool],
+      [AnsweringPresetMutationResult],
+      [],
+    ),
   'setTwilioLine' : IDL.Func(
       [TwilioLineInput],
       [TwilioLineMutationResult],
@@ -313,9 +406,29 @@ export const idlService = IDL.Service({
       [IDL.Bool],
       [],
     ),
+  'updateAnsweringPreset' : IDL.Func(
+      [PresetId, AnsweringPresetInput],
+      [AnsweringPresetMutationResult],
+      [],
+    ),
   'updatePreset' : IDL.Func(
       [PresetId, CallPresetInput],
       [IDL.Opt(CallPreset)],
+      [],
+    ),
+  'verifyAnsweringPresetForServer' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [AnsweringPresetMutationResult],
+      [],
+    ),
+  'registerAnsweringLiveSessionForServer' : IDL.Func(
+      [AnsweringLiveSession],
+      [IDL.Bool],
+      [],
+    ),
+  'finishAnsweringLiveSessionForServer' : IDL.Func(
+      [IDL.Text],
+      [IDL.Bool],
       [],
     ),
 });
@@ -420,6 +533,63 @@ export const idlFactory = ({ IDL }) => {
     'systemPrompt' : IDL.Text,
     'turnDetection' : TurnDetection,
     'audioFormat' : AudioFormat,
+  });
+  const AnsweringPresetStatus = IDL.Variant({
+    'pendingVerification' : IDL.Null,
+    'verified' : IDL.Null,
+  });
+  const AnsweringCaptureOptions = IDL.Record({
+    'saveTranscript' : IDL.Bool,
+    'recordAudio' : IDL.Bool,
+    'consentConfirmed' : IDL.Bool,
+  });
+  const AnsweringPreset = IDL.Record({
+    'id' : IDL.Nat,
+    'ownerId' : IDL.Principal,
+    'name' : IDL.Text,
+    'phoneNumber' : IDL.Text,
+    'systemPrompt' : IDL.Text,
+    'voice' : Voice,
+    'turnDetection' : TurnDetection,
+    'audioFormat' : AudioFormat,
+    'sampleRate' : SampleRate,
+    'toolsEnabled' : ToolsEnabled,
+    'captureOptions' : AnsweringCaptureOptions,
+    'enabled' : IDL.Bool,
+    'verificationStatus' : AnsweringPresetStatus,
+    'webhookSecret' : IDL.Text,
+    'createdAt' : IDL.Int,
+    'updatedAt' : IDL.Int,
+    'verifiedAt' : IDL.Opt(IDL.Int),
+    'lastIncomingAt' : IDL.Opt(IDL.Int),
+  });
+  const AnsweringPresetInput = IDL.Record({
+    'name' : IDL.Text,
+    'phoneNumber' : IDL.Text,
+    'systemPrompt' : IDL.Text,
+    'voice' : Voice,
+    'turnDetection' : TurnDetection,
+    'audioFormat' : AudioFormat,
+    'sampleRate' : SampleRate,
+    'toolsEnabled' : ToolsEnabled,
+    'captureOptions' : AnsweringCaptureOptions,
+    'enabled' : IDL.Bool,
+    'webhookSecret' : IDL.Text,
+  });
+  const AnsweringPresetMutationResult = IDL.Variant({
+    'ok' : AnsweringPreset,
+    'err' : IDL.Text,
+  });
+  const AnsweringLiveSession = IDL.Record({
+    'sessionId' : IDL.Text,
+    'monitorToken' : IDL.Text,
+    'callSid' : IDL.Text,
+    'userId' : IDL.Principal,
+    'answeringPresetId' : IDL.Nat,
+    'answeringPresetName' : IDL.Text,
+    'callerPhone' : IDL.Text,
+    'startedAt' : IDL.Int,
+    'allowedSeconds' : IDL.Nat,
   });
   const PresetId = IDL.Nat;
   const CallId = IDL.Nat;
@@ -541,6 +711,11 @@ export const idlFactory = ({ IDL }) => {
         [BillingMutationResult],
         [],
       ),
+    'createAnsweringPreset' : IDL.Func(
+        [AnsweringPresetInput],
+        [AnsweringPresetMutationResult],
+        [],
+      ),
     'createPreset' : IDL.Func([CallPresetInput], [CallPreset], []),
     'createPurchaseIntent' : IDL.Func(
         [IDL.Text],
@@ -552,6 +727,7 @@ export const idlFactory = ({ IDL }) => {
         [BillingMutationResult],
         [],
       ),
+    'deleteAnsweringPreset' : IDL.Func([PresetId], [IDL.Bool], []),
     'deletePreset' : IDL.Func([PresetId], [IDL.Bool], []),
     'duplicatePreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], []),
     'finishCallAndDebit' : IDL.Func(
@@ -580,6 +756,11 @@ export const idlFactory = ({ IDL }) => {
     'getBillingPackages' : IDL.Func([], [IDL.Vec(BillingPackage)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getEphemeralToken' : IDL.Func([PresetId], [EphemeralTokenResult], []),
+    'getAnsweringPreset' : IDL.Func(
+        [PresetId],
+        [IDL.Opt(AnsweringPreset)],
+        ['query'],
+      ),
     'getMyBillingStatus' : IDL.Func([], [BillingStatus], ['query']),
     'getPreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], ['query']),
     'getPurchaseIntentForServer' : IDL.Func(
@@ -592,8 +773,23 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(IDL.Text)],
         ['query'],
       ),
+    'getAnsweringPresetForServer' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [IDL.Opt(AnsweringPreset)],
+        ['query'],
+      ),
     'initiateCall' : IDL.Func([InitiateCallInput], [InitiateCallResult], []),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'listMyAnsweringLiveSessions' : IDL.Func(
+        [],
+        [IDL.Vec(AnsweringLiveSession)],
+        ['query'],
+      ),
+    'listMyAnsweringPresets' : IDL.Func(
+        [],
+        [IDL.Vec(AnsweringPreset)],
+        ['query'],
+      ),
     'listMyCalls' : IDL.Func([], [IDL.Vec(CallRecordPublic)], ['query']),
     'listMyPresets' : IDL.Func([], [IDL.Vec(CallPreset)], ['query']),
     'markReservationStarted' : IDL.Func(
@@ -607,9 +803,19 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'reserveCall' : IDL.Func([InitiateCallInput], [ReserveCallResult], []),
+    'reserveIncomingAnsweringCall' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [ReserveCallResult],
+        [],
+      ),
     'setAdminConfig' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
         [],
+        [],
+      ),
+    'setAnsweringPresetEnabled' : IDL.Func(
+        [PresetId, IDL.Bool],
+        [AnsweringPresetMutationResult],
         [],
       ),
     'setTwilioLine' : IDL.Func(
@@ -633,9 +839,29 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Bool],
         [],
       ),
+    'updateAnsweringPreset' : IDL.Func(
+        [PresetId, AnsweringPresetInput],
+        [AnsweringPresetMutationResult],
+        [],
+      ),
     'updatePreset' : IDL.Func(
         [PresetId, CallPresetInput],
         [IDL.Opt(CallPreset)],
+        [],
+      ),
+    'verifyAnsweringPresetForServer' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [AnsweringPresetMutationResult],
+        [],
+      ),
+    'registerAnsweringLiveSessionForServer' : IDL.Func(
+        [AnsweringLiveSession],
+        [IDL.Bool],
+        [],
+      ),
+    'finishAnsweringLiveSessionForServer' : IDL.Func(
+        [IDL.Text],
+        [IDL.Bool],
         [],
       ),
   });

@@ -1,4 +1,5 @@
 import Runtime "mo:core/Runtime";
+import Principal "mo:core/Principal";
 import AccessControl "mo:caffeineai-authorization/access-control";
 import ConfigLib "../lib/config";
 import ConfigTypes "../types/config";
@@ -8,6 +9,7 @@ mixin (
   accessControlState : AccessControl.AccessControlState,
   configState : ConfigLib.State,
   twilioLineState : ConfigLib.TwilioLineState,
+  answeringState : ConfigLib.AnsweringState,
 ) {
   // Admin: view current service config (masked secrets)
   public query ({ caller }) func getAdminConfig() : async {
@@ -123,5 +125,87 @@ mixin (
       Runtime.trap("Unauthorized: must be logged in");
     };
     ConfigLib.duplicatePreset(configState, caller, id);
+  };
+
+  public shared ({ caller }) func createAnsweringPreset(
+    input : ConfigTypes.AnsweringPresetInput,
+  ) : async ConfigTypes.AnsweringPresetMutationResult {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: must be logged in");
+    };
+    ConfigLib.createAnsweringPreset(answeringState, caller, input);
+  };
+
+  public query ({ caller }) func listMyAnsweringPresets() : async [ConfigTypes.AnsweringPreset] {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: must be logged in");
+    };
+    ConfigLib.listAnsweringPresetsForUser(answeringState, caller);
+  };
+
+  public query ({ caller }) func getAnsweringPreset(
+    id : Common.PresetId,
+  ) : async ?ConfigTypes.AnsweringPreset {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: must be logged in");
+    };
+    switch (ConfigLib.getAnsweringPreset(answeringState, id)) {
+      case null { null };
+      case (?preset) {
+        if (not Principal.equal(preset.ownerId, caller) and not AccessControl.isAdmin(accessControlState, caller)) {
+          Runtime.trap("Unauthorized: can only view your own answering presets");
+        };
+        ?preset;
+      };
+    };
+  };
+
+  public shared ({ caller }) func updateAnsweringPreset(
+    id : Common.PresetId,
+    input : ConfigTypes.AnsweringPresetInput,
+  ) : async ConfigTypes.AnsweringPresetMutationResult {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: must be logged in");
+    };
+    ConfigLib.updateAnsweringPreset(answeringState, caller, id, input);
+  };
+
+  public shared ({ caller }) func deleteAnsweringPreset(
+    id : Common.PresetId,
+  ) : async Bool {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: must be logged in");
+    };
+    ConfigLib.deleteAnsweringPreset(answeringState, caller, id);
+  };
+
+  public shared ({ caller }) func setAnsweringPresetEnabled(
+    id : Common.PresetId,
+    enabled : Bool,
+  ) : async ConfigTypes.AnsweringPresetMutationResult {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: must be logged in");
+    };
+    ConfigLib.setAnsweringPresetEnabled(answeringState, caller, id, enabled);
+  };
+
+  public query ({ caller }) func getAnsweringPresetForServer(
+    webhookSecret : Text,
+    phoneNumber : Text,
+  ) : async ?ConfigTypes.AnsweringPreset {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
+    ConfigLib.getAnsweringPresetForServer(answeringState, webhookSecret, phoneNumber);
+  };
+
+  public shared ({ caller }) func verifyAnsweringPresetForServer(
+    webhookSecret : Text,
+    phoneNumber : Text,
+  ) : async ConfigTypes.AnsweringPresetMutationResult {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
+    ConfigLib.verifyAnsweringPresetForServer(answeringState, webhookSecret, phoneNumber);
   };
 };

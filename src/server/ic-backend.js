@@ -21,6 +21,80 @@ const CallReservationStatus = IDL.Variant({
   canceled: IDL.Null,
 });
 
+const Voice = IDL.Variant({
+  eve: IDL.Null,
+  ara: IDL.Null,
+  rex: IDL.Null,
+  sal: IDL.Null,
+  leo: IDL.Null,
+});
+
+const AudioFormat = IDL.Variant({
+  pcmu: IDL.Null,
+  pcm: IDL.Null,
+  pcma: IDL.Null,
+});
+
+const SampleRate = IDL.Variant({
+  hz8000: IDL.Null,
+  hz16000: IDL.Null,
+  hz22050: IDL.Null,
+  hz24000: IDL.Null,
+  hz32000: IDL.Null,
+  hz44100: IDL.Null,
+  hz48000: IDL.Null,
+});
+
+const TurnDetection = IDL.Record({
+  serverVad: IDL.Bool,
+  threshold: IDL.Float64,
+  silenceDurationMs: IDL.Nat,
+  prefixPaddingMs: IDL.Nat,
+});
+
+const ToolsEnabled = IDL.Record({
+  webSearch: IDL.Bool,
+  xSearch: IDL.Bool,
+  functionCalling: IDL.Bool,
+});
+
+const AnsweringPresetStatus = IDL.Variant({
+  pendingVerification: IDL.Null,
+  verified: IDL.Null,
+});
+
+const AnsweringCaptureOptions = IDL.Record({
+  saveTranscript: IDL.Bool,
+  recordAudio: IDL.Bool,
+  consentConfirmed: IDL.Bool,
+});
+
+const AnsweringPreset = IDL.Record({
+  id: IDL.Nat,
+  ownerId: IDL.Principal,
+  name: IDL.Text,
+  phoneNumber: IDL.Text,
+  systemPrompt: IDL.Text,
+  voice: Voice,
+  turnDetection: TurnDetection,
+  audioFormat: AudioFormat,
+  sampleRate: SampleRate,
+  toolsEnabled: ToolsEnabled,
+  captureOptions: AnsweringCaptureOptions,
+  enabled: IDL.Bool,
+  verificationStatus: AnsweringPresetStatus,
+  webhookSecret: IDL.Text,
+  createdAt: IDL.Int,
+  updatedAt: IDL.Int,
+  verifiedAt: IDL.Opt(IDL.Int),
+  lastIncomingAt: IDL.Opt(IDL.Int),
+});
+
+const AnsweringPresetMutationResult = IDL.Variant({
+  ok: AnsweringPreset,
+  err: IDL.Text,
+});
+
 const PurchaseIntentPublic = IDL.Record({
   id: IDL.Text,
   user: IDL.Principal,
@@ -54,6 +128,18 @@ const CallReservationPublic = IDL.Record({
   canceledReason: IDL.Opt(IDL.Text),
 });
 
+const AnsweringLiveSession = IDL.Record({
+  sessionId: IDL.Text,
+  monitorToken: IDL.Text,
+  callSid: IDL.Text,
+  userId: IDL.Principal,
+  answeringPresetId: IDL.Nat,
+  answeringPresetName: IDL.Text,
+  callerPhone: IDL.Text,
+  startedAt: IDL.Int,
+  allowedSeconds: IDL.Nat,
+});
+
 const ReserveCallResult = IDL.Variant({
   ok: CallReservationPublic,
   err: IDL.Text,
@@ -75,6 +161,31 @@ const idlFactory = ({ IDL }) =>
       [],
       [IDL.Vec(IDL.Text)],
       ["query"],
+    ),
+    getAnsweringPresetForServer: IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Opt(AnsweringPreset)],
+      ["query"],
+    ),
+    verifyAnsweringPresetForServer: IDL.Func(
+      [IDL.Text, IDL.Text],
+      [AnsweringPresetMutationResult],
+      [],
+    ),
+    reserveIncomingAnsweringCall: IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [ReserveCallResult],
+      [],
+    ),
+    registerAnsweringLiveSessionForServer: IDL.Func(
+      [AnsweringLiveSession],
+      [IDL.Bool],
+      [],
+    ),
+    finishAnsweringLiveSessionForServer: IDL.Func(
+      [IDL.Text],
+      [IDL.Bool],
+      [],
     ),
     creditPaidSeconds: IDL.Func(
       [IDL.Text, IDL.Text, IDL.Principal, IDL.Nat, StripeMode],
@@ -219,6 +330,57 @@ export function normalizeReservation(reservation) {
     allowedSeconds: Number(reservation.allowedSeconds),
     status: variantKey(reservation.status),
     callSid: unwrapOptional(reservation.callSid),
+  };
+}
+
+export function normalizeAnsweringPreset(preset) {
+  if (!preset) return null;
+  return {
+    id: preset.id.toString(),
+    ownerId: preset.ownerId.toText(),
+    name: preset.name,
+    phoneNumber: preset.phoneNumber,
+    systemPrompt: preset.systemPrompt,
+    voice: variantKey(preset.voice),
+    turnDetection: {
+      serverVad: preset.turnDetection.serverVad,
+      threshold: Number(preset.turnDetection.threshold ?? 0.5),
+      silenceDurationMs: Number(preset.turnDetection.silenceDurationMs ?? 500),
+      prefixPaddingMs: Number(preset.turnDetection.prefixPaddingMs ?? 200),
+    },
+    audioFormat: variantKey(preset.audioFormat),
+    sampleRate: variantKey(preset.sampleRate),
+    toolsEnabled: {
+      webSearch: Boolean(preset.toolsEnabled?.webSearch),
+      xSearch: Boolean(preset.toolsEnabled?.xSearch),
+      functionCalling: Boolean(preset.toolsEnabled?.functionCalling),
+    },
+    captureOptions: {
+      saveTranscript: Boolean(preset.captureOptions?.saveTranscript),
+      recordAudio: Boolean(preset.captureOptions?.recordAudio),
+      consentConfirmed: Boolean(preset.captureOptions?.consentConfirmed),
+    },
+    enabled: Boolean(preset.enabled),
+    verificationStatus: variantKey(preset.verificationStatus),
+    webhookSecret: preset.webhookSecret,
+    createdAt: preset.createdAt,
+    updatedAt: preset.updatedAt,
+    verifiedAt: unwrapOptional(preset.verifiedAt),
+    lastIncomingAt: unwrapOptional(preset.lastIncomingAt),
+  };
+}
+
+export function normalizeAnsweringLiveSession(session) {
+  return {
+    sessionId: session.sessionId,
+    monitorToken: session.monitorToken,
+    callSid: session.callSid,
+    userId: session.userId.toText(),
+    answeringPresetId: session.answeringPresetId.toString(),
+    answeringPresetName: session.answeringPresetName,
+    callerPhone: session.callerPhone,
+    startedAt: session.startedAt,
+    allowedSeconds: Number(session.allowedSeconds),
   };
 }
 

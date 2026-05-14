@@ -34,6 +34,59 @@ export interface CallPresetInput {
   'turnDetection' : TurnDetection,
   'audioFormat' : AudioFormat,
 }
+export type AnsweringPresetStatus = { 'pendingVerification' : null } |
+  { 'verified' : null };
+export interface AnsweringCaptureOptions {
+  'saveTranscript' : boolean,
+  'recordAudio' : boolean,
+  'consentConfirmed' : boolean,
+}
+export interface AnsweringPreset {
+  'id' : bigint,
+  'ownerId' : Principal,
+  'name' : string,
+  'phoneNumber' : string,
+  'systemPrompt' : string,
+  'voice' : Voice,
+  'turnDetection' : TurnDetection,
+  'audioFormat' : AudioFormat,
+  'sampleRate' : SampleRate,
+  'toolsEnabled' : ToolsEnabled,
+  'captureOptions' : AnsweringCaptureOptions,
+  'enabled' : boolean,
+  'verificationStatus' : AnsweringPresetStatus,
+  'webhookSecret' : string,
+  'createdAt' : bigint,
+  'updatedAt' : bigint,
+  'verifiedAt' : [] | [bigint],
+  'lastIncomingAt' : [] | [bigint],
+}
+export interface AnsweringPresetInput {
+  'name' : string,
+  'phoneNumber' : string,
+  'systemPrompt' : string,
+  'voice' : Voice,
+  'turnDetection' : TurnDetection,
+  'audioFormat' : AudioFormat,
+  'sampleRate' : SampleRate,
+  'toolsEnabled' : ToolsEnabled,
+  'captureOptions' : AnsweringCaptureOptions,
+  'enabled' : boolean,
+  'webhookSecret' : string,
+}
+export type AnsweringPresetMutationResult = { 'ok' : AnsweringPreset } |
+  { 'err' : string };
+export interface AnsweringLiveSession {
+  'sessionId' : string,
+  'monitorToken' : string,
+  'callSid' : string,
+  'userId' : Principal,
+  'answeringPresetId' : bigint,
+  'answeringPresetName' : string,
+  'callerPhone' : string,
+  'startedAt' : bigint,
+  'allowedSeconds' : bigint,
+}
 export interface CallRecordPublic {
   'id' : bigint,
   'startTime' : bigint,
@@ -190,6 +243,10 @@ export interface _SERVICE {
   'adminListUserCalls' : ActorMethod<[Principal], Array<CallRecordPublic>>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'cancelCallReservation' : ActorMethod<[string, string], BillingMutationResult>,
+  'createAnsweringPreset' : ActorMethod<
+    [AnsweringPresetInput],
+    AnsweringPresetMutationResult
+  >,
   'createPreset' : ActorMethod<[CallPresetInput], CallPreset>,
   'createPurchaseIntent' : ActorMethod<[string], CreatePurchaseIntentResult>,
   'creditPaidSeconds' : ActorMethod<
@@ -197,6 +254,7 @@ export interface _SERVICE {
     BillingMutationResult
   >,
   'deletePreset' : ActorMethod<[PresetId], boolean>,
+  'deleteAnsweringPreset' : ActorMethod<[PresetId], boolean>,
   'duplicatePreset' : ActorMethod<[PresetId], [] | [CallPreset]>,
   'finishCallAndDebit' : ActorMethod<
     [string, bigint, [] | [string], [] | [string]],
@@ -216,6 +274,7 @@ export interface _SERVICE {
   'getCallRecord' : ActorMethod<[CallId], [] | [CallRecordPublic]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getEphemeralToken' : ActorMethod<[PresetId], EphemeralTokenResult>,
+  'getAnsweringPreset' : ActorMethod<[PresetId], [] | [AnsweringPreset]>,
   'getMyBillingStatus' : ActorMethod<[], BillingStatus>,
   'getPreset' : ActorMethod<[PresetId], [] | [CallPreset]>,
   'getPurchaseIntentForServer' : ActorMethod<
@@ -223,14 +282,31 @@ export interface _SERVICE {
     [] | [PurchaseIntentPublic]
   >,
   'getTwilioLineNumbersForServer' : ActorMethod<[], Array<string>>,
+  'getAnsweringPresetForServer' : ActorMethod<
+    [string, string],
+    [] | [AnsweringPreset]
+  >,
   'initiateCall' : ActorMethod<[InitiateCallInput], InitiateCallResult>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'listMyAnsweringLiveSessions' : ActorMethod<
+    [],
+    Array<AnsweringLiveSession>
+  >,
+  'listMyAnsweringPresets' : ActorMethod<[], Array<AnsweringPreset>>,
   'listMyCalls' : ActorMethod<[], Array<CallRecordPublic>>,
   'listMyPresets' : ActorMethod<[], Array<CallPreset>>,
   'markReservationStarted' : ActorMethod<[string, string], BillingMutationResult>,
   'removeTwilioLine' : ActorMethod<[string], TwilioLineMutationResult>,
   'reserveCall' : ActorMethod<[InitiateCallInput], ReserveCallResult>,
+  'reserveIncomingAnsweringCall' : ActorMethod<
+    [string, string, string, string],
+    ReserveCallResult
+  >,
   'setAdminConfig' : ActorMethod<[string, string, string, string], undefined>,
+  'setAnsweringPresetEnabled' : ActorMethod<
+    [PresetId, boolean],
+    AnsweringPresetMutationResult
+  >,
   'setTwilioLine' : ActorMethod<[TwilioLineInput], TwilioLineMutationResult>,
   'setTwilioLineEnabled' : ActorMethod<
     [string, boolean],
@@ -242,7 +318,20 @@ export interface _SERVICE {
     [CallId, CallStatus, [] | [string]],
     boolean
   >,
+  'updateAnsweringPreset' : ActorMethod<
+    [PresetId, AnsweringPresetInput],
+    AnsweringPresetMutationResult
+  >,
   'updatePreset' : ActorMethod<[PresetId, CallPresetInput], [] | [CallPreset]>,
+  'verifyAnsweringPresetForServer' : ActorMethod<
+    [string, string],
+    AnsweringPresetMutationResult
+  >,
+  'registerAnsweringLiveSessionForServer' : ActorMethod<
+    [AnsweringLiveSession],
+    boolean
+  >,
+  'finishAnsweringLiveSessionForServer' : ActorMethod<[string], boolean>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

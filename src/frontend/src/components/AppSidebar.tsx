@@ -10,6 +10,7 @@ import {
   LogOut,
   Mic,
   Phone,
+  PhoneCall,
   ScrollText,
   Settings,
   ShieldCheck,
@@ -18,6 +19,7 @@ import {
 
 const userNav = [
   { label: "Dashboard", href: "/user/dashboard", icon: LayoutDashboard },
+  { label: "AI Answering", href: "/user/answering", icon: PhoneCall },
   { label: "Call History", href: "/user/history", icon: Phone },
   { label: "Settings", href: "/user/settings", icon: Settings },
 ];

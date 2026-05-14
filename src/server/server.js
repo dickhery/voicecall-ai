@@ -10,6 +10,7 @@ import WebSocket, { WebSocketServer } from "ws";
 import {
   getBackendActor,
   getIcpServerPrincipalText,
+  normalizeAnsweringPreset,
   normalizePurchaseIntent,
   normalizeReservation,
   okOrThrow,
@@ -24,10 +25,13 @@ const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
 const TRANSCRIPT_FINISH_GRACE_MS = 2_500;
 const RECORDING_FINISH_GRACE_MS = 10_000;
+const BRIDGE_RECORDING_TTL_MS = Number(
+  process.env.BRIDGE_RECORDING_TTL_MS || 7 * 24 * 60 * 60 * 1000,
+);
 const LINE_CONFIG_REFRESH_MS = Number(process.env.LINE_CONFIG_REFRESH_MS || 30_000);
 const CALL_QUEUE_MAX_WAIT_MS = Number(process.env.CALL_QUEUE_MAX_WAIT_MS || 30 * 60 * 1000);
 const MAX_STEERING_PROMPT_CHARS = 800;
-const SERVER_VERSION = "2026-05-13-live-steering-safety";
+const SERVER_VERSION = "2026-05-14-incoming-answering";
 const SERVER_STARTED_AT = new Date().toISOString();
 
 const APP_SAFETY_INSTRUCTIONS = [
@@ -208,6 +212,7 @@ const requiredEnv = [
 const callSessions = new Map();
 const callsBySid = new Map();
 const activeLineSessions = new Map();
+const bridgeRecordings = new Map();
 const callQueue = [];
 let queueProcessing = false;
 let lineConfigCache = {
@@ -432,12 +437,31 @@ function requireServerConfig() {
   }
 }
 
+function requireRealtimeBridgeConfig() {
+  const missing = ["XAI_API_KEY"].filter((key) => !process.env[key]);
+  if (!process.env.BACKEND_CANISTER_ID) missing.push("BACKEND_CANISTER_ID");
+  if (!process.env.ICP_SERVER_IDENTITY_JSON && !process.env.ICP_SERVER_IDENTITY_SECRET_KEY) {
+    missing.push("ICP_SERVER_IDENTITY_JSON");
+  }
+  if (missing.length > 0) {
+    throw new Error(`Missing server environment variables: ${missing.join(", ")}`);
+  }
+  if (!getPublicHost()) {
+    throw new Error("Missing HOSTNAME. Set it to your Cloudflare Tunnel, ngrok, or deployed server host.");
+  }
+}
+
 function normalizePhone(phone) {
   const cleaned = String(phone || "").replace(/\s/g, "");
   if (!/^\+[1-9]\d{1,14}$/.test(cleaned)) {
     throw new Error("Phone number must be E.164 format, for example +15551234567.");
   }
   return cleaned;
+}
+
+function normalizeIncomingCallerPhone(phone) {
+  const cleaned = String(phone || "").replace(/\s/g, "");
+  return /^\+[1-9]\d{1,14}$/.test(cleaned) ? cleaned : "unknown";
 }
 
 function parsePhoneNumberList(value) {
@@ -532,6 +556,21 @@ function toPlainPreset(input = {}) {
       webSearch: false,
       xSearch: false,
       functionCalling: false,
+    },
+  };
+}
+
+function toPlainAnsweringPreset(input = {}) {
+  const preset = toPlainPreset(input);
+  return {
+    ...preset,
+    id: String(input.id ?? preset.id),
+    name: String(input.name || preset.name || "AI Answering"),
+    phoneNumber: String(input.phoneNumber || ""),
+    captureOptions: {
+      saveTranscript: Boolean(input.captureOptions?.saveTranscript),
+      recordAudio: Boolean(input.captureOptions?.recordAudio),
+      permissionConfirmed: Boolean(input.captureOptions?.consentConfirmed),
     },
   };
 }
@@ -642,6 +681,12 @@ function makeErrorTwiML(message) {
   return response.toString();
 }
 
+function makeRejectTwiML(reason = "busy") {
+  const response = new VoiceResponse();
+  response.reject({ reason });
+  return response.toString();
+}
+
 function appendTranscript(session, speaker, text) {
   const cleanText = String(text || "");
   if (!session || !cleanText) return;
@@ -675,6 +720,129 @@ function normalizeCallSid(callSid) {
     throw new Error("A valid Twilio CallSid is required.");
   }
   return sid;
+}
+
+function decodeMuLawByte(value) {
+  const sample = ~value & 0xff;
+  const sign = sample & 0x80;
+  const exponent = (sample >> 4) & 0x07;
+  const mantissa = sample & 0x0f;
+  let magnitude = ((mantissa << 3) + 0x84) << exponent;
+  magnitude -= 0x84;
+  return sign ? -magnitude : magnitude;
+}
+
+function buildPcmWavFromMuLaw(chunks) {
+  const totalSamples = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const dataSize = totalSamples * 2;
+  const buffer = Buffer.alloc(44 + dataSize);
+  buffer.write("RIFF", 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write("WAVE", 8);
+  buffer.write("fmt ", 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(1, 22);
+  buffer.writeUInt32LE(8000, 24);
+  buffer.writeUInt32LE(8000 * 2, 28);
+  buffer.writeUInt16LE(2, 32);
+  buffer.writeUInt16LE(16, 34);
+  buffer.write("data", 36);
+  buffer.writeUInt32LE(dataSize, 40);
+
+  let offset = 44;
+  for (const chunk of chunks) {
+    for (const value of chunk) {
+      const sample = Math.max(-32768, Math.min(32767, decodeMuLawByte(value)));
+      buffer.writeInt16LE(sample, offset);
+      offset += 2;
+    }
+  }
+  return buffer;
+}
+
+function getBridgeRecordingAccessSecret() {
+  return (
+    process.env.BRIDGE_RECORDING_ACCESS_SECRET ||
+    process.env.RECORDING_ACCESS_SECRET ||
+    process.env.ICP_SERVER_IDENTITY_SECRET_KEY ||
+    process.env.XAI_API_KEY ||
+    ""
+  );
+}
+
+function signBridgeRecordingAccess(recordingId) {
+  const secret = getBridgeRecordingAccessSecret();
+  if (!secret) {
+    throw new Error("Bridge recording access secret is not configured.");
+  }
+  return crypto.createHmac("sha256", secret).update(recordingId).digest("base64url");
+}
+
+function buildPublicBridgeRecordingUrl(recordingId) {
+  const publicBaseUrl = getPublicBaseUrl();
+  if (!publicBaseUrl) {
+    throw new Error("Missing HOSTNAME. Recording playback requires a public voice server URL.");
+  }
+  const url = new URL(`/bridge-recordings/${recordingId}`, publicBaseUrl);
+  url.searchParams.set("token", signBridgeRecordingAccess(recordingId));
+  return url.toString();
+}
+
+function appendBridgeRecordingAudio(session, payload) {
+  if (
+    !session?.recordAudio ||
+    !session.permissionConfirmed ||
+    session.recordingMode !== "bridge" ||
+    !payload
+  ) {
+    return;
+  }
+  if (!session.bridgeRecordingChunks) session.bridgeRecordingChunks = [];
+  session.bridgeRecordingChunks.push(Buffer.from(payload, "base64"));
+}
+
+function finalizeBridgeRecording(session) {
+  if (
+    !session?.recordAudio ||
+    !session.permissionConfirmed ||
+    session.recordingMode !== "bridge" ||
+    session.recording?.url
+  ) {
+    return;
+  }
+  const chunks = session.bridgeRecordingChunks || [];
+  if (chunks.length === 0) {
+    session.recording = {
+      sid: null,
+      callSid: session.callSid || null,
+      url: null,
+      sourceUrl: null,
+      status: "absent",
+      duration: null,
+    };
+    return;
+  }
+
+  const recordingId = `br_${session.id}`;
+  const media = buildPcmWavFromMuLaw(chunks);
+  bridgeRecordings.set(recordingId, {
+    media,
+    callSid: session.callSid || "",
+    createdAt: Date.now(),
+    expiresAt: Date.now() + BRIDGE_RECORDING_TTL_MS,
+  });
+  session.recording = {
+    sid: null,
+    callSid: session.callSid || null,
+    url: buildPublicBridgeRecordingUrl(recordingId),
+    sourceUrl: null,
+    status: "completed",
+    duration: session.billingStartedAt
+      ? String(Math.max(0, Math.ceil(((session.billingStoppedAt || Date.now()) - session.billingStartedAt) / 1000)))
+      : null,
+  };
+  session.bridgeRecordingChunks = [];
 }
 
 function getRecordingAccessSecret() {
@@ -996,6 +1164,7 @@ async function finishPaidSession(session, reason = "completed") {
   const usedSeconds = session.billingStartedAt
     ? Math.ceil((session.billingFinishedAt - session.billingStartedAt) / 1000)
     : 0;
+  finalizeBridgeRecording(session);
   const artifactsText = callArtifactsToText(session);
 
   if (session.reservationId) {
@@ -1021,6 +1190,18 @@ async function finishPaidSession(session, reason = "completed") {
       log("error", "Failed to finish paid call session", {
         sessionId: session.id,
         reservationId: session.reservationId,
+        error: error.message,
+      });
+    }
+  }
+
+  if (session.answeringPresetId) {
+    try {
+      const actor = await getBackendActor();
+      await actor.finishAnsweringLiveSessionForServer(session.id);
+    } catch (error) {
+      log("warn", "Unable to clear answering live session", {
+        sessionId: session.id,
         error: error.message,
       });
     }
@@ -1320,6 +1501,12 @@ app.get("/health", async (_req, res) => {
       numbers: linePool.numbers,
     },
     xaiConfigured: Boolean(process.env.XAI_API_KEY),
+    answeringBridgeConfigured: Boolean(
+      process.env.XAI_API_KEY &&
+        process.env.BACKEND_CANISTER_ID &&
+        (process.env.ICP_SERVER_IDENTITY_JSON || process.env.ICP_SERVER_IDENTITY_SECRET_KEY) &&
+        getPublicHost(),
+    ),
     billingConfigured: Boolean(
       process.env.BACKEND_CANISTER_ID &&
         (process.env.ICP_SERVER_IDENTITY_JSON || process.env.ICP_SERVER_IDENTITY_SECRET_KEY) &&
@@ -1358,6 +1545,37 @@ app.get("/recordings/:recordingSid/access", async (req, res) => {
   } catch (error) {
     log("error", "Failed to create recording access URL", {
       recordingSid: req.params.recordingSid,
+      error: error.message,
+    });
+    res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.get("/bridge-recordings/:recordingId", (req, res) => {
+  try {
+    const recordingId = String(req.params.recordingId || "");
+    const token = String(req.query.token || "");
+    if (!recordingId || token !== signBridgeRecordingAccess(recordingId)) {
+      res.status(403).json({ ok: false, error: "Recording access link is invalid." });
+      return;
+    }
+    const recording = bridgeRecordings.get(recordingId);
+    if (!recording || recording.expiresAt < Date.now()) {
+      bridgeRecordings.delete(recordingId);
+      res.status(404).json({ ok: false, error: "Recording is no longer available." });
+      return;
+    }
+    res.setHeader("Content-Type", "audio/wav");
+    res.setHeader("Content-Length", String(recording.media.length));
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.setHeader(
+      "Content-Disposition",
+      `${req.query.download === "1" ? "attachment" : "inline"}; filename="voicecall-answering-${recordingId}.wav"`,
+    );
+    res.send(recording.media);
+  } catch (error) {
+    log("error", "Failed to stream bridge recording", {
+      recordingId: req.params.recordingId,
       error: error.message,
     });
     res.status(400).json({ ok: false, error: error.message });
@@ -1518,6 +1736,7 @@ app.post("/initiate-call", async (req, res) => {
       saveTranscript: captureOptions.saveTranscript,
       recordAudio: captureOptions.recordAudio,
       permissionConfirmed: captureOptions.permissionConfirmed,
+      recordingMode: "twilio",
       state: "created",
       queueEnteredAt: null,
       createdAt: Date.now(),
@@ -1541,6 +1760,7 @@ app.post("/initiate-call", async (req, res) => {
       transcript: [],
       awaitingCallerTranscript: false,
       recording: null,
+      bridgeRecordingChunks: null,
       monitorClients: new Set(),
     };
     callSessions.set(sessionId, session);
@@ -1607,6 +1827,159 @@ app.post("/initiate-call", async (req, res) => {
       }
     }
     res.status(400).json({ ok: false, error: error.message });
+  }
+});
+
+app.post("/answering/incoming/:webhookSecret", async (req, res) => {
+  res.type("text/xml");
+  let session = null;
+  let reservation = null;
+  try {
+    requireRealtimeBridgeConfig();
+    const webhookSecret = String(req.params.webhookSecret || "").trim();
+    const twilioToNumber = normalizePhone(req.body.To);
+    const callerPhone = normalizeIncomingCallerPhone(req.body.From);
+    const callSid = normalizeCallSid(req.body.CallSid);
+    if (!webhookSecret) {
+      throw new Error("Missing answering webhook secret.");
+    }
+
+    const actor = await getBackendActor();
+    const verifiedResult = await actor.verifyAnsweringPresetForServer(
+      webhookSecret,
+      twilioToNumber,
+    );
+    if (verifiedResult?.err) {
+      throw new Error(verifiedResult.err);
+    }
+
+    const rawPreset = unwrapOptional(
+      await actor.getAnsweringPresetForServer(webhookSecret, twilioToNumber),
+    );
+    const answeringPreset = normalizeAnsweringPreset(rawPreset);
+    if (!answeringPreset) {
+      throw new Error("Answering preset was not found for this Twilio number.");
+    }
+    if (answeringPreset.verificationStatus !== "verified") {
+      throw new Error("Answering preset phone number is not verified yet.");
+    }
+    if (!answeringPreset.enabled) {
+      throw new Error("Answering service is turned off for this preset.");
+    }
+
+    const reservationResult = await actor.reserveIncomingAnsweringCall(
+      webhookSecret,
+      callerPhone,
+      twilioToNumber,
+      callSid,
+    );
+    reservation = normalizeReservation(
+      okOrThrow(reservationResult, "Unable to reserve paid answering time."),
+    );
+
+    const sessionId = crypto.randomUUID();
+    const monitorToken = crypto.randomBytes(24).toString("base64url");
+    const publicWsUrl = getPublicWsUrl();
+    if (!publicWsUrl) {
+      throw new Error("Voice server public WebSocket URL is not configured.");
+    }
+
+    const preset = toPlainAnsweringPreset(answeringPreset);
+    assertSafeInstructionText(preset.systemPrompt, "Answering preset instructions");
+
+    session = {
+      id: sessionId,
+      monitorToken,
+      callId: reservation.callId,
+      reservationId: reservation.id,
+      answeringPresetId: answeringPreset.id,
+      answeringPresetName: answeringPreset.name,
+      allowedSeconds: reservation.allowedSeconds,
+      recipientPhone: callerPhone,
+      preset,
+      saveTranscript: preset.captureOptions.saveTranscript,
+      recordAudio: preset.captureOptions.recordAudio,
+      permissionConfirmed: preset.captureOptions.permissionConfirmed,
+      recordingMode: "bridge",
+      state: "active",
+      queueEnteredAt: null,
+      createdAt: Date.now(),
+      billingStartedAt: null,
+      billingFinishedAt: null,
+      billingStoppedAt: null,
+      cutoffTimer: null,
+      finishTimer: null,
+      finished: false,
+      callSid,
+      lineNumber: twilioToNumber,
+      streamSid: null,
+      twilioWs: null,
+      xaiWs: null,
+      xaiResponseInProgress: false,
+      steeringCount: 0,
+      lastSteeringAt: null,
+      twimlUrl: "",
+      statusCallbackUrl: "",
+      recordingStatusUrl: "",
+      transcript: [],
+      awaitingCallerTranscript: false,
+      recording: null,
+      bridgeRecordingChunks: [],
+      monitorClients: new Set(),
+    };
+    callSessions.set(sessionId, session);
+    callsBySid.set(callSid, sessionId);
+
+    await actor.registerAnsweringLiveSessionForServer({
+      sessionId,
+      monitorToken,
+      callSid,
+      userId: principalFromText(reservation.user),
+      answeringPresetId: BigInt(answeringPreset.id),
+      answeringPresetName: answeringPreset.name,
+      callerPhone,
+      startedAt: BigInt(Date.now()) * 1_000_000n,
+      allowedSeconds: BigInt(reservation.allowedSeconds),
+    });
+
+    const response = new VoiceResponse();
+    const connect = response.connect();
+    const stream = connect.stream({
+      url: publicWsUrl,
+      name: `voicecall-answering-${sessionId}`,
+    });
+    stream.parameter({ name: "sessionId", value: sessionId });
+    stream.parameter({ name: "callId", value: String(reservation.callId || "") });
+    stream.parameter({ name: "presetName", value: answeringPreset.name });
+    stream.parameter({ name: "direction", value: "incoming" });
+    res.status(200).send(response.toString());
+  } catch (error) {
+    log("warn", "Incoming answering call rejected", {
+      to: req.body?.To,
+      from: req.body?.From,
+      callSid: req.body?.CallSid,
+      error: error.message,
+    });
+    if (session) {
+      callSessions.delete(session.id);
+      if (session.callSid) callsBySid.delete(session.callSid);
+    }
+    if (reservation?.id) {
+      getBackendActor()
+        .then((actor) =>
+          actor.cancelCallReservation(
+            reservation.id,
+            `Incoming answering call rejected: ${error.message}`,
+          ),
+        )
+        .catch((cancelError) => {
+          log("warn", "Unable to cancel rejected answering reservation", {
+            reservationId: reservation.id,
+            error: cancelError.message,
+          });
+        });
+    }
+    res.status(200).send(makeRejectTwiML("busy"));
   }
 });
 
@@ -2048,6 +2421,7 @@ mediaWss.on("connection", (twilioWs, request) => {
           media: { payload: event.delta },
         });
         broadcastMonitorAudio(session, "assistant", event.delta);
+        appendBridgeRecordingAudio(session, event.delta);
         markCounter += 1;
         sendToTwilio({
           event: "mark",
@@ -2145,6 +2519,7 @@ mediaWss.on("connection", (twilioWs, request) => {
     if (data.event === "media") {
       if (data.media?.payload) {
         broadcastMonitorAudio(session, "caller", data.media.payload);
+        appendBridgeRecordingAudio(session, data.media.payload);
         sendCallerAudioToStt(data.media.payload);
       }
       if (xaiWs && xaiWs.readyState === WebSocket.OPEN && data.media?.payload) {
@@ -2186,6 +2561,7 @@ mediaWss.on("connection", (twilioWs, request) => {
 
 setInterval(() => {
   const cutoff = Date.now() - SESSION_TTL_MS;
+  const now = Date.now();
   for (const [sessionId, session] of callSessions.entries()) {
     if (
       session.state === "queued" &&
@@ -2199,6 +2575,11 @@ setInterval(() => {
     }
     if (session.createdAt < cutoff) {
       finishPaidSession(session, "session_ttl_cleanup");
+    }
+  }
+  for (const [recordingId, recording] of bridgeRecordings.entries()) {
+    if (recording.expiresAt < now) {
+      bridgeRecordings.delete(recordingId);
     }
   }
   dispatchQueuedSessions().catch((error) => {

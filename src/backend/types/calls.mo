@@ -57,4 +57,16 @@ module {
     message : Text;
     callId : ?Nat;
   };
+
+  public type AnsweringLiveSession = {
+    sessionId : Text;
+    monitorToken : Text;
+    callSid : Text;
+    userId : Principal;
+    answeringPresetId : Nat;
+    answeringPresetName : Text;
+    callerPhone : Text;
+    startedAt : Int;
+    allowedSeconds : Nat;
+  };
 };

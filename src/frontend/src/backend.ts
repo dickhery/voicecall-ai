@@ -134,6 +134,66 @@ export interface CallPreset {
     turnDetection: TurnDetection;
     audioFormat: AudioFormat;
 }
+export enum AnsweringPresetStatus {
+    pendingVerification = "pendingVerification",
+    verified = "verified"
+}
+export interface AnsweringCaptureOptions {
+    saveTranscript: boolean;
+    recordAudio: boolean;
+    consentConfirmed: boolean;
+}
+export interface AnsweringPreset {
+    id: bigint;
+    ownerId: Principal;
+    name: string;
+    phoneNumber: string;
+    systemPrompt: string;
+    voice: Voice;
+    turnDetection: TurnDetection;
+    audioFormat: AudioFormat;
+    sampleRate: SampleRate;
+    toolsEnabled: ToolsEnabled;
+    captureOptions: AnsweringCaptureOptions;
+    enabled: boolean;
+    verificationStatus: AnsweringPresetStatus;
+    webhookSecret: string;
+    createdAt: bigint;
+    updatedAt: bigint;
+    verifiedAt?: bigint;
+    lastIncomingAt?: bigint;
+}
+export interface AnsweringPresetInput {
+    name: string;
+    phoneNumber: string;
+    systemPrompt: string;
+    voice: Voice;
+    turnDetection: TurnDetection;
+    audioFormat: AudioFormat;
+    sampleRate: SampleRate;
+    toolsEnabled: ToolsEnabled;
+    captureOptions: AnsweringCaptureOptions;
+    enabled: boolean;
+    webhookSecret: string;
+}
+export type AnsweringPresetMutationResult = {
+    __kind__: "ok";
+    ok: AnsweringPreset;
+} | {
+    __kind__: "err";
+    err: string;
+};
+export interface AnsweringLiveSession {
+    sessionId: string;
+    monitorToken: string;
+    callSid: string;
+    userId: Principal;
+    answeringPresetId: bigint;
+    answeringPresetName: string;
+    callerPhone: string;
+    startedAt: bigint;
+    allowedSeconds: bigint;
+}
 export interface SystemLog {
     level: Variant_info_warn_error;
     message: string;
@@ -322,8 +382,10 @@ export interface backendInterface {
     adminListUserCalls(userId: Principal): Promise<Array<CallRecordPublic>>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     cancelCallReservation(reservationId: string, reason: string): Promise<BillingMutationResult>;
+    createAnsweringPreset(input: AnsweringPresetInput): Promise<AnsweringPresetMutationResult>;
     createPreset(input: CallPresetInput): Promise<CallPreset>;
     createPurchaseIntent(packageId: string): Promise<CreatePurchaseIntentResult>;
+    deleteAnsweringPreset(id: PresetId): Promise<boolean>;
     deletePreset(id: PresetId): Promise<boolean>;
     duplicatePreset(id: PresetId): Promise<CallPreset | null>;
     getAdminConfig(): Promise<{
@@ -337,20 +399,25 @@ export interface backendInterface {
     getCallRecord(id: CallId): Promise<CallRecordPublic | null>;
     getCallerUserRole(): Promise<UserRole>;
     getEphemeralToken(presetId: PresetId): Promise<EphemeralTokenResult>;
+    getAnsweringPreset(id: PresetId): Promise<AnsweringPreset | null>;
     getMyBillingStatus(): Promise<BillingStatus>;
     getPreset(id: PresetId): Promise<CallPreset | null>;
     initiateCall(input: InitiateCallInput): Promise<InitiateCallResult>;
     isCallerAdmin(): Promise<boolean>;
+    listMyAnsweringLiveSessions(): Promise<Array<AnsweringLiveSession>>;
+    listMyAnsweringPresets(): Promise<Array<AnsweringPreset>>;
     listMyCalls(): Promise<Array<CallRecordPublic>>;
     listMyPresets(): Promise<Array<CallPreset>>;
     reserveCall(input: InitiateCallInput): Promise<ReserveCallResult>;
     setAdminConfig(xaiApiKey: string, twilioAccountSid: string, twilioAuthToken: string, twilioFromNumber: string): Promise<void>;
+    setAnsweringPresetEnabled(id: PresetId, enabled: boolean): Promise<AnsweringPresetMutationResult>;
     setTwilioLine(input: TwilioLineInput): Promise<TwilioLineMutationResult>;
     removeTwilioLine(phoneNumber: string): Promise<TwilioLineMutationResult>;
     setTwilioLineEnabled(phoneNumber: string, enabled: boolean): Promise<TwilioLineMutationResult>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
     twilioWebhook(callSid: string, callStatus: string): Promise<string>;
     updateCallStatus(callId: CallId, status: CallStatus, transcript: string | null): Promise<boolean>;
+    updateAnsweringPreset(id: PresetId, input: AnsweringPresetInput): Promise<AnsweringPresetMutationResult>;
     updatePreset(id: PresetId, input: CallPresetInput): Promise<CallPreset | null>;
 }
 import type { AudioFormat as _AudioFormat, CallPreset as _CallPreset, CallPresetInput as _CallPresetInput, CallRecordPublic as _CallRecordPublic, CallStatus as _CallStatus, EphemeralTokenResult as _EphemeralTokenResult, InitiateCallResult as _InitiateCallResult, SampleRate as _SampleRate, SystemLog as _SystemLog, ToolsEnabled as _ToolsEnabled, TurnDetection as _TurnDetection, UserRole as _UserRole, Voice as _Voice } from "./declarations/backend.did.d.ts";
@@ -454,6 +521,20 @@ export class Backend implements backendInterface {
             return from_candid_BillingMutationResult(result);
         }
     }
+    async createAnsweringPreset(arg0: AnsweringPresetInput): Promise<AnsweringPresetMutationResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createAnsweringPreset(to_candid_AnsweringPresetInput(arg0));
+                return from_candid_AnsweringPresetMutationResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createAnsweringPreset(to_candid_AnsweringPresetInput(arg0));
+            return from_candid_AnsweringPresetMutationResult(result);
+        }
+    }
     async createPreset(arg0: CallPresetInput): Promise<CallPreset> {
         if (this.processError) {
             try {
@@ -480,6 +561,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.createPurchaseIntent(arg0);
             return from_candid_CreatePurchaseIntentResult(result);
+        }
+    }
+    async deleteAnsweringPreset(arg0: PresetId): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteAnsweringPreset(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteAnsweringPreset(arg0);
+            return result;
         }
     }
     async deletePreset(arg0: PresetId): Promise<boolean> {
@@ -586,6 +681,20 @@ export class Backend implements backendInterface {
             return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getAnsweringPreset(arg0: PresetId): Promise<AnsweringPreset | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAnsweringPreset(arg0);
+                return from_candid_opt_AnsweringPreset(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAnsweringPreset(arg0);
+            return from_candid_opt_AnsweringPreset(result);
+        }
+    }
     async getMyBillingStatus(): Promise<BillingStatus> {
         if (this.processError) {
             try {
@@ -642,6 +751,34 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async listMyAnsweringLiveSessions(): Promise<Array<AnsweringLiveSession>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.listMyAnsweringLiveSessions();
+                return result.map(from_candid_AnsweringLiveSession);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.listMyAnsweringLiveSessions();
+            return result.map(from_candid_AnsweringLiveSession);
+        }
+    }
+    async listMyAnsweringPresets(): Promise<Array<AnsweringPreset>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.listMyAnsweringPresets();
+                return result.map(from_candid_AnsweringPreset);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.listMyAnsweringPresets();
+            return result.map(from_candid_AnsweringPreset);
+        }
+    }
     async listMyCalls(): Promise<Array<CallRecordPublic>> {
         if (this.processError) {
             try {
@@ -696,6 +833,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.setAdminConfig(arg0, arg1, arg2, arg3);
             return result;
+        }
+    }
+    async setAnsweringPresetEnabled(arg0: PresetId, arg1: boolean): Promise<AnsweringPresetMutationResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setAnsweringPresetEnabled(arg0, arg1);
+                return from_candid_AnsweringPresetMutationResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setAnsweringPresetEnabled(arg0, arg1);
+            return from_candid_AnsweringPresetMutationResult(result);
         }
     }
     async setTwilioLine(arg0: TwilioLineInput): Promise<TwilioLineMutationResult> {
@@ -780,6 +931,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.updateCallStatus(arg0, to_candid_CallStatus_n40(this._uploadFile, this._downloadFile, arg1), to_candid_opt_n42(this._uploadFile, this._downloadFile, arg2));
             return result;
+        }
+    }
+    async updateAnsweringPreset(arg0: PresetId, arg1: AnsweringPresetInput): Promise<AnsweringPresetMutationResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.updateAnsweringPreset(arg0, to_candid_AnsweringPresetInput(arg1));
+                return from_candid_AnsweringPresetMutationResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.updateAnsweringPreset(arg0, to_candid_AnsweringPresetInput(arg1));
+            return from_candid_AnsweringPresetMutationResult(result);
         }
     }
     async updatePreset(arg0: PresetId, arg1: CallPresetInput): Promise<CallPreset | null> {
@@ -888,6 +1053,71 @@ function from_candid_TwilioLineMutationResult(value: any): TwilioLineMutationRes
     } : {
         __kind__: "err",
         err: value.err
+    };
+}
+function from_candid_AnsweringPresetStatus(value: any): AnsweringPresetStatus {
+    return "verified" in value ? AnsweringPresetStatus.verified : AnsweringPresetStatus.pendingVerification;
+}
+function from_candid_AnsweringPreset(value: any): AnsweringPreset {
+    return {
+        id: value.id,
+        ownerId: value.ownerId,
+        name: value.name,
+        phoneNumber: value.phoneNumber,
+        systemPrompt: value.systemPrompt,
+        voice: from_candid_Voice_n25(undefined as any, undefined as any, value.voice),
+        turnDetection: value.turnDetection,
+        audioFormat: from_candid_AudioFormat_n29(undefined as any, undefined as any, value.audioFormat),
+        sampleRate: from_candid_SampleRate_n27(undefined as any, undefined as any, value.sampleRate),
+        toolsEnabled: value.toolsEnabled,
+        captureOptions: value.captureOptions,
+        enabled: value.enabled,
+        verificationStatus: from_candid_AnsweringPresetStatus(value.verificationStatus),
+        webhookSecret: value.webhookSecret,
+        createdAt: value.createdAt,
+        updatedAt: value.updatedAt,
+        verifiedAt: from_candid_opt_nat(value.verifiedAt),
+        lastIncomingAt: from_candid_opt_nat(value.lastIncomingAt)
+    };
+}
+function from_candid_AnsweringPresetMutationResult(value: any): AnsweringPresetMutationResult {
+    return "ok" in value ? {
+        __kind__: "ok",
+        ok: from_candid_AnsweringPreset(value.ok)
+    } : {
+        __kind__: "err",
+        err: value.err
+    };
+}
+function from_candid_opt_AnsweringPreset(value: [] | [any]): AnsweringPreset | null {
+    return value.length === 0 ? null : from_candid_AnsweringPreset(value[0]);
+}
+function from_candid_AnsweringLiveSession(value: any): AnsweringLiveSession {
+    return {
+        sessionId: value.sessionId,
+        monitorToken: value.monitorToken,
+        callSid: value.callSid,
+        userId: value.userId,
+        answeringPresetId: value.answeringPresetId,
+        answeringPresetName: value.answeringPresetName,
+        callerPhone: value.callerPhone,
+        startedAt: value.startedAt,
+        allowedSeconds: value.allowedSeconds
+    };
+}
+function to_candid_AnsweringPresetInput(value: AnsweringPresetInput): any {
+    return {
+        name: value.name,
+        phoneNumber: value.phoneNumber,
+        systemPrompt: value.systemPrompt,
+        voice: to_candid_Voice_n17(undefined as any, undefined as any, value.voice),
+        turnDetection: value.turnDetection,
+        audioFormat: to_candid_AudioFormat_n21(undefined as any, undefined as any, value.audioFormat),
+        sampleRate: to_candid_SampleRate_n19(undefined as any, undefined as any, value.sampleRate),
+        toolsEnabled: value.toolsEnabled,
+        captureOptions: value.captureOptions,
+        enabled: value.enabled,
+        webhookSecret: value.webhookSecret
     };
 }
 function from_candid_AudioFormat_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AudioFormat): AudioFormat {

@@ -17,6 +17,7 @@ import Error "mo:core/Error";
 mixin (
   accessControlState : AccessControl.AccessControlState,
   callsState : CallsLib.State,
+  answeringLiveState : CallsLib.AnsweringLiveState,
   configState : ConfigLib.State,
 ) {
   // Transform callback for IC HTTP outcalls (must be query)
@@ -166,6 +167,32 @@ mixin (
       Runtime.trap("Unauthorized: admin only");
     };
     CallsLib.getSystemLogs(callsState, limit);
+  };
+
+  public shared ({ caller }) func registerAnsweringLiveSessionForServer(
+    session : CallTypes.AnsweringLiveSession,
+  ) : async Bool {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
+    CallsLib.registerAnsweringLiveSession(answeringLiveState, session);
+    true;
+  };
+
+  public shared ({ caller }) func finishAnsweringLiveSessionForServer(
+    sessionId : Text,
+  ) : async Bool {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
+    CallsLib.removeAnsweringLiveSession(answeringLiveState, sessionId);
+  };
+
+  public query ({ caller }) func listMyAnsweringLiveSessions() : async [CallTypes.AnsweringLiveSession] {
+    if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
+      Runtime.trap("Unauthorized: must be logged in");
+    };
+    CallsLib.listAnsweringLiveSessionsForUser(answeringLiveState, caller);
   };
 
   // --- Private helpers ---

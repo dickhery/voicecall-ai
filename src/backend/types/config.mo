@@ -65,6 +65,57 @@ module {
     toolsEnabled : ToolsEnabled;
   };
 
+  public type AnsweringPresetStatus = {
+    #pendingVerification;
+    #verified;
+  };
+
+  public type AnsweringCaptureOptions = {
+    saveTranscript : Bool;
+    recordAudio : Bool;
+    consentConfirmed : Bool;
+  };
+
+  public type AnsweringPreset = {
+    id : Nat;
+    ownerId : Principal;
+    name : Text;
+    phoneNumber : Text;
+    systemPrompt : Text;
+    voice : Voice;
+    turnDetection : TurnDetection;
+    audioFormat : AudioFormat;
+    sampleRate : SampleRate;
+    toolsEnabled : ToolsEnabled;
+    captureOptions : AnsweringCaptureOptions;
+    enabled : Bool;
+    verificationStatus : AnsweringPresetStatus;
+    webhookSecret : Text;
+    createdAt : Int;
+    updatedAt : Int;
+    verifiedAt : ?Int;
+    lastIncomingAt : ?Int;
+  };
+
+  public type AnsweringPresetInput = {
+    name : Text;
+    phoneNumber : Text;
+    systemPrompt : Text;
+    voice : Voice;
+    turnDetection : TurnDetection;
+    audioFormat : AudioFormat;
+    sampleRate : SampleRate;
+    toolsEnabled : ToolsEnabled;
+    captureOptions : AnsweringCaptureOptions;
+    enabled : Bool;
+    webhookSecret : Text;
+  };
+
+  public type AnsweringPresetMutationResult = {
+    #ok : AnsweringPreset;
+    #err : Text;
+  };
+
   public type TwilioLine = {
     phoneNumber : Text;
     name : Text;

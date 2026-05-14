@@ -1,5 +1,6 @@
 import type { backendInterface } from "../backend";
 import {
+  AnsweringPresetStatus,
   AudioFormat,
   CallStatus,
   CallReservationStatus,
@@ -85,6 +86,40 @@ const sampleCallRecord2 = {
   presetId: BigInt(2),
 };
 
+const sampleAnsweringPreset = {
+  id: 1n,
+  ownerId: samplePrincipal,
+  name: "After-hours support",
+  phoneNumber: "+18885550123",
+  systemPrompt:
+    "You answer calls after hours. Collect the caller's name, reason for calling, and preferred callback time.",
+  voice: Voice.eve,
+  sampleRate: SampleRate.hz8000,
+  audioFormat: AudioFormat.pcmu,
+  toolsEnabled: {
+    xSearch: false,
+    webSearch: false,
+    functionCalling: false,
+  },
+  turnDetection: {
+    prefixPaddingMs: 200n,
+    threshold: 0.5,
+    silenceDurationMs: 500n,
+    serverVad: true,
+  },
+  captureOptions: {
+    saveTranscript: true,
+    recordAudio: false,
+    consentConfirmed: true,
+  },
+  enabled: true,
+  verificationStatus: AnsweringPresetStatus.verified,
+  webhookSecret: "mock_answering_secret_01234567890123456789",
+  createdAt: BigInt(Date.now() * 1_000_000),
+  updatedAt: BigInt(Date.now() * 1_000_000),
+  verifiedAt: BigInt(Date.now() * 1_000_000),
+};
+
 export const mockBackend: backendInterface = {
   _initializeAccessControl: async () => undefined,
   adminAddPromoMinutes: async (_user: Principal, _minutes: bigint) => ({
@@ -117,6 +152,19 @@ export const mockBackend: backendInterface = {
     ok: true,
   }),
 
+  createAnsweringPreset: async (input) => ({
+    __kind__: "ok",
+    ok: {
+      ...sampleAnsweringPreset,
+      ...input,
+      id: 2n,
+      ownerId: samplePrincipal,
+      verificationStatus: AnsweringPresetStatus.pendingVerification,
+      createdAt: BigInt(Date.now() * 1_000_000),
+      updatedAt: BigInt(Date.now() * 1_000_000),
+    },
+  }),
+
   createPreset: async (_input) => samplePreset,
 
   createPurchaseIntent: async (packageId: string) => ({
@@ -132,6 +180,8 @@ export const mockBackend: backendInterface = {
       status: PurchaseIntentStatus.pending,
     },
   }),
+
+  deleteAnsweringPreset: async (_id: bigint) => true,
 
   deletePreset: async (_id: bigint) => true,
 
@@ -169,6 +219,8 @@ export const mockBackend: backendInterface = {
     },
   }),
 
+  getAnsweringPreset: async (_id: bigint) => sampleAnsweringPreset,
+
   getMyBillingStatus: async () => ({
     balanceSeconds: 5400n,
     reservedSeconds: 0n,
@@ -191,6 +243,10 @@ export const mockBackend: backendInterface = {
   }),
 
   isCallerAdmin: async () => true,
+
+  listMyAnsweringLiveSessions: async () => [],
+
+  listMyAnsweringPresets: async () => [sampleAnsweringPreset],
 
   listMyCalls: async () => [sampleCallRecord, sampleCallRecord2],
 
@@ -218,6 +274,11 @@ export const mockBackend: backendInterface = {
     _twilioAuthToken: string,
     _twilioFromNumber: string
   ) => undefined,
+
+  setAnsweringPresetEnabled: async (_id: bigint, enabled: boolean) => ({
+    __kind__: "ok",
+    ok: { ...sampleAnsweringPreset, enabled },
+  }),
 
   setTwilioLine: async (input) => ({
     __kind__: "ok",
@@ -247,6 +308,11 @@ export const mockBackend: backendInterface = {
     _status: CallStatus,
     _transcript: string | null
   ) => true,
+
+  updateAnsweringPreset: async (_id: bigint, input) => ({
+    __kind__: "ok",
+    ok: { ...sampleAnsweringPreset, ...input },
+  }),
 
   updatePreset: async (_id: bigint, _input) => samplePreset,
 };

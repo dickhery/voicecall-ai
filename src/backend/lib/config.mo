@@ -1,12 +1,15 @@
 import Map "mo:core/Map";
+import List "mo:core/List";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 import Nat "mo:core/Nat";
+import Int "mo:core/Int";
 import Iter "mo:core/Iter";
 import Text "mo:core/Text";
 import Char "mo:core/Char";
 import Array "mo:core/Array";
 import Order "mo:core/Order";
+import Time "mo:core/Time";
 import Types "../types/config";
 import Common "../types/common";
 
@@ -18,6 +21,14 @@ module {
   };
 
   public type TwilioLineState = Map.Map<Text, Types.TwilioLine>;
+
+  public type AnsweringState = {
+    presets : Map.Map<Common.PresetId, Types.AnsweringPreset>;
+    presetIdsByOwner : Map.Map<Principal, List.List<Common.PresetId>>;
+    presetIdByWebhookSecret : Map.Map<Text, Common.PresetId>;
+    presetIdByPhoneNumber : Map.Map<Text, Common.PresetId>;
+    nextAnsweringPresetId : { var value : Nat };
+  };
 
   public func initState() : State {
     {
@@ -34,6 +45,16 @@ module {
 
   public func initTwilioLineState() : TwilioLineState {
     Map.empty<Text, Types.TwilioLine>();
+  };
+
+  public func initAnsweringState() : AnsweringState {
+    {
+      presets = Map.empty<Common.PresetId, Types.AnsweringPreset>();
+      presetIdsByOwner = Map.empty<Principal, List.List<Common.PresetId>>();
+      presetIdByWebhookSecret = Map.empty<Text, Common.PresetId>();
+      presetIdByPhoneNumber = Map.empty<Text, Common.PresetId>();
+      nextAnsweringPresetId = { var value = 1 };
+    };
   };
 
   private func isDigit(c : Char) : Bool {
@@ -70,6 +91,13 @@ module {
 
   private func compareLines(a : Types.TwilioLine, b : Types.TwilioLine) : Order.Order {
     Text.compare(a.phoneNumber, b.phoneNumber);
+  };
+
+  private func compareAnsweringNewestFirst(a : Types.AnsweringPreset, b : Types.AnsweringPreset) : Order.Order {
+    switch (Int.compare(b.createdAt, a.createdAt)) {
+      case (#equal) { Nat.compare(b.id, a.id) };
+      case (order) { order };
+    };
   };
 
   private func withPresetDefaults(preset : Types.CallPreset) : Types.CallPreset {
@@ -109,6 +137,83 @@ module {
       name = if (input.name == "") { input.phoneNumber } else { input.name };
       enabled = input.enabled;
     });
+  };
+
+  private func isWebhookSecretChar(c : Char) : Bool {
+    let code = c.toNat32();
+    (code >= 48 and code <= 57) or
+    (code >= 65 and code <= 90) or
+    (code >= 97 and code <= 122) or
+    c == '-' or c == '_';
+  };
+
+  private func isValidWebhookSecret(secret : Text) : Bool {
+    let chars = secret.toArray();
+    let size = chars.size();
+    if (size < 32 or size > 160) {
+      return false;
+    };
+    var i = 0;
+    while (i < size) {
+      if (not isWebhookSecretChar(chars[i])) {
+        return false;
+      };
+      i += 1;
+    };
+    true;
+  };
+
+  private func sanitizeAnsweringInput(input : Types.AnsweringPresetInput) : {
+    #ok : Types.AnsweringPresetInput;
+    #err : Text;
+  } {
+    let name = input.name.trim(#char ' ');
+    let prompt = input.systemPrompt.trim(#char ' ');
+    if (name == "") {
+      return #err("Preset name is required.");
+    };
+    if (prompt == "") {
+      return #err("AI answering instructions are required.");
+    };
+    if (not isE164(input.phoneNumber)) {
+      return #err("Twilio phone number must be E.164 format, for example +15551234567.");
+    };
+    if (not isValidWebhookSecret(input.webhookSecret)) {
+      return #err("Webhook verification secret is invalid.");
+    };
+    if (
+      (input.captureOptions.saveTranscript or input.captureOptions.recordAudio) and
+      not input.captureOptions.consentConfirmed
+    ) {
+      return #err("Confirm caller consent before saving transcripts or recordings.");
+    };
+    #ok({
+      input with
+      name = name;
+      systemPrompt = prompt;
+      audioFormat = #pcmu;
+      sampleRate = #hz8000;
+      toolsEnabled = {
+        webSearch = input.toolsEnabled.webSearch;
+        xSearch = input.toolsEnabled.xSearch;
+        functionCalling = false;
+      };
+    });
+  };
+
+  private func getExistingPendingAnsweringPreset(
+    state : AnsweringState,
+    owner : Principal,
+  ) : ?Types.AnsweringPreset {
+    for (preset in state.presets.values()) {
+      if (
+        Principal.equal(preset.ownerId, owner) and
+        preset.verificationStatus == #pendingVerification
+      ) {
+        return ?preset;
+      };
+    };
+    null;
   };
 
   public func listTwilioLines(
@@ -383,6 +488,287 @@ module {
         });
         state.presets.add(newId, copy);
         ?copy;
+      };
+    };
+  };
+
+  public func createAnsweringPreset(
+    state : AnsweringState,
+    owner : Principal,
+    input : Types.AnsweringPresetInput,
+  ) : Types.AnsweringPresetMutationResult {
+    switch (getExistingPendingAnsweringPreset(state, owner)) {
+      case (?_) {
+        return #err("Finish verifying your pending Twilio number before creating another answering preset.");
+      };
+      case null {};
+    };
+    switch (sanitizeAnsweringInput(input)) {
+      case (#err(message)) { #err(message) };
+      case (#ok(cleanInput)) {
+        switch (state.presetIdByPhoneNumber.get(cleanInput.phoneNumber)) {
+          case (?_) { return #err("That Twilio phone number is already assigned to an answering preset.") };
+          case null {};
+        };
+        switch (state.presetIdByWebhookSecret.get(cleanInput.webhookSecret)) {
+          case (?_) { return #err("Webhook verification secret is already in use.") };
+          case null {};
+        };
+
+        let id = state.nextAnsweringPresetId.value;
+        state.nextAnsweringPresetId.value += 1;
+        let now = Time.now();
+        let preset : Types.AnsweringPreset = {
+          id;
+          ownerId = owner;
+          name = cleanInput.name;
+          phoneNumber = cleanInput.phoneNumber;
+          systemPrompt = cleanInput.systemPrompt;
+          voice = cleanInput.voice;
+          turnDetection = cleanInput.turnDetection;
+          audioFormat = #pcmu;
+          sampleRate = #hz8000;
+          toolsEnabled = cleanInput.toolsEnabled;
+          captureOptions = cleanInput.captureOptions;
+          enabled = cleanInput.enabled;
+          verificationStatus = #pendingVerification;
+          webhookSecret = cleanInput.webhookSecret;
+          createdAt = now;
+          updatedAt = now;
+          verifiedAt = null;
+          lastIncomingAt = null;
+        };
+
+        state.presets.add(id, preset);
+        state.presetIdByWebhookSecret.add(preset.webhookSecret, id);
+        state.presetIdByPhoneNumber.add(preset.phoneNumber, id);
+        switch (state.presetIdsByOwner.get(owner)) {
+          case null {
+            let ids = List.empty<Common.PresetId>();
+            ids.add(id);
+            state.presetIdsByOwner.add(owner, ids);
+          };
+          case (?ids) { ids.add(id) };
+        };
+        #ok(preset);
+      };
+    };
+  };
+
+  public func listAnsweringPresetsForUser(
+    state : AnsweringState,
+    owner : Principal,
+  ) : [Types.AnsweringPreset] {
+    let presets = List.empty<Types.AnsweringPreset>();
+    switch (state.presetIdsByOwner.get(owner)) {
+      case null {};
+      case (?ids) {
+        ids.forEach(func(id) {
+          switch (state.presets.get(id)) {
+            case null {};
+            case (?preset) { presets.add(preset) };
+          };
+        });
+      };
+    };
+    Array.sort(presets.toArray(), compareAnsweringNewestFirst);
+  };
+
+  public func getAnsweringPreset(
+    state : AnsweringState,
+    id : Common.PresetId,
+  ) : ?Types.AnsweringPreset {
+    state.presets.get(id);
+  };
+
+  public func getAnsweringPresetForServer(
+    state : AnsweringState,
+    webhookSecret : Text,
+    phoneNumber : Text,
+  ) : ?Types.AnsweringPreset {
+    switch (state.presetIdByWebhookSecret.get(webhookSecret)) {
+      case null { null };
+      case (?id) {
+        switch (state.presets.get(id)) {
+          case null { null };
+          case (?preset) {
+            if (preset.phoneNumber == phoneNumber) { ?preset } else { null };
+          };
+        };
+      };
+    };
+  };
+
+  public func getAnsweringPresetForIncoming(
+    state : AnsweringState,
+    webhookSecret : Text,
+    phoneNumber : Text,
+  ) : { #ok : Types.AnsweringPreset; #err : Text } {
+    switch (getAnsweringPresetForServer(state, webhookSecret, phoneNumber)) {
+      case null { #err("Answering preset was not found for this Twilio number.") };
+      case (?preset) {
+        if (preset.verificationStatus != #verified) {
+          return #err("Answering preset phone number is not verified yet.");
+        };
+        if (not preset.enabled) {
+          return #err("Answering service is turned off for this preset.");
+        };
+        #ok(preset);
+      };
+    };
+  };
+
+  public func updateAnsweringPreset(
+    state : AnsweringState,
+    caller : Principal,
+    id : Common.PresetId,
+    input : Types.AnsweringPresetInput,
+  ) : Types.AnsweringPresetMutationResult {
+    switch (state.presets.get(id)) {
+      case null { #err("Answering preset not found.") };
+      case (?existing) {
+        if (not Principal.equal(existing.ownerId, caller)) {
+          Runtime.trap("Unauthorized: not the owner");
+        };
+        switch (sanitizeAnsweringInput(input)) {
+          case (#err(message)) { #err(message) };
+          case (#ok(cleanInput)) {
+            if (cleanInput.phoneNumber != existing.phoneNumber) {
+              switch (state.presetIdByPhoneNumber.get(cleanInput.phoneNumber)) {
+                case (?otherId) {
+                  if (otherId != id) {
+                    return #err("That Twilio phone number is already assigned to an answering preset.");
+                  };
+                };
+                case null {};
+              };
+            };
+            if (cleanInput.webhookSecret != existing.webhookSecret) {
+              switch (state.presetIdByWebhookSecret.get(cleanInput.webhookSecret)) {
+                case (?otherId) {
+                  if (otherId != id) {
+                    return #err("Webhook verification secret is already in use.");
+                  };
+                };
+                case null {};
+              };
+            };
+
+            let phoneChanged = cleanInput.phoneNumber != existing.phoneNumber;
+            if (phoneChanged) {
+              state.presetIdByPhoneNumber.remove(existing.phoneNumber);
+              state.presetIdByPhoneNumber.add(cleanInput.phoneNumber, id);
+            };
+            if (cleanInput.webhookSecret != existing.webhookSecret) {
+              state.presetIdByWebhookSecret.remove(existing.webhookSecret);
+              state.presetIdByWebhookSecret.add(cleanInput.webhookSecret, id);
+            };
+
+            let updated : Types.AnsweringPreset = {
+              id = existing.id;
+              ownerId = existing.ownerId;
+              name = cleanInput.name;
+              phoneNumber = cleanInput.phoneNumber;
+              systemPrompt = cleanInput.systemPrompt;
+              voice = cleanInput.voice;
+              turnDetection = cleanInput.turnDetection;
+              audioFormat = #pcmu;
+              sampleRate = #hz8000;
+              toolsEnabled = cleanInput.toolsEnabled;
+              captureOptions = cleanInput.captureOptions;
+              enabled = if (phoneChanged) { false } else { cleanInput.enabled };
+              verificationStatus = if (phoneChanged) { #pendingVerification } else { existing.verificationStatus };
+              webhookSecret = cleanInput.webhookSecret;
+              createdAt = existing.createdAt;
+              updatedAt = Time.now();
+              verifiedAt = if (phoneChanged) { null } else { existing.verifiedAt };
+              lastIncomingAt = existing.lastIncomingAt;
+            };
+            state.presets.add(id, updated);
+            #ok(updated);
+          };
+        };
+      };
+    };
+  };
+
+  public func deleteAnsweringPreset(
+    state : AnsweringState,
+    caller : Principal,
+    id : Common.PresetId,
+  ) : Bool {
+    switch (state.presets.get(id)) {
+      case null { false };
+      case (?existing) {
+        if (not Principal.equal(existing.ownerId, caller)) {
+          Runtime.trap("Unauthorized: not the owner");
+        };
+        state.presets.remove(id);
+        state.presetIdByWebhookSecret.remove(existing.webhookSecret);
+        state.presetIdByPhoneNumber.remove(existing.phoneNumber);
+        true;
+      };
+    };
+  };
+
+  public func setAnsweringPresetEnabled(
+    state : AnsweringState,
+    caller : Principal,
+    id : Common.PresetId,
+    enabled : Bool,
+  ) : Types.AnsweringPresetMutationResult {
+    switch (state.presets.get(id)) {
+      case null { #err("Answering preset not found.") };
+      case (?existing) {
+        if (not Principal.equal(existing.ownerId, caller)) {
+          Runtime.trap("Unauthorized: not the owner");
+        };
+        if (enabled and existing.verificationStatus != #verified) {
+          return #err("Verify this Twilio number before turning on the answering service.");
+        };
+        let updated : Types.AnsweringPreset = {
+          existing with
+          enabled = enabled;
+          updatedAt = Time.now();
+        };
+        state.presets.add(id, updated);
+        #ok(updated);
+      };
+    };
+  };
+
+  public func verifyAnsweringPresetForServer(
+    state : AnsweringState,
+    webhookSecret : Text,
+    phoneNumber : Text,
+  ) : Types.AnsweringPresetMutationResult {
+    if (not isE164(phoneNumber)) {
+      return #err("Twilio phone number must be E.164 format.");
+    };
+    switch (getAnsweringPresetForServer(state, webhookSecret, phoneNumber)) {
+      case null { #err("Answering preset was not found for this Twilio number.") };
+      case (?existing) {
+        let now = Time.now();
+        let updated : Types.AnsweringPreset = {
+          existing with
+          verificationStatus = #verified;
+          verifiedAt = ?now;
+          updatedAt = now;
+        };
+        state.presets.add(existing.id, updated);
+        #ok(updated);
+      };
+    };
+  };
+
+  public func markAnsweringPresetIncoming(
+    state : AnsweringState,
+    id : Common.PresetId,
+  ) {
+    switch (state.presets.get(id)) {
+      case null {};
+      case (?existing) {
+        state.presets.add(id, { existing with lastIncomingAt = ?Time.now() });
       };
     };
   };
