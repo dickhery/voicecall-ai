@@ -13,7 +13,9 @@ mixin (
   billingState : BillingLib.State,
   callsState : CallsLib.State,
   configState : ConfigLib.State,
+  callPresetVoiceIds : ConfigLib.VoiceIdState,
   answeringState : ConfigLib.AnsweringState,
+  answeringPresetVoiceIds : ConfigLib.VoiceIdState,
 ) {
   let ANSWERING_PRESET_ID_OFFSET : Nat = 1_000_000_000;
 
@@ -115,7 +117,7 @@ mixin (
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: must be logged in");
     };
-    switch (ConfigLib.getPreset(configState, input.presetId)) {
+    switch (ConfigLib.getPreset(configState, callPresetVoiceIds, input.presetId)) {
       case null { return #err("Preset not found") };
       case (?preset) {
         if (not Principal.equal(preset.ownerId, caller) and not AccessControl.isAdmin(accessControlState, caller)) {
@@ -174,7 +176,7 @@ mixin (
     if (not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: server admin only");
     };
-    switch (ConfigLib.getAnsweringPresetForIncoming(answeringState, webhookSecret, twilioToNumber)) {
+    switch (ConfigLib.getAnsweringPresetForIncoming(answeringState, answeringPresetVoiceIds, webhookSecret, twilioToNumber)) {
       case (#err(message)) { return #err(message) };
       case (#ok(preset)) {
         let available = BillingLib.getAvailableSeconds(billingState, preset.ownerId);

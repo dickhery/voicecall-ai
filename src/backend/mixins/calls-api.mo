@@ -19,6 +19,7 @@ mixin (
   callsState : CallsLib.State,
   answeringLiveState : CallsLib.AnsweringLiveState,
   configState : ConfigLib.State,
+  callPresetVoiceIds : ConfigLib.VoiceIdState,
 ) {
   // Transform callback for IC HTTP outcalls (must be query)
   public query func transform(
@@ -61,7 +62,7 @@ mixin (
       return #err("xAI API key not configured. Admin must set credentials first.");
     };
     // Verify the preset exists (we don't embed its config in the token request)
-    switch (ConfigLib.getPreset(configState, presetId)) {
+    switch (ConfigLib.getPreset(configState, callPresetVoiceIds, presetId)) {
       case null { return #err("Preset not found") };
       case (?_) {};
     };

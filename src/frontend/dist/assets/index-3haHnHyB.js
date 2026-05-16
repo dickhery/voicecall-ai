@@ -33076,6 +33076,7 @@ const AudioFormat$1 = Variant({
 const CallPresetInput = Record({
   "toolsEnabled": ToolsEnabled,
   "voice": Voice$1,
+  "voiceId": Opt(Text),
   "name": Text,
   "sampleRate": SampleRate$1,
   "systemPrompt": Text,
@@ -33087,11 +33088,16 @@ const CallPreset = Record({
   "toolsEnabled": ToolsEnabled,
   "ownerId": Principal2,
   "voice": Voice$1,
+  "voiceId": Opt(Text),
   "name": Text,
   "sampleRate": SampleRate$1,
   "systemPrompt": Text,
   "turnDetection": TurnDetection,
   "audioFormat": AudioFormat$1
+});
+const CallPresetMutationResult = Variant({
+  "ok": CallPreset,
+  "err": Text
 });
 const AnsweringPresetStatus$1 = Variant({
   "pendingVerification": Null,
@@ -33109,6 +33115,7 @@ const AnsweringPreset = Record({
   "phoneNumber": Text,
   "systemPrompt": Text,
   "voice": Voice$1,
+  "voiceId": Opt(Text),
   "turnDetection": TurnDetection,
   "audioFormat": AudioFormat$1,
   "sampleRate": SampleRate$1,
@@ -33127,6 +33134,7 @@ const AnsweringPresetInput = Record({
   "phoneNumber": Text,
   "systemPrompt": Text,
   "voice": Voice$1,
+  "voiceId": Opt(Text),
   "turnDetection": TurnDetection,
   "audioFormat": AudioFormat$1,
   "sampleRate": SampleRate$1,
@@ -33397,9 +33405,19 @@ Service({
     [AnsweringPresetMutationResult],
     []
   ),
+  "updateAnsweringPresetInstructions": Func(
+    [PresetId, Text],
+    [AnsweringPresetMutationResult],
+    []
+  ),
   "updatePreset": Func(
     [PresetId, CallPresetInput],
     [Opt(CallPreset)],
+    []
+  ),
+  "updatePresetInstructions": Func(
+    [PresetId, Text],
+    [CallPresetMutationResult],
     []
   ),
   "verifyAnsweringPresetForServer": Func(
@@ -33500,6 +33518,7 @@ const idlFactory = ({ IDL: IDL2 }) => {
   const CallPresetInput2 = IDL2.Record({
     "toolsEnabled": ToolsEnabled2,
     "voice": Voice2,
+    "voiceId": IDL2.Opt(IDL2.Text),
     "name": IDL2.Text,
     "sampleRate": SampleRate2,
     "systemPrompt": IDL2.Text,
@@ -33511,11 +33530,16 @@ const idlFactory = ({ IDL: IDL2 }) => {
     "toolsEnabled": ToolsEnabled2,
     "ownerId": IDL2.Principal,
     "voice": Voice2,
+    "voiceId": IDL2.Opt(IDL2.Text),
     "name": IDL2.Text,
     "sampleRate": SampleRate2,
     "systemPrompt": IDL2.Text,
     "turnDetection": TurnDetection2,
     "audioFormat": AudioFormat2
+  });
+  const CallPresetMutationResult2 = IDL2.Variant({
+    "ok": CallPreset2,
+    "err": IDL2.Text
   });
   const AnsweringPresetStatus2 = IDL2.Variant({
     "pendingVerification": IDL2.Null,
@@ -33533,6 +33557,7 @@ const idlFactory = ({ IDL: IDL2 }) => {
     "phoneNumber": IDL2.Text,
     "systemPrompt": IDL2.Text,
     "voice": Voice2,
+    "voiceId": IDL2.Opt(IDL2.Text),
     "turnDetection": TurnDetection2,
     "audioFormat": AudioFormat2,
     "sampleRate": SampleRate2,
@@ -33551,6 +33576,7 @@ const idlFactory = ({ IDL: IDL2 }) => {
     "phoneNumber": IDL2.Text,
     "systemPrompt": IDL2.Text,
     "voice": Voice2,
+    "voiceId": IDL2.Opt(IDL2.Text),
     "turnDetection": TurnDetection2,
     "audioFormat": AudioFormat2,
     "sampleRate": SampleRate2,
@@ -33826,9 +33852,19 @@ const idlFactory = ({ IDL: IDL2 }) => {
       [AnsweringPresetMutationResult2],
       []
     ),
+    "updateAnsweringPresetInstructions": IDL2.Func(
+      [PresetId2, IDL2.Text],
+      [AnsweringPresetMutationResult2],
+      []
+    ),
     "updatePreset": IDL2.Func(
       [PresetId2, CallPresetInput2],
       [IDL2.Opt(CallPreset2)],
+      []
+    ),
+    "updatePresetInstructions": IDL2.Func(
+      [PresetId2, IDL2.Text],
+      [CallPresetMutationResult2],
       []
     ),
     "verifyAnsweringPresetForServer": IDL2.Func(
@@ -34432,6 +34468,20 @@ class Backend {
       return from_candid_AnsweringPresetMutationResult(result);
     }
   }
+  async updateAnsweringPresetInstructions(arg0, arg1) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.updateAnsweringPresetInstructions(arg0, arg1);
+        return from_candid_AnsweringPresetMutationResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.updateAnsweringPresetInstructions(arg0, arg1);
+      return from_candid_AnsweringPresetMutationResult(result);
+    }
+  }
   async updatePreset(arg0, arg1) {
     if (this.processError) {
       try {
@@ -34444,6 +34494,20 @@ class Backend {
     } else {
       const result = await this.actor.updatePreset(arg0, to_candid_CallPresetInput_n15(this._uploadFile, this._downloadFile, arg1));
       return from_candid_opt_n31(this._uploadFile, this._downloadFile, result);
+    }
+  }
+  async updatePresetInstructions(arg0, arg1) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.updatePresetInstructions(arg0, arg1);
+        return from_candid_CallPresetMutationResult(this._uploadFile, this._downloadFile, result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.updatePresetInstructions(arg0, arg1);
+      return from_candid_CallPresetMutationResult(this._uploadFile, this._downloadFile, result);
     }
   }
 }
@@ -34551,6 +34615,7 @@ function from_candid_AnsweringPreset(value) {
     phoneNumber: value.phoneNumber,
     systemPrompt: value.systemPrompt,
     voice: from_candid_Voice_n25(void 0, void 0, value.voice),
+    voiceId: from_candid_opt_text(value.voiceId),
     turnDetection: value.turnDetection,
     audioFormat: from_candid_AudioFormat_n29(void 0, void 0, value.audioFormat),
     sampleRate: from_candid_SampleRate_n27(void 0, void 0, value.sampleRate),
@@ -34569,6 +34634,15 @@ function from_candid_AnsweringPresetMutationResult(value) {
   return "ok" in value ? {
     __kind__: "ok",
     ok: from_candid_AnsweringPreset(value.ok)
+  } : {
+    __kind__: "err",
+    err: value.err
+  };
+}
+function from_candid_CallPresetMutationResult(_uploadFile, _downloadFile, value) {
+  return "ok" in value ? {
+    __kind__: "ok",
+    ok: from_candid_CallPreset_n23(_uploadFile, _downloadFile, value.ok)
   } : {
     __kind__: "err",
     err: value.err
@@ -34596,6 +34670,7 @@ function to_candid_AnsweringPresetInput(value) {
     phoneNumber: value.phoneNumber,
     systemPrompt: value.systemPrompt,
     voice: to_candid_Voice_n17(void 0, void 0, value.voice),
+    voiceId: to_candid_opt_n42(void 0, void 0, value.voiceId ?? null),
     turnDetection: value.turnDetection,
     audioFormat: to_candid_AudioFormat_n21(void 0, void 0, value.audioFormat),
     sampleRate: to_candid_SampleRate_n19(void 0, void 0, value.sampleRate),
@@ -34656,6 +34731,7 @@ function from_candid_record_n24(_uploadFile, _downloadFile, value) {
     toolsEnabled: value.toolsEnabled,
     ownerId: value.ownerId,
     voice: from_candid_Voice_n25(_uploadFile, _downloadFile, value.voice),
+    voiceId: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.voiceId)),
     name: value.name,
     sampleRate: from_candid_SampleRate_n27(_uploadFile, _downloadFile, value.sampleRate),
     systemPrompt: value.systemPrompt,
@@ -34754,6 +34830,7 @@ function to_candid_record_n16(_uploadFile, _downloadFile, value) {
   return {
     toolsEnabled: value.toolsEnabled,
     voice: to_candid_Voice_n17(_uploadFile, _downloadFile, value.voice),
+    voiceId: to_candid_opt_n42(_uploadFile, _downloadFile, value.voiceId ?? null),
     name: value.name,
     sampleRate: to_candid_SampleRate_n19(_uploadFile, _downloadFile, value.sampleRate),
     systemPrompt: value.systemPrompt,
@@ -37836,51 +37913,62 @@ const createLucideIcon = (iconName, iconNode) => {
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$N = [
+const __iconNode$O = [
   ["path", { d: "m12 19-7-7 7-7", key: "1l729n" }],
   ["path", { d: "M19 12H5", key: "x3x0zl" }]
 ];
-const ArrowLeft = createLucideIcon("arrow-left", __iconNode$N);
+const ArrowLeft = createLucideIcon("arrow-left", __iconNode$O);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$M = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
-const Check = createLucideIcon("check", __iconNode$M);
+const __iconNode$N = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
+const Check = createLucideIcon("check", __iconNode$N);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$L = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
-const ChevronDown = createLucideIcon("chevron-down", __iconNode$L);
+const __iconNode$M = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
+const ChevronDown = createLucideIcon("chevron-down", __iconNode$M);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$K = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
-const ChevronLeft = createLucideIcon("chevron-left", __iconNode$K);
+const __iconNode$L = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
+const ChevronLeft = createLucideIcon("chevron-left", __iconNode$L);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$J = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
-const ChevronRight = createLucideIcon("chevron-right", __iconNode$J);
+const __iconNode$K = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
+const ChevronRight = createLucideIcon("chevron-right", __iconNode$K);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$I = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
-const ChevronUp = createLucideIcon("chevron-up", __iconNode$I);
+const __iconNode$J = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
+const ChevronUp = createLucideIcon("chevron-up", __iconNode$J);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$I = [
+  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
+  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+];
+const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$I);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37888,10 +37976,10 @@ const ChevronUp = createLucideIcon("chevron-up", __iconNode$I);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$H = [
-  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
-  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
 ];
-const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$H);
+const CircleCheck = createLucideIcon("circle-check", __iconNode$H);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37900,9 +37988,10 @@ const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$H);
  */
 const __iconNode$G = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
+  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
+  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
 ];
-const CircleCheck = createLucideIcon("circle-check", __iconNode$G);
+const CircleX = createLucideIcon("circle-x", __iconNode$G);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37911,10 +38000,9 @@ const CircleCheck = createLucideIcon("circle-check", __iconNode$G);
  */
 const __iconNode$F = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
-  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
+  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
 ];
-const CircleX = createLucideIcon("circle-x", __iconNode$F);
+const Clock = createLucideIcon("clock", __iconNode$F);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37922,10 +38010,10 @@ const CircleX = createLucideIcon("circle-x", __iconNode$F);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$E = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
+  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
+  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
 ];
-const Clock = createLucideIcon("clock", __iconNode$E);
+const Copy = createLucideIcon("copy", __iconNode$E);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37933,10 +38021,10 @@ const Clock = createLucideIcon("clock", __iconNode$E);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$D = [
-  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
-  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
+  ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2", key: "ynyp8z" }],
+  ["line", { x1: "2", x2: "22", y1: "10", y2: "10", key: "1b3vmo" }]
 ];
-const Copy = createLucideIcon("copy", __iconNode$D);
+const CreditCard = createLucideIcon("credit-card", __iconNode$D);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37944,10 +38032,11 @@ const Copy = createLucideIcon("copy", __iconNode$D);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$C = [
-  ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2", key: "ynyp8z" }],
-  ["line", { x1: "2", x2: "22", y1: "10", y2: "10", key: "1b3vmo" }]
+  ["path", { d: "M12 15V3", key: "m9g1x1" }],
+  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
+  ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
 ];
-const CreditCard = createLucideIcon("credit-card", __iconNode$C);
+const Download = createLucideIcon("download", __iconNode$C);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37955,18 +38044,6 @@ const CreditCard = createLucideIcon("credit-card", __iconNode$C);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$B = [
-  ["path", { d: "M12 15V3", key: "m9g1x1" }],
-  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
-  ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
-];
-const Download = createLucideIcon("download", __iconNode$B);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$A = [
   [
     "path",
     {
@@ -37984,14 +38061,14 @@ const __iconNode$A = [
   ],
   ["path", { d: "m2 2 20 20", key: "1ooewy" }]
 ];
-const EyeOff = createLucideIcon("eye-off", __iconNode$A);
+const EyeOff = createLucideIcon("eye-off", __iconNode$B);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$z = [
+const __iconNode$A = [
   [
     "path",
     {
@@ -38001,7 +38078,21 @@ const __iconNode$z = [
   ],
   ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
 ];
-const Eye = createLucideIcon("eye", __iconNode$z);
+const Eye = createLucideIcon("eye", __iconNode$A);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$z = [
+  ["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", key: "1rqfz7" }],
+  ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4", key: "tnqrlb" }],
+  ["path", { d: "M10 9H8", key: "b1mrlr" }],
+  ["path", { d: "M16 13H8", key: "t4e002" }],
+  ["path", { d: "M16 17H8", key: "z1uh3a" }]
+];
+const FileText = createLucideIcon("file-text", __iconNode$z);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38009,20 +38100,6 @@ const Eye = createLucideIcon("eye", __iconNode$z);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$y = [
-  ["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", key: "1rqfz7" }],
-  ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4", key: "tnqrlb" }],
-  ["path", { d: "M10 9H8", key: "b1mrlr" }],
-  ["path", { d: "M16 13H8", key: "t4e002" }],
-  ["path", { d: "M16 17H8", key: "z1uh3a" }]
-];
-const FileText = createLucideIcon("file-text", __iconNode$y);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$x = [
   ["rect", { x: "3", y: "8", width: "18", height: "4", rx: "1", key: "bkv52" }],
   ["path", { d: "M12 8v13", key: "1c76mn" }],
   ["path", { d: "M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7", key: "6wjy6b" }],
@@ -38034,14 +38111,14 @@ const __iconNode$x = [
     }
   ]
 ];
-const Gift = createLucideIcon("gift", __iconNode$x);
+const Gift = createLucideIcon("gift", __iconNode$y);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$w = [
+const __iconNode$x = [
   [
     "path",
     {
@@ -38050,7 +38127,19 @@ const __iconNode$w = [
     }
   ]
 ];
-const Headphones = createLucideIcon("headphones", __iconNode$w);
+const Headphones = createLucideIcon("headphones", __iconNode$x);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$w = [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "M12 16v-4", key: "1dtifu" }],
+  ["path", { d: "M12 8h.01", key: "e9boi3" }]
+];
+const Info = createLucideIcon("info", __iconNode$w);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38058,18 +38147,6 @@ const Headphones = createLucideIcon("headphones", __iconNode$w);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$v = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "M12 16v-4", key: "1dtifu" }],
-  ["path", { d: "M12 8h.01", key: "e9boi3" }]
-];
-const Info = createLucideIcon("info", __iconNode$v);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$u = [
   [
     "path",
     {
@@ -38079,28 +38156,40 @@ const __iconNode$u = [
   ],
   ["circle", { cx: "16.5", cy: "7.5", r: ".5", fill: "currentColor", key: "w0ekpg" }]
 ];
-const KeyRound = createLucideIcon("key-round", __iconNode$u);
+const KeyRound = createLucideIcon("key-round", __iconNode$v);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$t = [
+const __iconNode$u = [
   ["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1", key: "10lvy0" }],
   ["rect", { width: "7", height: "5", x: "14", y: "3", rx: "1", key: "16une8" }],
   ["rect", { width: "7", height: "9", x: "14", y: "12", rx: "1", key: "1hutg5" }],
   ["rect", { width: "7", height: "5", x: "3", y: "16", rx: "1", key: "ldoo1y" }]
 ];
-const LayoutDashboard = createLucideIcon("layout-dashboard", __iconNode$t);
+const LayoutDashboard = createLucideIcon("layout-dashboard", __iconNode$u);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$s = [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]];
-const LoaderCircle = createLucideIcon("loader-circle", __iconNode$s);
+const __iconNode$t = [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]];
+const LoaderCircle = createLucideIcon("loader-circle", __iconNode$t);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$s = [
+  ["path", { d: "m16 17 5-5-5-5", key: "1bji2h" }],
+  ["path", { d: "M21 12H9", key: "dn1m92" }],
+  ["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", key: "1uf3rs" }]
+];
+const LogOut = createLucideIcon("log-out", __iconNode$s);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38108,11 +38197,11 @@ const LoaderCircle = createLucideIcon("loader-circle", __iconNode$s);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$r = [
-  ["path", { d: "m16 17 5-5-5-5", key: "1bji2h" }],
-  ["path", { d: "M21 12H9", key: "dn1m92" }],
-  ["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", key: "1uf3rs" }]
+  ["path", { d: "M4 12h16", key: "1lakjw" }],
+  ["path", { d: "M4 18h16", key: "19g7jn" }],
+  ["path", { d: "M4 6h16", key: "1o0s65" }]
 ];
-const LogOut = createLucideIcon("log-out", __iconNode$r);
+const Menu = createLucideIcon("menu", __iconNode$r);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38120,11 +38209,12 @@ const LogOut = createLucideIcon("log-out", __iconNode$r);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$q = [
-  ["path", { d: "M4 12h16", key: "1lakjw" }],
-  ["path", { d: "M4 18h16", key: "19g7jn" }],
-  ["path", { d: "M4 6h16", key: "1o0s65" }]
+  ["path", { d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", key: "1lielz" }],
+  ["path", { d: "M8 10h.01", key: "19clt8" }],
+  ["path", { d: "M12 10h.01", key: "1nrarc" }],
+  ["path", { d: "M16 10h.01", key: "1m94wz" }]
 ];
-const Menu = createLucideIcon("menu", __iconNode$q);
+const MessageSquareMore = createLucideIcon("message-square-more", __iconNode$q);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38132,12 +38222,11 @@ const Menu = createLucideIcon("menu", __iconNode$q);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$p = [
-  ["path", { d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", key: "1lielz" }],
-  ["path", { d: "M8 10h.01", key: "19clt8" }],
-  ["path", { d: "M12 10h.01", key: "1nrarc" }],
-  ["path", { d: "M16 10h.01", key: "1m94wz" }]
+  ["path", { d: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z", key: "131961" }],
+  ["path", { d: "M19 10v2a7 7 0 0 1-14 0v-2", key: "1vc78b" }],
+  ["line", { x1: "12", x2: "12", y1: "19", y2: "22", key: "x3vr5v" }]
 ];
-const MessageSquareMore = createLucideIcon("message-square-more", __iconNode$p);
+const Mic = createLucideIcon("mic", __iconNode$p);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38145,11 +38234,16 @@ const MessageSquareMore = createLucideIcon("message-square-more", __iconNode$p);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$o = [
-  ["path", { d: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z", key: "131961" }],
-  ["path", { d: "M19 10v2a7 7 0 0 1-14 0v-2", key: "1vc78b" }],
-  ["line", { x1: "12", x2: "12", y1: "19", y2: "22", key: "x3vr5v" }]
+  [
+    "path",
+    {
+      d: "M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z",
+      key: "1a8usu"
+    }
+  ],
+  ["path", { d: "m15 5 4 4", key: "1mk7zo" }]
 ];
-const Mic = createLucideIcon("mic", __iconNode$o);
+const Pencil = createLucideIcon("pencil", __iconNode$o);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -39411,6 +39505,20 @@ function useUpdatePreset() {
     }
   });
 }
+function useUpdatePresetInstructions() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id: id2, systemPrompt }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.updatePresetInstructions(id2, systemPrompt);
+    },
+    onSuccess: (_2, vars) => {
+      qc.invalidateQueries({ queryKey: ["myPresets"] });
+      qc.invalidateQueries({ queryKey: ["preset", vars.id.toString()] });
+    }
+  });
+}
 function useDeletePreset() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
@@ -39452,6 +39560,17 @@ function useCreateAnsweringPreset() {
     mutationFn: async (input) => {
       if (!actor) throw new Error("Actor not available");
       return actor.createAnsweringPreset(input);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myAnsweringPresets"] })
+  });
+}
+function useUpdateAnsweringPresetInstructions() {
+  const { actor } = useBackendActor();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id: id2, systemPrompt }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.updateAnsweringPresetInstructions(id2, systemPrompt);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["myAnsweringPresets"] })
   });
@@ -39705,6 +39824,7 @@ function serializePreset(preset) {
     name: preset.name,
     systemPrompt: preset.systemPrompt,
     voice: preset.voice,
+    voiceId: preset.voiceId ?? null,
     audioFormat: preset.audioFormat,
     sampleRate: preset.sampleRate,
     turnDetection: {
@@ -39715,6 +39835,17 @@ function serializePreset(preset) {
     },
     toolsEnabled: preset.toolsEnabled
   };
+}
+async function getJson(path) {
+  const baseUrl = await getVoiceServerUrl();
+  const response = await fetch(`${baseUrl}${path}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.ok === false) {
+    throw new Error(
+      payload.error || `Voice server request failed (${response.status})`
+    );
+  }
+  return payload;
 }
 async function postJson(path, body) {
   const baseUrl = await getVoiceServerUrl();
@@ -39730,6 +39861,9 @@ async function postJson(path, body) {
     );
   }
   return payload;
+}
+async function listXaiVoiceLibrary() {
+  return getJson("/xai/voices");
 }
 async function startVoiceServerCall({
   recipientPhone,
@@ -46291,6 +46425,152 @@ function IndexRoute$1() {
     }
   );
 }
+const DEFAULT_XAI_VOICE_OPTIONS = [
+  {
+    voiceId: "eve",
+    name: "Eve",
+    description: "Energetic, upbeat",
+    type: "built-in"
+  },
+  {
+    voiceId: "ara",
+    name: "Ara",
+    description: "Warm, friendly",
+    type: "built-in"
+  },
+  {
+    voiceId: "rex",
+    name: "Rex",
+    description: "Confident, clear",
+    type: "built-in"
+  },
+  {
+    voiceId: "sal",
+    name: "Sal",
+    description: "Smooth, balanced",
+    type: "built-in"
+  },
+  {
+    voiceId: "leo",
+    name: "Leo",
+    description: "Authoritative, strong",
+    type: "built-in"
+  }
+];
+const LEGACY_VOICE_BY_ID = {
+  eve: Voice.eve,
+  ara: Voice.ara,
+  rex: Voice.rex,
+  sal: Voice.sal,
+  leo: Voice.leo
+};
+const DEFAULT_VOICE_BY_ID = new Map(
+  DEFAULT_XAI_VOICE_OPTIONS.map((voice) => [voice.voiceId, voice])
+);
+function normalizeVoiceId(value) {
+  return String(value || "").trim().toLowerCase();
+}
+function voiceToVoiceId(voice) {
+  return String(voice).toLowerCase();
+}
+function mergeVoiceOptions(voices) {
+  const byId = /* @__PURE__ */ new Map();
+  for (const voice of DEFAULT_XAI_VOICE_OPTIONS) {
+    byId.set(normalizeVoiceId(voice.voiceId), voice);
+  }
+  for (const voice of voices) {
+    const voiceId = normalizeVoiceId(voice.voiceId);
+    if (!voiceId) continue;
+    byId.set(voiceId, {
+      ...voice,
+      voiceId: voice.voiceId.trim(),
+      name: voice.name || voice.voiceId
+    });
+  }
+  return Array.from(byId.values());
+}
+function getVoiceLabel(voice, voiceId) {
+  var _a3, _b3;
+  const normalized = normalizeVoiceId(voiceId);
+  if (normalized) {
+    return ((_a3 = DEFAULT_VOICE_BY_ID.get(normalized)) == null ? void 0 : _a3.name) ?? String(voiceId).trim();
+  }
+  return ((_b3 = DEFAULT_VOICE_BY_ID.get(voiceToVoiceId(voice))) == null ? void 0 : _b3.name) ?? String(voice);
+}
+function getVoiceInitial(voice, voiceId) {
+  return getVoiceLabel(voice, voiceId).slice(0, 1).toUpperCase() || "?";
+}
+function VoiceIdSelector({
+  value,
+  onChange,
+  dataOcidPrefix = "voice_selector"
+}) {
+  const [voices, setVoices] = reactExports.useState(
+    DEFAULT_XAI_VOICE_OPTIONS
+  );
+  const [isLoading, setIsLoading] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    let canceled = false;
+    setIsLoading(true);
+    listXaiVoiceLibrary().then((library) => {
+      if (!canceled) setVoices(mergeVoiceOptions(library.voices));
+    }).catch(() => {
+      if (!canceled) setVoices(DEFAULT_XAI_VOICE_OPTIONS);
+    }).finally(() => {
+      if (!canceled) setIsLoading(false);
+    });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+  const activeVoiceId = normalizeVoiceId(value.voiceId) || voiceToVoiceId(value.voice);
+  const displayedVoices = reactExports.useMemo(() => mergeVoiceOptions(voices), [voices]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5", children: displayedVoices.map((voice) => {
+      const voiceId = normalizeVoiceId(voice.voiceId);
+      const isActive = activeVoiceId === voiceId;
+      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        Button,
+        {
+          type: "button",
+          variant: isActive ? "secondary" : "outline",
+          className: "h-auto min-h-20 flex-col items-start gap-1 whitespace-normal p-3 text-left",
+          onClick: () => {
+            const legacyVoice = LEGACY_VOICE_BY_ID[voiceId];
+            onChange({
+              voice: legacyVoice ?? value.voice,
+              voiceId: legacyVoice ? "" : voice.voiceId
+            });
+          },
+          "data-ocid": `${dataOcidPrefix}.preset_voice.${voiceId}`,
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-tight", children: voice.name || voice.voiceId }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] leading-tight text-muted-foreground", children: voice.description || voice.voiceId })
+          ]
+        },
+        voice.voiceId
+      );
+    }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase tracking-wide text-muted-foreground", children: "Voice ID" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Input,
+          {
+            value: value.voiceId ?? "",
+            onChange: (event) => onChange({ voice: value.voice, voiceId: event.target.value }),
+            placeholder: "nlbqfwie",
+            "data-ocid": `${dataOcidPrefix}.custom_voice_id.input`
+          }
+        )
+      ] }),
+      isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-10 items-center gap-2 text-xs text-muted-foreground", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-3.5 w-3.5 animate-spin" }),
+        "Loading voices"
+      ] })
+    ] })
+  ] });
+}
 function useStateMachine(initialState, machine) {
   return reactExports.useReducer((state, event) => {
     const nextState = machine[state][event];
@@ -46695,6 +46975,422 @@ function Checkbox({
     }
   );
 }
+var DIALOG_NAME = "Dialog";
+var [createDialogContext, createDialogScope] = createContextScope(DIALOG_NAME);
+var [DialogProvider, useDialogContext] = createDialogContext(DIALOG_NAME);
+var Dialog$1 = (props) => {
+  const {
+    __scopeDialog,
+    children,
+    open: openProp,
+    defaultOpen,
+    onOpenChange,
+    modal = true
+  } = props;
+  const triggerRef = reactExports.useRef(null);
+  const contentRef = reactExports.useRef(null);
+  const [open, setOpen] = useControllableState({
+    prop: openProp,
+    defaultProp: defaultOpen ?? false,
+    onChange: onOpenChange,
+    caller: DIALOG_NAME
+  });
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    DialogProvider,
+    {
+      scope: __scopeDialog,
+      triggerRef,
+      contentRef,
+      contentId: useId(),
+      titleId: useId(),
+      descriptionId: useId(),
+      open,
+      onOpenChange: setOpen,
+      onOpenToggle: reactExports.useCallback(() => setOpen((prevOpen) => !prevOpen), [setOpen]),
+      modal,
+      children
+    }
+  );
+};
+Dialog$1.displayName = DIALOG_NAME;
+var TRIGGER_NAME$1 = "DialogTrigger";
+var DialogTrigger = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeDialog, ...triggerProps } = props;
+    const context = useDialogContext(TRIGGER_NAME$1, __scopeDialog);
+    const composedTriggerRef = useComposedRefs(forwardedRef, context.triggerRef);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.button,
+      {
+        type: "button",
+        "aria-haspopup": "dialog",
+        "aria-expanded": context.open,
+        "aria-controls": context.contentId,
+        "data-state": getState(context.open),
+        ...triggerProps,
+        ref: composedTriggerRef,
+        onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
+      }
+    );
+  }
+);
+DialogTrigger.displayName = TRIGGER_NAME$1;
+var PORTAL_NAME$1 = "DialogPortal";
+var [PortalProvider, usePortalContext] = createDialogContext(PORTAL_NAME$1, {
+  forceMount: void 0
+});
+var DialogPortal$1 = (props) => {
+  const { __scopeDialog, forceMount, children, container } = props;
+  const context = useDialogContext(PORTAL_NAME$1, __scopeDialog);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(PortalProvider, { scope: __scopeDialog, forceMount, children: reactExports.Children.map(children, (child) => /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || context.open, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Portal$2, { asChild: true, container, children: child }) })) });
+};
+DialogPortal$1.displayName = PORTAL_NAME$1;
+var OVERLAY_NAME$1 = "DialogOverlay";
+var DialogOverlay$1 = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const portalContext = usePortalContext(OVERLAY_NAME$1, props.__scopeDialog);
+    const { forceMount = portalContext.forceMount, ...overlayProps } = props;
+    const context = useDialogContext(OVERLAY_NAME$1, props.__scopeDialog);
+    return context.modal ? /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || context.open, children: /* @__PURE__ */ jsxRuntimeExports.jsx(DialogOverlayImpl, { ...overlayProps, ref: forwardedRef }) }) : null;
+  }
+);
+DialogOverlay$1.displayName = OVERLAY_NAME$1;
+var Slot = /* @__PURE__ */ createSlot("DialogOverlay.RemoveScroll");
+var DialogOverlayImpl = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeDialog, ...overlayProps } = props;
+    const context = useDialogContext(OVERLAY_NAME$1, __scopeDialog);
+    return (
+      // Make sure `Content` is scrollable even when it doesn't live inside `RemoveScroll`
+      // ie. when `Overlay` and `Content` are siblings
+      /* @__PURE__ */ jsxRuntimeExports.jsx(ReactRemoveScroll, { as: Slot, allowPinchZoom: true, shards: [context.contentRef], children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Primitive.div,
+        {
+          "data-state": getState(context.open),
+          ...overlayProps,
+          ref: forwardedRef,
+          style: { pointerEvents: "auto", ...overlayProps.style }
+        }
+      ) })
+    );
+  }
+);
+var CONTENT_NAME$1 = "DialogContent";
+var DialogContent$1 = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const portalContext = usePortalContext(CONTENT_NAME$1, props.__scopeDialog);
+    const { forceMount = portalContext.forceMount, ...contentProps } = props;
+    const context = useDialogContext(CONTENT_NAME$1, props.__scopeDialog);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || context.open, children: context.modal ? /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContentModal, { ...contentProps, ref: forwardedRef }) : /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContentNonModal, { ...contentProps, ref: forwardedRef }) });
+  }
+);
+DialogContent$1.displayName = CONTENT_NAME$1;
+var DialogContentModal = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const context = useDialogContext(CONTENT_NAME$1, props.__scopeDialog);
+    const contentRef = reactExports.useRef(null);
+    const composedRefs = useComposedRefs(forwardedRef, context.contentRef, contentRef);
+    reactExports.useEffect(() => {
+      const content = contentRef.current;
+      if (content) return hideOthers(content);
+    }, []);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      DialogContentImpl,
+      {
+        ...props,
+        ref: composedRefs,
+        trapFocus: context.open,
+        disableOutsidePointerEvents: true,
+        onCloseAutoFocus: composeEventHandlers(props.onCloseAutoFocus, (event) => {
+          var _a3;
+          event.preventDefault();
+          (_a3 = context.triggerRef.current) == null ? void 0 : _a3.focus();
+        }),
+        onPointerDownOutside: composeEventHandlers(props.onPointerDownOutside, (event) => {
+          const originalEvent = event.detail.originalEvent;
+          const ctrlLeftClick = originalEvent.button === 0 && originalEvent.ctrlKey === true;
+          const isRightClick = originalEvent.button === 2 || ctrlLeftClick;
+          if (isRightClick) event.preventDefault();
+        }),
+        onFocusOutside: composeEventHandlers(
+          props.onFocusOutside,
+          (event) => event.preventDefault()
+        )
+      }
+    );
+  }
+);
+var DialogContentNonModal = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const context = useDialogContext(CONTENT_NAME$1, props.__scopeDialog);
+    const hasInteractedOutsideRef = reactExports.useRef(false);
+    const hasPointerDownOutsideRef = reactExports.useRef(false);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      DialogContentImpl,
+      {
+        ...props,
+        ref: forwardedRef,
+        trapFocus: false,
+        disableOutsidePointerEvents: false,
+        onCloseAutoFocus: (event) => {
+          var _a3, _b3;
+          (_a3 = props.onCloseAutoFocus) == null ? void 0 : _a3.call(props, event);
+          if (!event.defaultPrevented) {
+            if (!hasInteractedOutsideRef.current) (_b3 = context.triggerRef.current) == null ? void 0 : _b3.focus();
+            event.preventDefault();
+          }
+          hasInteractedOutsideRef.current = false;
+          hasPointerDownOutsideRef.current = false;
+        },
+        onInteractOutside: (event) => {
+          var _a3, _b3;
+          (_a3 = props.onInteractOutside) == null ? void 0 : _a3.call(props, event);
+          if (!event.defaultPrevented) {
+            hasInteractedOutsideRef.current = true;
+            if (event.detail.originalEvent.type === "pointerdown") {
+              hasPointerDownOutsideRef.current = true;
+            }
+          }
+          const target = event.target;
+          const targetIsTrigger = (_b3 = context.triggerRef.current) == null ? void 0 : _b3.contains(target);
+          if (targetIsTrigger) event.preventDefault();
+          if (event.detail.originalEvent.type === "focusin" && hasPointerDownOutsideRef.current) {
+            event.preventDefault();
+          }
+        }
+      }
+    );
+  }
+);
+var DialogContentImpl = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeDialog, trapFocus, onOpenAutoFocus, onCloseAutoFocus, ...contentProps } = props;
+    const context = useDialogContext(CONTENT_NAME$1, __scopeDialog);
+    const contentRef = reactExports.useRef(null);
+    const composedRefs = useComposedRefs(forwardedRef, contentRef);
+    useFocusGuards();
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        FocusScope,
+        {
+          asChild: true,
+          loop: true,
+          trapped: trapFocus,
+          onMountAutoFocus: onOpenAutoFocus,
+          onUnmountAutoFocus: onCloseAutoFocus,
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            DismissableLayer,
+            {
+              role: "dialog",
+              id: context.contentId,
+              "aria-describedby": context.descriptionId,
+              "aria-labelledby": context.titleId,
+              "data-state": getState(context.open),
+              ...contentProps,
+              ref: composedRefs,
+              onDismiss: () => context.onOpenChange(false)
+            }
+          )
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(TitleWarning, { titleId: context.titleId }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(DescriptionWarning$1, { contentRef, descriptionId: context.descriptionId })
+      ] })
+    ] });
+  }
+);
+var TITLE_NAME$1 = "DialogTitle";
+var DialogTitle$1 = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeDialog, ...titleProps } = props;
+    const context = useDialogContext(TITLE_NAME$1, __scopeDialog);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Primitive.h2, { id: context.titleId, ...titleProps, ref: forwardedRef });
+  }
+);
+DialogTitle$1.displayName = TITLE_NAME$1;
+var DESCRIPTION_NAME$1 = "DialogDescription";
+var DialogDescription$1 = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeDialog, ...descriptionProps } = props;
+    const context = useDialogContext(DESCRIPTION_NAME$1, __scopeDialog);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Primitive.p, { id: context.descriptionId, ...descriptionProps, ref: forwardedRef });
+  }
+);
+DialogDescription$1.displayName = DESCRIPTION_NAME$1;
+var CLOSE_NAME = "DialogClose";
+var DialogClose = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeDialog, ...closeProps } = props;
+    const context = useDialogContext(CLOSE_NAME, __scopeDialog);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.button,
+      {
+        type: "button",
+        ...closeProps,
+        ref: forwardedRef,
+        onClick: composeEventHandlers(props.onClick, () => context.onOpenChange(false))
+      }
+    );
+  }
+);
+DialogClose.displayName = CLOSE_NAME;
+function getState(open) {
+  return open ? "open" : "closed";
+}
+var TITLE_WARNING_NAME = "DialogTitleWarning";
+var [WarningProvider, useWarningContext] = createContext2(TITLE_WARNING_NAME, {
+  contentName: CONTENT_NAME$1,
+  titleName: TITLE_NAME$1,
+  docsSlug: "dialog"
+});
+var TitleWarning = ({ titleId }) => {
+  const titleWarningContext = useWarningContext(TITLE_WARNING_NAME);
+  const MESSAGE = `\`${titleWarningContext.contentName}\` requires a \`${titleWarningContext.titleName}\` for the component to be accessible for screen reader users.
+
+If you want to hide the \`${titleWarningContext.titleName}\`, you can wrap it with our VisuallyHidden component.
+
+For more information, see https://radix-ui.com/primitives/docs/components/${titleWarningContext.docsSlug}`;
+  reactExports.useEffect(() => {
+    if (titleId) {
+      const hasTitle = document.getElementById(titleId);
+      if (!hasTitle) console.error(MESSAGE);
+    }
+  }, [MESSAGE, titleId]);
+  return null;
+};
+var DESCRIPTION_WARNING_NAME = "DialogDescriptionWarning";
+var DescriptionWarning$1 = ({ contentRef, descriptionId }) => {
+  const descriptionWarningContext = useWarningContext(DESCRIPTION_WARNING_NAME);
+  const MESSAGE = `Warning: Missing \`Description\` or \`aria-describedby={undefined}\` for {${descriptionWarningContext.contentName}}.`;
+  reactExports.useEffect(() => {
+    var _a3;
+    const describedById = (_a3 = contentRef.current) == null ? void 0 : _a3.getAttribute("aria-describedby");
+    if (descriptionId && describedById) {
+      const hasDescription = document.getElementById(descriptionId);
+      if (!hasDescription) console.warn(MESSAGE);
+    }
+  }, [MESSAGE, contentRef, descriptionId]);
+  return null;
+};
+var Root$1 = Dialog$1;
+var Trigger = DialogTrigger;
+var Portal = DialogPortal$1;
+var Overlay = DialogOverlay$1;
+var Content = DialogContent$1;
+var Title = DialogTitle$1;
+var Description = DialogDescription$1;
+var Close = DialogClose;
+function Dialog({
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Root$1, { "data-slot": "dialog", ...props });
+}
+function DialogPortal({
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Portal, { "data-slot": "dialog-portal", ...props });
+}
+function DialogOverlay({
+  className,
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Overlay,
+    {
+      "data-slot": "dialog-overlay",
+      className: cn(
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
+        className
+      ),
+      ...props
+    }
+  );
+}
+function DialogContent({
+  className,
+  children,
+  showCloseButton = true,
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogPortal, { "data-slot": "dialog-portal", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(DialogOverlay, {}),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      Content,
+      {
+        "data-slot": "dialog-content",
+        className: cn(
+          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          className
+        ),
+        ...props,
+        children: [
+          children,
+          showCloseButton && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            Close,
+            {
+              "data-slot": "dialog-close",
+              className: "ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(X, {}),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "sr-only", children: "Close" })
+              ]
+            }
+          )
+        ]
+      }
+    )
+  ] });
+}
+function DialogHeader({ className, ...props }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "div",
+    {
+      "data-slot": "dialog-header",
+      className: cn("flex flex-col gap-2 text-center sm:text-left", className),
+      ...props
+    }
+  );
+}
+function DialogFooter({ className, ...props }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "div",
+    {
+      "data-slot": "dialog-footer",
+      className: cn(
+        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+        className
+      ),
+      ...props
+    }
+  );
+}
+function DialogTitle({
+  className,
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Title,
+    {
+      "data-slot": "dialog-title",
+      className: cn("text-lg leading-none font-semibold", className),
+      ...props
+    }
+  );
+}
+function DialogDescription({
+  className,
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Description,
+    {
+      "data-slot": "dialog-description",
+      className: cn("text-muted-foreground text-sm", className),
+      ...props
+    }
+  );
+}
 function Textarea({ className, ...props }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "textarea",
@@ -46754,13 +47450,7 @@ const DEFAULT_TOOLS = {
   xSearch: false,
   functionCalling: false
 };
-const VOICES = [
-  { value: Voice.eve, label: "Eve" },
-  { value: Voice.ara, label: "Ara" },
-  { value: Voice.rex, label: "Rex" },
-  { value: Voice.sal, label: "Sal" },
-  { value: Voice.leo, label: "Leo" }
-];
+const MAX_AI_INSTRUCTIONS_CHARS$2 = 8e3;
 const MONITOR_SAMPLE_RATE$1 = 8e3;
 const MONITOR_JITTER_SECONDS$1 = 0.12;
 function validateE164$1(phone) {
@@ -46779,6 +47469,7 @@ function buildDefaultPreset() {
     phoneNumber: "",
     systemPrompt: "",
     voice: Voice.eve,
+    voiceId: "",
     turnDetection: DEFAULT_TURN_DETECTION,
     audioFormat: AudioFormat.pcmu,
     sampleRate: SampleRate.hz8000,
@@ -46939,8 +47630,20 @@ function AnsweringPresetCard({
 }) {
   const setEnabled = useSetAnsweringPresetEnabled();
   const deletePreset = useDeleteAnsweringPreset();
+  const updateInstructions = useUpdateAnsweringPresetInstructions();
+  const [isEditingInstructions, setIsEditingInstructions] = reactExports.useState(false);
+  const [draftInstructions, setDraftInstructions] = reactExports.useState(
+    preset.systemPrompt
+  );
   const isVerified = preset.verificationStatus === AnsweringPresetStatus.verified;
   const url = webhookUrl(baseUrl, preset);
+  const trimmedDraftInstructions = draftInstructions.trim();
+  const canSaveInstructions = trimmedDraftInstructions.length > 0 && trimmedDraftInstructions.length <= MAX_AI_INSTRUCTIONS_CHARS$2 && trimmedDraftInstructions !== preset.systemPrompt.trim();
+  reactExports.useEffect(() => {
+    if (!isEditingInstructions) {
+      setDraftInstructions(preset.systemPrompt);
+    }
+  }, [isEditingInstructions, preset.systemPrompt]);
   const toggleEnabled = async (enabled) => {
     const result = await setEnabled.mutateAsync({ id: preset.id, enabled });
     if (result.__kind__ === "err") {
@@ -46953,91 +47656,224 @@ function AnsweringPresetCard({
     await deletePreset.mutateAsync(preset.id);
     ue.success("Answering preset deleted");
   };
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(Card, { className: "border-border bg-card", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx(CardHeader, { className: "pb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 md:flex-row md:items-start md:justify-between", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(CardTitle, { className: "text-lg", children: preset.name }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { className: "font-mono", children: preset.phoneNumber })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Badge,
-          {
-            variant: "outline",
-            className: isVerified ? "border-green-500/40 text-green-400" : "border-yellow-500/40 text-yellow-400",
-            children: isVerified ? "Verified" : "Pending"
-          }
-        ),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 rounded-md border border-border px-2 py-1", children: [
+  const saveInstructions = async () => {
+    if (!trimmedDraftInstructions) {
+      ue.error("AI answering instructions are required");
+      return;
+    }
+    if (trimmedDraftInstructions.length > MAX_AI_INSTRUCTIONS_CHARS$2) {
+      ue.error("AI instructions must be 8000 characters or fewer");
+      return;
+    }
+    const result = await updateInstructions.mutateAsync({
+      id: preset.id,
+      systemPrompt: trimmedDraftInstructions
+    });
+    if (result.__kind__ === "err") {
+      ue.error(result.err);
+      return;
+    }
+    ue.success("Answering instructions updated");
+    setIsEditingInstructions(false);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Card, { className: "border-border bg-card", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(CardHeader, { className: "pb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 md:flex-row md:items-start md:justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(CardTitle, { className: "text-lg", children: preset.name }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { className: "font-mono", children: preset.phoneNumber })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap items-center gap-2", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Switch,
+            Badge,
             {
-              checked: preset.enabled,
-              disabled: !isVerified || setEnabled.isPending,
-              onCheckedChange: (enabled) => void toggleEnabled(enabled)
+              variant: "outline",
+              className: isVerified ? "border-green-500/40 text-green-400" : "border-yellow-500/40 text-yellow-400",
+              children: isVerified ? "Verified" : "Pending"
             }
           ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-muted-foreground", children: preset.enabled ? "On" : "Off" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Button,
-          {
-            type: "button",
-            variant: "ghost",
-            size: "icon",
-            onClick: () => void remove(),
-            disabled: deletePreset.isPending,
-            children: deletePreset.isPending ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-4 w-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-4 w-4" })
-          }
-        )
-      ] })
-    ] }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs(CardContent, { className: "space-y-4", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-border p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium uppercase text-muted-foreground", children: "Voice" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold", children: preset.voice })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-border p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium uppercase text-muted-foreground", children: "Capture" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm", children: [
-            preset.captureOptions.saveTranscript ? "Transcript" : "",
-            preset.captureOptions.recordAudio ? "Audio" : ""
-          ].filter(Boolean).join(" + ") || "Off" })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-border p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium uppercase text-muted-foreground", children: "Last Call" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm", children: formatDate(preset.lastIncomingAt) })
-        ] })
-      ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase text-muted-foreground", children: "Twilio Voice Webhook" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 rounded-md border border-border px-2 py-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Switch,
+              {
+                checked: preset.enabled,
+                disabled: !isVerified || setEnabled.isPending,
+                onCheckedChange: (enabled) => void toggleEnabled(enabled)
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-muted-foreground", children: preset.enabled ? "On" : "Off" })
+          ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Input,
+            Button,
             {
-              value: url || "Voice server URL is not configured",
-              readOnly: true
+              type: "button",
+              variant: "ghost",
+              size: "icon",
+              onClick: () => setIsEditingInstructions(true),
+              "aria-label": "Edit answering instructions",
+              "data-ocid": `answering.preset.edit_instructions.${preset.id.toString()}`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-4 w-4" })
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Button,
             {
               type: "button",
-              variant: "outline",
+              variant: "ghost",
               size: "icon",
-              disabled: !url,
-              onClick: () => {
-                void copyTextToClipboard(url);
-                ue.success("Webhook URL copied");
-              },
-              children: /* @__PURE__ */ jsxRuntimeExports.jsx(Copy, { className: "h-4 w-4" })
+              onClick: () => void remove(),
+              disabled: deletePreset.isPending,
+              "aria-label": "Delete answering preset",
+              children: deletePreset.isPending ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-4 w-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Trash2, { className: "h-4 w-4" })
             }
           )
+        ] })
+      ] }) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(CardContent, { className: "space-y-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-border p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium uppercase text-muted-foreground", children: "Voice" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold", children: getVoiceLabel(preset.voice, preset.voiceId) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-border p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium uppercase text-muted-foreground", children: "Capture" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm", children: [
+              preset.captureOptions.saveTranscript ? "Transcript" : "",
+              preset.captureOptions.recordAudio ? "Audio" : ""
+            ].filter(Boolean).join(" + ") || "Off" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-border p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium uppercase text-muted-foreground", children: "Last Call" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm", children: formatDate(preset.lastIncomingAt) })
+          ] })
         ] }),
-        !isVerified && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: "Set this URL as the number’s Voice webhook in Twilio, then call the number once. The first webhook confirms the number." })
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-md border border-border p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-2 flex items-center justify-between gap-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase text-muted-foreground", children: "AI Instructions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              Button,
+              {
+                type: "button",
+                variant: "ghost",
+                size: "sm",
+                className: "h-7 gap-1.5 px-2 text-xs",
+                onClick: () => setIsEditingInstructions(true),
+                "data-ocid": `answering.preset.instructions_edit_button.${preset.id.toString()}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-3 w-3" }),
+                  "Edit"
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "line-clamp-3 whitespace-pre-line text-sm text-muted-foreground", children: preset.systemPrompt })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase text-muted-foreground", children: "Twilio Voice Webhook" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Input,
+              {
+                value: url || "Voice server URL is not configured",
+                readOnly: true
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Button,
+              {
+                type: "button",
+                variant: "outline",
+                size: "icon",
+                disabled: !url,
+                onClick: () => {
+                  void copyTextToClipboard(url);
+                  ue.success("Webhook URL copied");
+                },
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(Copy, { className: "h-4 w-4" })
+              }
+            )
+          ] }),
+          !isVerified && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: "Set this URL as the number’s Voice webhook in Twilio, then call the number once. The first webhook confirms the number." })
+        ] })
       ] })
-    ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Dialog,
+      {
+        open: isEditingInstructions,
+        onOpenChange: (open) => {
+          setIsEditingInstructions(open);
+          if (!open) setDraftInstructions(preset.systemPrompt);
+        },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          DialogContent,
+          {
+            "data-ocid": `answering.preset.instructions_dialog.${preset.id.toString()}`,
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogHeader, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Edit AI Instructions" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(DialogDescription, { children: preset.name })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Label,
+                  {
+                    htmlFor: `answering-preset-instructions-${preset.id.toString()}`,
+                    children: "Instructions"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Textarea,
+                  {
+                    id: `answering-preset-instructions-${preset.id.toString()}`,
+                    value: draftInstructions,
+                    onChange: (event) => setDraftInstructions(event.target.value),
+                    rows: 8,
+                    maxLength: MAX_AI_INSTRUCTIONS_CHARS$2,
+                    "data-ocid": `answering.preset.instructions_textarea.${preset.id.toString()}`,
+                    className: "resize-none font-mono text-xs leading-relaxed"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] text-muted-foreground font-mono", children: [
+                  trimmedDraftInstructions.length,
+                  "/",
+                  MAX_AI_INSTRUCTIONS_CHARS$2
+                ] }) })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogFooter, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Button,
+                  {
+                    type: "button",
+                    variant: "outline",
+                    onClick: () => {
+                      setIsEditingInstructions(false);
+                      setDraftInstructions(preset.systemPrompt);
+                    },
+                    "data-ocid": `answering.preset.instructions_cancel_button.${preset.id.toString()}`,
+                    children: "Cancel"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  Button,
+                  {
+                    type: "button",
+                    onClick: () => void saveInstructions(),
+                    disabled: !canSaveInstructions || updateInstructions.isPending,
+                    "data-ocid": `answering.preset.instructions_save_button.${preset.id.toString()}`,
+                    className: "gap-2",
+                    children: [
+                      updateInstructions.isPending ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-4 w-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-4 w-4" }),
+                      "Save Instructions"
+                    ]
+                  }
+                )
+              ] })
+            ]
+          }
+        )
+      }
+    )
   ] });
 }
 function AnsweringServicePage() {
@@ -47058,6 +47894,15 @@ function AnsweringServicePage() {
   }, []);
   const submit = async (event) => {
     event.preventDefault();
+    const systemPrompt = input.systemPrompt.trim();
+    if (!systemPrompt) {
+      ue.error("AI answering instructions are required");
+      return;
+    }
+    if (systemPrompt.length > MAX_AI_INSTRUCTIONS_CHARS$2) {
+      ue.error("AI instructions must be 8000 characters or fewer");
+      return;
+    }
     if (!validateE164$1(input.phoneNumber)) {
       ue.error("Enter the Twilio number in E.164 format");
       return;
@@ -47066,7 +47911,11 @@ function AnsweringServicePage() {
       ue.error("Confirm caller consent before saving call artifacts");
       return;
     }
-    const result = await createPreset.mutateAsync(input);
+    const result = await createPreset.mutateAsync({
+      ...input,
+      name: input.name.trim(),
+      systemPrompt
+    });
     if (result.__kind__ === "err") {
       ue.error(result.err);
       return;
@@ -47150,6 +47999,7 @@ function AnsweringServicePage() {
                   systemPrompt: event.target.value
                 }),
                 rows: 5,
+                maxLength: MAX_AI_INSTRUCTIONS_CHARS$2,
                 className: "resize-none font-mono text-xs",
                 placeholder: "You answer calls for a small design studio. Ask for the caller's name, reason for calling, and preferred callback time.",
                 required: true
@@ -47158,16 +48008,18 @@ function AnsweringServicePage() {
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { children: "Voice" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-5 gap-2", children: VOICES.map((voice) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Button,
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              VoiceIdSelector,
               {
-                type: "button",
-                variant: input.voice === voice.value ? "secondary" : "outline",
-                onClick: () => setInput({ ...input, voice: voice.value }),
-                children: voice.label
-              },
-              voice.value
-            )) })
+                value: { voice: input.voice, voiceId: input.voiceId },
+                onChange: (next) => setInput({
+                  ...input,
+                  voice: next.voice,
+                  voiceId: next.voiceId ?? ""
+                }),
+                dataOcidPrefix: "answering"
+              }
+            )
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 rounded-md border border-border p-3", children: [
@@ -47366,312 +48218,6 @@ function AnsweringServicePage() {
 const Route$3 = createFileRoute("/user/answering")({
   component: AnsweringServicePage
 });
-var DIALOG_NAME = "Dialog";
-var [createDialogContext, createDialogScope] = createContextScope(DIALOG_NAME);
-var [DialogProvider, useDialogContext] = createDialogContext(DIALOG_NAME);
-var Dialog = (props) => {
-  const {
-    __scopeDialog,
-    children,
-    open: openProp,
-    defaultOpen,
-    onOpenChange,
-    modal = true
-  } = props;
-  const triggerRef = reactExports.useRef(null);
-  const contentRef = reactExports.useRef(null);
-  const [open, setOpen] = useControllableState({
-    prop: openProp,
-    defaultProp: defaultOpen ?? false,
-    onChange: onOpenChange,
-    caller: DIALOG_NAME
-  });
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    DialogProvider,
-    {
-      scope: __scopeDialog,
-      triggerRef,
-      contentRef,
-      contentId: useId(),
-      titleId: useId(),
-      descriptionId: useId(),
-      open,
-      onOpenChange: setOpen,
-      onOpenToggle: reactExports.useCallback(() => setOpen((prevOpen) => !prevOpen), [setOpen]),
-      modal,
-      children
-    }
-  );
-};
-Dialog.displayName = DIALOG_NAME;
-var TRIGGER_NAME$1 = "DialogTrigger";
-var DialogTrigger = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, ...triggerProps } = props;
-    const context = useDialogContext(TRIGGER_NAME$1, __scopeDialog);
-    const composedTriggerRef = useComposedRefs(forwardedRef, context.triggerRef);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.button,
-      {
-        type: "button",
-        "aria-haspopup": "dialog",
-        "aria-expanded": context.open,
-        "aria-controls": context.contentId,
-        "data-state": getState(context.open),
-        ...triggerProps,
-        ref: composedTriggerRef,
-        onClick: composeEventHandlers(props.onClick, context.onOpenToggle)
-      }
-    );
-  }
-);
-DialogTrigger.displayName = TRIGGER_NAME$1;
-var PORTAL_NAME$1 = "DialogPortal";
-var [PortalProvider, usePortalContext] = createDialogContext(PORTAL_NAME$1, {
-  forceMount: void 0
-});
-var DialogPortal = (props) => {
-  const { __scopeDialog, forceMount, children, container } = props;
-  const context = useDialogContext(PORTAL_NAME$1, __scopeDialog);
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(PortalProvider, { scope: __scopeDialog, forceMount, children: reactExports.Children.map(children, (child) => /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || context.open, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Portal$2, { asChild: true, container, children: child }) })) });
-};
-DialogPortal.displayName = PORTAL_NAME$1;
-var OVERLAY_NAME$1 = "DialogOverlay";
-var DialogOverlay = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const portalContext = usePortalContext(OVERLAY_NAME$1, props.__scopeDialog);
-    const { forceMount = portalContext.forceMount, ...overlayProps } = props;
-    const context = useDialogContext(OVERLAY_NAME$1, props.__scopeDialog);
-    return context.modal ? /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || context.open, children: /* @__PURE__ */ jsxRuntimeExports.jsx(DialogOverlayImpl, { ...overlayProps, ref: forwardedRef }) }) : null;
-  }
-);
-DialogOverlay.displayName = OVERLAY_NAME$1;
-var Slot = /* @__PURE__ */ createSlot("DialogOverlay.RemoveScroll");
-var DialogOverlayImpl = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, ...overlayProps } = props;
-    const context = useDialogContext(OVERLAY_NAME$1, __scopeDialog);
-    return (
-      // Make sure `Content` is scrollable even when it doesn't live inside `RemoveScroll`
-      // ie. when `Overlay` and `Content` are siblings
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ReactRemoveScroll, { as: Slot, allowPinchZoom: true, shards: [context.contentRef], children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-        Primitive.div,
-        {
-          "data-state": getState(context.open),
-          ...overlayProps,
-          ref: forwardedRef,
-          style: { pointerEvents: "auto", ...overlayProps.style }
-        }
-      ) })
-    );
-  }
-);
-var CONTENT_NAME$1 = "DialogContent";
-var DialogContent = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const portalContext = usePortalContext(CONTENT_NAME$1, props.__scopeDialog);
-    const { forceMount = portalContext.forceMount, ...contentProps } = props;
-    const context = useDialogContext(CONTENT_NAME$1, props.__scopeDialog);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || context.open, children: context.modal ? /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContentModal, { ...contentProps, ref: forwardedRef }) : /* @__PURE__ */ jsxRuntimeExports.jsx(DialogContentNonModal, { ...contentProps, ref: forwardedRef }) });
-  }
-);
-DialogContent.displayName = CONTENT_NAME$1;
-var DialogContentModal = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const context = useDialogContext(CONTENT_NAME$1, props.__scopeDialog);
-    const contentRef = reactExports.useRef(null);
-    const composedRefs = useComposedRefs(forwardedRef, context.contentRef, contentRef);
-    reactExports.useEffect(() => {
-      const content = contentRef.current;
-      if (content) return hideOthers(content);
-    }, []);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      DialogContentImpl,
-      {
-        ...props,
-        ref: composedRefs,
-        trapFocus: context.open,
-        disableOutsidePointerEvents: true,
-        onCloseAutoFocus: composeEventHandlers(props.onCloseAutoFocus, (event) => {
-          var _a3;
-          event.preventDefault();
-          (_a3 = context.triggerRef.current) == null ? void 0 : _a3.focus();
-        }),
-        onPointerDownOutside: composeEventHandlers(props.onPointerDownOutside, (event) => {
-          const originalEvent = event.detail.originalEvent;
-          const ctrlLeftClick = originalEvent.button === 0 && originalEvent.ctrlKey === true;
-          const isRightClick = originalEvent.button === 2 || ctrlLeftClick;
-          if (isRightClick) event.preventDefault();
-        }),
-        onFocusOutside: composeEventHandlers(
-          props.onFocusOutside,
-          (event) => event.preventDefault()
-        )
-      }
-    );
-  }
-);
-var DialogContentNonModal = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const context = useDialogContext(CONTENT_NAME$1, props.__scopeDialog);
-    const hasInteractedOutsideRef = reactExports.useRef(false);
-    const hasPointerDownOutsideRef = reactExports.useRef(false);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      DialogContentImpl,
-      {
-        ...props,
-        ref: forwardedRef,
-        trapFocus: false,
-        disableOutsidePointerEvents: false,
-        onCloseAutoFocus: (event) => {
-          var _a3, _b3;
-          (_a3 = props.onCloseAutoFocus) == null ? void 0 : _a3.call(props, event);
-          if (!event.defaultPrevented) {
-            if (!hasInteractedOutsideRef.current) (_b3 = context.triggerRef.current) == null ? void 0 : _b3.focus();
-            event.preventDefault();
-          }
-          hasInteractedOutsideRef.current = false;
-          hasPointerDownOutsideRef.current = false;
-        },
-        onInteractOutside: (event) => {
-          var _a3, _b3;
-          (_a3 = props.onInteractOutside) == null ? void 0 : _a3.call(props, event);
-          if (!event.defaultPrevented) {
-            hasInteractedOutsideRef.current = true;
-            if (event.detail.originalEvent.type === "pointerdown") {
-              hasPointerDownOutsideRef.current = true;
-            }
-          }
-          const target = event.target;
-          const targetIsTrigger = (_b3 = context.triggerRef.current) == null ? void 0 : _b3.contains(target);
-          if (targetIsTrigger) event.preventDefault();
-          if (event.detail.originalEvent.type === "focusin" && hasPointerDownOutsideRef.current) {
-            event.preventDefault();
-          }
-        }
-      }
-    );
-  }
-);
-var DialogContentImpl = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, trapFocus, onOpenAutoFocus, onCloseAutoFocus, ...contentProps } = props;
-    const context = useDialogContext(CONTENT_NAME$1, __scopeDialog);
-    const contentRef = reactExports.useRef(null);
-    const composedRefs = useComposedRefs(forwardedRef, contentRef);
-    useFocusGuards();
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(
-        FocusScope,
-        {
-          asChild: true,
-          loop: true,
-          trapped: trapFocus,
-          onMountAutoFocus: onOpenAutoFocus,
-          onUnmountAutoFocus: onCloseAutoFocus,
-          children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            DismissableLayer,
-            {
-              role: "dialog",
-              id: context.contentId,
-              "aria-describedby": context.descriptionId,
-              "aria-labelledby": context.titleId,
-              "data-state": getState(context.open),
-              ...contentProps,
-              ref: composedRefs,
-              onDismiss: () => context.onOpenChange(false)
-            }
-          )
-        }
-      ),
-      /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(TitleWarning, { titleId: context.titleId }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(DescriptionWarning$1, { contentRef, descriptionId: context.descriptionId })
-      ] })
-    ] });
-  }
-);
-var TITLE_NAME$1 = "DialogTitle";
-var DialogTitle = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, ...titleProps } = props;
-    const context = useDialogContext(TITLE_NAME$1, __scopeDialog);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Primitive.h2, { id: context.titleId, ...titleProps, ref: forwardedRef });
-  }
-);
-DialogTitle.displayName = TITLE_NAME$1;
-var DESCRIPTION_NAME$1 = "DialogDescription";
-var DialogDescription = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, ...descriptionProps } = props;
-    const context = useDialogContext(DESCRIPTION_NAME$1, __scopeDialog);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(Primitive.p, { id: context.descriptionId, ...descriptionProps, ref: forwardedRef });
-  }
-);
-DialogDescription.displayName = DESCRIPTION_NAME$1;
-var CLOSE_NAME = "DialogClose";
-var DialogClose = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeDialog, ...closeProps } = props;
-    const context = useDialogContext(CLOSE_NAME, __scopeDialog);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.button,
-      {
-        type: "button",
-        ...closeProps,
-        ref: forwardedRef,
-        onClick: composeEventHandlers(props.onClick, () => context.onOpenChange(false))
-      }
-    );
-  }
-);
-DialogClose.displayName = CLOSE_NAME;
-function getState(open) {
-  return open ? "open" : "closed";
-}
-var TITLE_WARNING_NAME = "DialogTitleWarning";
-var [WarningProvider, useWarningContext] = createContext2(TITLE_WARNING_NAME, {
-  contentName: CONTENT_NAME$1,
-  titleName: TITLE_NAME$1,
-  docsSlug: "dialog"
-});
-var TitleWarning = ({ titleId }) => {
-  const titleWarningContext = useWarningContext(TITLE_WARNING_NAME);
-  const MESSAGE = `\`${titleWarningContext.contentName}\` requires a \`${titleWarningContext.titleName}\` for the component to be accessible for screen reader users.
-
-If you want to hide the \`${titleWarningContext.titleName}\`, you can wrap it with our VisuallyHidden component.
-
-For more information, see https://radix-ui.com/primitives/docs/components/${titleWarningContext.docsSlug}`;
-  reactExports.useEffect(() => {
-    if (titleId) {
-      const hasTitle = document.getElementById(titleId);
-      if (!hasTitle) console.error(MESSAGE);
-    }
-  }, [MESSAGE, titleId]);
-  return null;
-};
-var DESCRIPTION_WARNING_NAME = "DialogDescriptionWarning";
-var DescriptionWarning$1 = ({ contentRef, descriptionId }) => {
-  const descriptionWarningContext = useWarningContext(DESCRIPTION_WARNING_NAME);
-  const MESSAGE = `Warning: Missing \`Description\` or \`aria-describedby={undefined}\` for {${descriptionWarningContext.contentName}}.`;
-  reactExports.useEffect(() => {
-    var _a3;
-    const describedById = (_a3 = contentRef.current) == null ? void 0 : _a3.getAttribute("aria-describedby");
-    if (descriptionId && describedById) {
-      const hasDescription = document.getElementById(descriptionId);
-      if (!hasDescription) console.warn(MESSAGE);
-    }
-  }, [MESSAGE, contentRef, descriptionId]);
-  return null;
-};
-var Root$1 = Dialog;
-var Trigger = DialogTrigger;
-var Portal = DialogPortal;
-var Overlay = DialogOverlay;
-var Content = DialogContent;
-var Title = DialogTitle;
-var Description = DialogDescription;
-var Close = DialogClose;
 var ROOT_NAME = "AlertDialog";
 var [createAlertDialogContext] = createContextScope(ROOT_NAME, [
   createDialogScope
@@ -56271,6 +56817,7 @@ const STATUS_LABELS = {
   completed: "Completed",
   error: "Error"
 };
+const MAX_AI_INSTRUCTIONS_CHARS$1 = 8e3;
 const MAX_STEERING_PROMPT_CHARS = 800;
 function StatCard({
   icon,
@@ -56519,6 +57066,8 @@ function DashboardPage() {
   const [recipientError, setRecipientError] = reactExports.useState("");
   const [selectedPresetId, setSelectedPresetId] = reactExports.useState("");
   const [deletePresetId, setDeletePresetId] = reactExports.useState(null);
+  const [instructionEditorPreset, setInstructionEditorPreset] = reactExports.useState(null);
+  const [instructionDraft, setInstructionDraft] = reactExports.useState("");
   const [saveTranscript, setSaveTranscript] = reactExports.useState(false);
   const [recordAudio, setRecordAudio] = reactExports.useState(false);
   const [capturePermissionConfirmed, setCapturePermissionConfirmed] = reactExports.useState(false);
@@ -56535,6 +57084,7 @@ function DashboardPage() {
   } = useGetMyBillingStatus();
   const deletePreset = useDeletePreset();
   const duplicatePreset = useDuplicatePreset();
+  const updatePresetInstructions = useUpdatePresetInstructions();
   const createPurchaseIntent = useCreatePurchaseIntent();
   const voice = useXaiVoice();
   const [buyingPackageId, setBuyingPackageId] = reactExports.useState(null);
@@ -56550,6 +57100,8 @@ function DashboardPage() {
   const selectedPreset = (presets ?? []).find((p2) => p2.id.toString() === selectedPresetId) ?? null;
   const isCallActive = voice.status !== "idle" && voice.status !== "completed" && voice.status !== "error";
   const savesCallArtifacts = saveTranscript || recordAudio;
+  const trimmedInstructionDraft = instructionDraft.trim();
+  const canSaveInstructions = instructionEditorPreset !== null && trimmedInstructionDraft.length > 0 && trimmedInstructionDraft.length <= MAX_AI_INSTRUCTIONS_CHARS$1 && trimmedInstructionDraft !== instructionEditorPreset.systemPrompt.trim();
   reactExports.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const billing = params.get("billing");
@@ -56592,6 +57144,32 @@ function DashboardPage() {
       permissionConfirmed: capturePermissionConfirmed
     });
     refetchBilling();
+  };
+  const openInstructionEditor = (preset) => {
+    setInstructionEditorPreset(preset);
+    setInstructionDraft(preset.systemPrompt);
+  };
+  const savePresetInstructions = async () => {
+    if (!instructionEditorPreset) return;
+    if (!trimmedInstructionDraft) {
+      ue.error("AI instructions are required");
+      return;
+    }
+    if (trimmedInstructionDraft.length > MAX_AI_INSTRUCTIONS_CHARS$1) {
+      ue.error("AI instructions must be 8000 characters or fewer");
+      return;
+    }
+    const result = await updatePresetInstructions.mutateAsync({
+      id: instructionEditorPreset.id,
+      systemPrompt: trimmedInstructionDraft
+    });
+    if (result.__kind__ === "err") {
+      ue.error(result.err);
+      return;
+    }
+    ue.success("Preset instructions updated");
+    setInstructionEditorPreset(null);
+    setInstructionDraft("");
   };
   const handleBuyPackage = async (packageId) => {
     setBuyingPackageId(packageId);
@@ -56819,10 +57397,31 @@ function DashboardPage() {
                   )
                 ] }),
                 selectedPreset && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg bg-muted/30 border border-border p-3 space-y-1", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium text-foreground", children: selectedPreset.name }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium text-foreground truncate", children: selectedPreset.name }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                      Button,
+                      {
+                        type: "button",
+                        variant: "ghost",
+                        size: "sm",
+                        className: "h-7 shrink-0 gap-1.5 px-2 text-xs",
+                        onClick: () => openInstructionEditor(selectedPreset),
+                        disabled: isCallActive,
+                        "data-ocid": "dashboard.selected_preset.edit_instructions_button",
+                        children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "w-3 h-3" }),
+                          "Edit"
+                        ]
+                      }
+                    )
+                  ] }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground line-clamp-2", children: selectedPreset.systemPrompt }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5 pt-0.5", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "text-xs h-4 px-1", children: selectedPreset.voice }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "text-xs h-4 px-1", children: getVoiceLabel(
+                      selectedPreset.voice,
+                      selectedPreset.voiceId
+                    ) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "text-xs h-4 px-1", children: selectedPreset.sampleRate })
                   ] })
                 ] }),
@@ -56953,41 +57552,61 @@ function DashboardPage() {
               ) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: (presets ?? []).map((preset, idx) => {
                 const isSelected = selectedPresetId === preset.id.toString();
                 return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  "button",
+                  "div",
                   {
-                    type: "button",
                     "data-ocid": `dashboard.preset.item.${idx + 1}`,
-                    onClick: () => setSelectedPresetId(preset.id.toString()),
-                    onKeyDown: (e) => {
-                      if (e.key === "Enter" || e.key === " ")
-                        setSelectedPresetId(preset.id.toString());
-                    },
-                    className: `flex w-full text-left items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-smooth border ${isSelected ? "bg-primary/10 border-primary/40" : "bg-muted/30 hover:bg-muted/50 border-transparent hover:border-border"}`,
+                    className: `flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 transition-smooth ${isSelected ? "bg-primary/10 border-primary/40" : "bg-muted/30 hover:bg-muted/50 border-transparent hover:border-border"}`,
                     children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
-                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-foreground truncate", children: preset.name }),
-                          isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx(
-                            Badge,
-                            {
-                              variant: "outline",
-                              className: "text-xs h-4 px-1 border-primary/40 text-primary shrink-0",
-                              children: "Selected"
-                            }
-                          )
-                        ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-muted-foreground truncate", children: [
-                          preset.voice,
-                          " ·",
-                          " ",
-                          preset.systemPrompt.substring(0, 60),
-                          preset.systemPrompt.length > 60 ? "..." : ""
-                        ] })
-                      ] }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(
+                        "button",
+                        {
+                          type: "button",
+                          className: "flex flex-1 min-w-0 cursor-pointer items-center gap-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          onClick: () => setSelectedPresetId(preset.id.toString()),
+                          "data-ocid": `dashboard.preset.select_button.${idx + 1}`,
+                          children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5", children: [
+                              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-foreground truncate", children: preset.name }),
+                              isSelected && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                                Badge,
+                                {
+                                  variant: "outline",
+                                  className: "text-xs h-4 px-1 border-primary/40 text-primary shrink-0",
+                                  children: "Selected"
+                                }
+                              )
+                            ] }),
+                            /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-muted-foreground truncate", children: [
+                              getVoiceLabel(preset.voice, preset.voiceId),
+                              " ·",
+                              " ",
+                              preset.systemPrompt.substring(0, 60),
+                              preset.systemPrompt.length > 60 ? "..." : ""
+                            ] })
+                          ] })
+                        }
+                      ),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 shrink-0", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           Button,
                           {
+                            type: "button",
+                            variant: "ghost",
+                            size: "icon",
+                            className: "h-7 w-7 text-muted-foreground hover:text-foreground",
+                            onClick: (e) => {
+                              e.stopPropagation();
+                              openInstructionEditor(preset);
+                            },
+                            "aria-label": "Edit preset instructions",
+                            "data-ocid": `dashboard.preset.edit_instructions_button.${idx + 1}`,
+                            children: /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "w-3.5 h-3.5" })
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(
+                          Button,
+                          {
+                            type: "button",
                             variant: "ghost",
                             size: "icon",
                             className: "h-7 w-7 text-muted-foreground hover:text-foreground",
@@ -57003,6 +57622,7 @@ function DashboardPage() {
                         /* @__PURE__ */ jsxRuntimeExports.jsx(
                           Button,
                           {
+                            type: "button",
                             variant: "ghost",
                             size: "icon",
                             className: "h-7 w-7 text-muted-foreground hover:text-destructive",
@@ -57091,6 +57711,73 @@ function DashboardPage() {
         }
       )
     ] }) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Dialog,
+      {
+        open: instructionEditorPreset !== null,
+        onOpenChange: (open) => {
+          if (!open) {
+            setInstructionEditorPreset(null);
+            setInstructionDraft("");
+          }
+        },
+        children: /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogContent, { "data-ocid": "dashboard.preset.instructions_dialog", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogHeader, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Edit AI Instructions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(DialogDescription, { children: (instructionEditorPreset == null ? void 0 : instructionEditorPreset.name) ?? "Call preset" })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { htmlFor: "dashboard-preset-instructions", children: "Instructions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Textarea,
+              {
+                id: "dashboard-preset-instructions",
+                value: instructionDraft,
+                onChange: (event) => setInstructionDraft(event.target.value),
+                rows: 8,
+                maxLength: MAX_AI_INSTRUCTIONS_CHARS$1,
+                "data-ocid": "dashboard.preset.instructions_textarea",
+                className: "resize-none font-mono text-xs leading-relaxed"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-end gap-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] text-muted-foreground font-mono", children: [
+              trimmedInstructionDraft.length,
+              "/",
+              MAX_AI_INSTRUCTIONS_CHARS$1
+            ] }) })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogFooter, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Button,
+              {
+                type: "button",
+                variant: "outline",
+                onClick: () => {
+                  setInstructionEditorPreset(null);
+                  setInstructionDraft("");
+                },
+                "data-ocid": "dashboard.preset.instructions_cancel_button",
+                children: "Cancel"
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              Button,
+              {
+                type: "button",
+                onClick: () => void savePresetInstructions(),
+                disabled: !canSaveInstructions || updatePresetInstructions.isPending,
+                "data-ocid": "dashboard.preset.instructions_save_button",
+                className: "gap-2",
+                children: [
+                  updatePresetInstructions.isPending ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "w-4 h-4" }),
+                  "Save Instructions"
+                ]
+              }
+            )
+          ] })
+        ] })
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       AlertDialog,
       {
@@ -60067,6 +60754,7 @@ function useForm(props = {}) {
 }
 const DEFAULT_AUDIO_FORMAT = AudioFormat.pcmu;
 const DEFAULT_SAMPLE_RATE = SampleRate.hz8000;
+const MAX_AI_INSTRUCTIONS_CHARS = 8e3;
 const DEFAULT_TOOLS_ENABLED = {
   xSearch: false,
   webSearch: false,
@@ -60076,6 +60764,7 @@ function createDefaultPreset() {
   return {
     name: "",
     voice: Voice.eve,
+    voiceId: "",
     systemPrompt: "",
     audioFormat: DEFAULT_AUDIO_FORMAT,
     sampleRate: DEFAULT_SAMPLE_RATE,
@@ -60104,45 +60793,6 @@ const defaultTimingText = {
   prefixPadding: `Default: ${Number(defaultTurnDetection.prefixPaddingMs)}ms`
 };
 const TURN_DETECTION_HELP = "These settings control when the AI decides the caller has finished speaking and can respond. The defaults work well for most calls; adjust them if the AI interrupts too quickly or waits too long.";
-const VOICE_META = {
-  [Voice.eve]: { label: "Eve", description: "Warm, conversational" },
-  [Voice.ara]: { label: "Ara", description: "Clear, professional" },
-  [Voice.rex]: { label: "Rex", description: "Deep, authoritative" },
-  [Voice.sal]: { label: "Sal", description: "Friendly, upbeat" },
-  [Voice.leo]: { label: "Leo", description: "Calm, deliberate" }
-};
-function VoiceCardSelector({
-  value,
-  onChange
-}) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-3 sm:grid-cols-5 gap-2", children: Object.values(Voice).map((v2) => {
-    const meta = VOICE_META[v2];
-    const isActive = value === v2;
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "button",
-      {
-        type: "button",
-        onClick: () => onChange(v2),
-        "data-ocid": `settings.preset.voice.${v2}`,
-        className: [
-          "flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-smooth cursor-pointer",
-          isActive ? "border-primary bg-primary/10 text-primary shadow-sm" : "border-border bg-card hover:border-primary/40 hover:bg-muted/20 text-muted-foreground hover:text-foreground"
-        ].join(" "),
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            "span",
-            {
-              className: `text-sm font-semibold ${isActive ? "text-primary" : "text-foreground"}`,
-              children: meta.label
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] leading-tight opacity-70", children: meta.description })
-        ]
-      },
-      v2
-    );
-  }) });
-}
 function PresetForm({ initial, onSave, onCancel, isLoading }) {
   var _a3, _b3, _c2, _d2, _e2;
   const {
@@ -60155,6 +60805,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
     defaultValues: initial ? {
       name: initial.name,
       voice: initial.voice,
+      voiceId: initial.voiceId ?? "",
       systemPrompt: initial.systemPrompt,
       audioFormat: DEFAULT_AUDIO_FORMAT,
       sampleRate: DEFAULT_SAMPLE_RATE,
@@ -60195,10 +60846,16 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
         Textarea,
         {
           ...register("systemPrompt", {
-            required: "System prompt is required"
+            required: "System prompt is required",
+            validate: (value) => value.trim().length > 0 || "System prompt is required",
+            maxLength: {
+              value: MAX_AI_INSTRUCTIONS_CHARS,
+              message: "System prompt is too long"
+            }
           }),
           placeholder: "You are a professional sales representative. Greet the customer warmly, ask how you can help them today, and guide them through...",
           rows: 5,
+          maxLength: MAX_AI_INSTRUCTIONS_CHARS,
           "data-ocid": "settings.preset.system_prompt.textarea",
           className: `resize-none font-mono text-xs leading-relaxed ${errors.systemPrompt ? "border-destructive" : ""}`
         }
@@ -60215,10 +60872,14 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold text-muted-foreground uppercase tracking-wide", children: "Voice" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
-        VoiceCardSelector,
+        VoiceIdSelector,
         {
-          value: values.voice,
-          onChange: (v2) => setValue("voice", v2)
+          value: { voice: values.voice, voiceId: values.voiceId },
+          onChange: (next) => {
+            setValue("voice", next.voice);
+            setValue("voiceId", next.voiceId ?? "");
+          },
+          dataOcidPrefix: "settings"
         }
       )
     ] }),
@@ -60530,7 +61191,6 @@ function SettingsPage() {
         }
       ),
       !presetsLoading && (presets ?? []).length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-3", children: (presets ?? []).map((preset, idx) => {
-        var _a3, _b3, _c2;
         const isExpanded = expandedPreset === preset.id.toString();
         return /* @__PURE__ */ jsxRuntimeExports.jsxs(
           Card,
@@ -60549,11 +61209,11 @@ function SettingsPage() {
                     ),
                     "data-ocid": `settings.preset.expand_button.${idx + 1}`,
                     children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-primary", children: ((_b3 = (_a3 = VOICE_META[preset.voice]) == null ? void 0 : _a3.label) == null ? void 0 : _b3[0]) ?? "?" }) }),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-bold text-primary", children: getVoiceInitial(preset.voice, preset.voiceId) }) }),
                       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-semibold text-foreground truncate", children: preset.name }),
                         /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[11px] text-muted-foreground mt-0.5", children: [
-                          (_c2 = VOICE_META[preset.voice]) == null ? void 0 : _c2.label,
+                          getVoiceLabel(preset.voice, preset.voiceId),
                           " ·",
                           " ",
                           preset.systemPrompt.substring(0, 70),

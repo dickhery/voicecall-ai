@@ -55,6 +55,19 @@ module {
     toolsEnabled : ToolsEnabled;
   };
 
+  // Stable storage shape. Voice IDs are stored separately to keep upgrades compatible.
+  public type StoredCallPreset = {
+    id : Nat;
+    ownerId : Principal;
+    name : Text;
+    systemPrompt : Text;
+    voice : Voice;
+    turnDetection : TurnDetection;
+    audioFormat : AudioFormat;
+    sampleRate : SampleRate;
+    toolsEnabled : ToolsEnabled;
+  };
+
   // Input type for creating/updating a preset (no id, no ownerId)
   public type CallPresetInput = {
     name : Text;
@@ -91,6 +104,28 @@ module {
     systemPrompt : Text;
     voice : Voice;
     voiceId : ?Text;
+    turnDetection : TurnDetection;
+    audioFormat : AudioFormat;
+    sampleRate : SampleRate;
+    toolsEnabled : ToolsEnabled;
+    captureOptions : AnsweringCaptureOptions;
+    enabled : Bool;
+    verificationStatus : AnsweringPresetStatus;
+    webhookSecret : Text;
+    createdAt : Int;
+    updatedAt : Int;
+    verifiedAt : ?Int;
+    lastIncomingAt : ?Int;
+  };
+
+  // Stable storage shape. Voice IDs are stored separately to keep upgrades compatible.
+  public type StoredAnsweringPreset = {
+    id : Nat;
+    ownerId : Principal;
+    name : Text;
+    phoneNumber : Text;
+    systemPrompt : Text;
+    voice : Voice;
     turnDetection : TurnDetection;
     audioFormat : AudioFormat;
     sampleRate : SampleRate;

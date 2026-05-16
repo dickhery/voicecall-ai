@@ -18,14 +18,15 @@ module {
 
   public type State = {
     adminConfig : Types.AdminConfig;
-    presets : Map.Map<Common.PresetId, Types.CallPreset>;
+    presets : Map.Map<Common.PresetId, Types.StoredCallPreset>;
     nextPresetId : { var value : Nat };
   };
 
   public type TwilioLineState = Map.Map<Text, Types.TwilioLine>;
+  public type VoiceIdState = Map.Map<Common.PresetId, Text>;
 
   public type AnsweringState = {
-    presets : Map.Map<Common.PresetId, Types.AnsweringPreset>;
+    presets : Map.Map<Common.PresetId, Types.StoredAnsweringPreset>;
     presetIdsByOwner : Map.Map<Principal, List.List<Common.PresetId>>;
     presetIdByWebhookSecret : Map.Map<Text, Common.PresetId>;
     presetIdByPhoneNumber : Map.Map<Text, Common.PresetId>;
@@ -40,9 +41,13 @@ module {
         var twilioAuthToken = "";
         var twilioFromNumber = "";
       };
-      presets = Map.empty<Common.PresetId, Types.CallPreset>();
+      presets = Map.empty<Common.PresetId, Types.StoredCallPreset>();
       nextPresetId = { var value = 1 };
     };
+  };
+
+  public func initVoiceIdState() : VoiceIdState {
+    Map.empty<Common.PresetId, Text>();
   };
 
   public func initTwilioLineState() : TwilioLineState {
@@ -51,7 +56,7 @@ module {
 
   public func initAnsweringState() : AnsweringState {
     {
-      presets = Map.empty<Common.PresetId, Types.AnsweringPreset>();
+      presets = Map.empty<Common.PresetId, Types.StoredAnsweringPreset>();
       presetIdsByOwner = Map.empty<Principal, List.List<Common.PresetId>>();
       presetIdByWebhookSecret = Map.empty<Text, Common.PresetId>();
       presetIdByPhoneNumber = Map.empty<Text, Common.PresetId>();
@@ -107,7 +112,7 @@ module {
     };
   };
 
-  private func withPresetDefaults(preset : Types.CallPreset) : Types.CallPreset {
+  private func withStoredPresetDefaults(preset : Types.StoredCallPreset) : Types.StoredCallPreset {
     {
       preset with
       audioFormat = #pcmu;
@@ -117,6 +122,63 @@ module {
         xSearch = false;
         functionCalling = false;
       };
+    };
+  };
+
+  private func toPublicPreset(
+    voiceIds : VoiceIdState,
+    preset : Types.StoredCallPreset,
+  ) : Types.CallPreset {
+    let stored = withStoredPresetDefaults(preset);
+    {
+      id = stored.id;
+      ownerId = stored.ownerId;
+      name = stored.name;
+      systemPrompt = stored.systemPrompt;
+      voice = stored.voice;
+      voiceId = voiceIds.get(stored.id);
+      turnDetection = stored.turnDetection;
+      audioFormat = stored.audioFormat;
+      sampleRate = stored.sampleRate;
+      toolsEnabled = stored.toolsEnabled;
+    };
+  };
+
+  private func toPublicAnsweringPreset(
+    voiceIds : VoiceIdState,
+    preset : Types.StoredAnsweringPreset,
+  ) : Types.AnsweringPreset {
+    {
+      id = preset.id;
+      ownerId = preset.ownerId;
+      name = preset.name;
+      phoneNumber = preset.phoneNumber;
+      systemPrompt = preset.systemPrompt;
+      voice = preset.voice;
+      voiceId = voiceIds.get(preset.id);
+      turnDetection = preset.turnDetection;
+      audioFormat = preset.audioFormat;
+      sampleRate = preset.sampleRate;
+      toolsEnabled = preset.toolsEnabled;
+      captureOptions = preset.captureOptions;
+      enabled = preset.enabled;
+      verificationStatus = preset.verificationStatus;
+      webhookSecret = preset.webhookSecret;
+      createdAt = preset.createdAt;
+      updatedAt = preset.updatedAt;
+      verifiedAt = preset.verifiedAt;
+      lastIncomingAt = preset.lastIncomingAt;
+    };
+  };
+
+  private func setVoiceId(
+    voiceIds : VoiceIdState,
+    id : Common.PresetId,
+    voiceId : ?Text,
+  ) {
+    switch (voiceId) {
+      case null { voiceIds.remove(id) };
+      case (?value) { voiceIds.add(id, value) };
     };
   };
 
@@ -290,7 +352,7 @@ module {
   private func getExistingPendingAnsweringPreset(
     state : AnsweringState,
     owner : Principal,
-  ) : ?Types.AnsweringPreset {
+  ) : ?Types.StoredAnsweringPreset {
     for (preset in state.presets.values()) {
       if (
         Principal.equal(preset.ownerId, owner) and
@@ -468,47 +530,54 @@ module {
   // Preset CRUD
   public func createPreset(
     state : State,
+    voiceIds : VoiceIdState,
     owner : Principal,
     input : Types.CallPresetInput,
   ) : Types.CallPreset {
     let cleanInput = requireCallPresetInput(input);
     let id = state.nextPresetId.value;
     state.nextPresetId.value += 1;
-    let preset : Types.CallPreset = withPresetDefaults({
+    let preset : Types.StoredCallPreset = withStoredPresetDefaults({
       id;
       ownerId = owner;
       name = cleanInput.name;
       systemPrompt = cleanInput.systemPrompt;
       voice = cleanInput.voice;
-      voiceId = cleanInput.voiceId;
       turnDetection = cleanInput.turnDetection;
       audioFormat = cleanInput.audioFormat;
       sampleRate = cleanInput.sampleRate;
       toolsEnabled = cleanInput.toolsEnabled;
     });
     state.presets.add(id, preset);
-    preset;
+    setVoiceId(voiceIds, id, cleanInput.voiceId);
+    toPublicPreset(voiceIds, preset);
   };
 
-  public func getPreset(state : State, id : Common.PresetId) : ?Types.CallPreset {
+  public func getPreset(
+    state : State,
+    voiceIds : VoiceIdState,
+    id : Common.PresetId,
+  ) : ?Types.CallPreset {
     switch (state.presets.get(id)) {
       case null { null };
-      case (?preset) { ?withPresetDefaults(preset) };
+      case (?preset) { ?toPublicPreset(voiceIds, preset) };
     };
   };
 
   public func listPresetsForUser(
     state : State,
+    voiceIds : VoiceIdState,
     userId : Principal,
   ) : [Types.CallPreset] {
     state.presets.values()
       .filter(func(p) { Principal.equal(p.ownerId, userId) })
-      .map(withPresetDefaults)
+      .map(func(p) { toPublicPreset(voiceIds, p) })
       .toArray();
   };
 
   public func updatePreset(
     state : State,
+    voiceIds : VoiceIdState,
     caller : Principal,
     id : Common.PresetId,
     input : Types.CallPresetInput,
@@ -520,26 +589,27 @@ module {
           Runtime.trap("Unauthorized: not the owner");
         };
         let cleanInput = requireCallPresetInput(input);
-        let updated : Types.CallPreset = withPresetDefaults({
+        let updated : Types.StoredCallPreset = withStoredPresetDefaults({
           id = existing.id;
           ownerId = existing.ownerId;
           name = cleanInput.name;
           systemPrompt = cleanInput.systemPrompt;
           voice = cleanInput.voice;
-          voiceId = cleanInput.voiceId;
           turnDetection = cleanInput.turnDetection;
           audioFormat = cleanInput.audioFormat;
           sampleRate = cleanInput.sampleRate;
           toolsEnabled = cleanInput.toolsEnabled;
         });
         state.presets.add(id, updated);
-        ?updated;
+        setVoiceId(voiceIds, id, cleanInput.voiceId);
+        ?toPublicPreset(voiceIds, updated);
       };
     };
   };
 
   public func updatePresetInstructions(
     state : State,
+    voiceIds : VoiceIdState,
     caller : Principal,
     id : Common.PresetId,
     systemPrompt : Text,
@@ -553,12 +623,12 @@ module {
         switch (sanitizeInstructions(systemPrompt, "AI instructions are required.")) {
           case (#err(message)) { #err(message) };
           case (#ok(prompt)) {
-            let updated : Types.CallPreset = withPresetDefaults({
+            let updated : Types.StoredCallPreset = withStoredPresetDefaults({
               existing with
               systemPrompt = prompt;
             });
             state.presets.add(id, updated);
-            #ok(updated);
+            #ok(toPublicPreset(voiceIds, updated));
           };
         };
       };
@@ -567,6 +637,7 @@ module {
 
   public func deletePreset(
     state : State,
+    voiceIds : VoiceIdState,
     caller : Principal,
     id : Common.PresetId,
   ) : Bool {
@@ -577,6 +648,7 @@ module {
           Runtime.trap("Unauthorized: not the owner");
         };
         state.presets.remove(id);
+        voiceIds.remove(id);
         true;
       };
     };
@@ -584,6 +656,7 @@ module {
 
   public func duplicatePreset(
     state : State,
+    voiceIds : VoiceIdState,
     caller : Principal,
     id : Common.PresetId,
   ) : ?Types.CallPreset {
@@ -592,26 +665,27 @@ module {
       case (?existing) {
         let newId = state.nextPresetId.value;
         state.nextPresetId.value += 1;
-        let copy : Types.CallPreset = withPresetDefaults({
+        let copy : Types.StoredCallPreset = withStoredPresetDefaults({
           id = newId;
           ownerId = caller;
           name = existing.name # " (copy)";
           systemPrompt = existing.systemPrompt;
           voice = existing.voice;
-          voiceId = existing.voiceId;
           turnDetection = existing.turnDetection;
           audioFormat = existing.audioFormat;
           sampleRate = existing.sampleRate;
           toolsEnabled = existing.toolsEnabled;
         });
         state.presets.add(newId, copy);
-        ?copy;
+        setVoiceId(voiceIds, newId, voiceIds.get(existing.id));
+        ?toPublicPreset(voiceIds, copy);
       };
     };
   };
 
   public func createAnsweringPreset(
     state : AnsweringState,
+    voiceIds : VoiceIdState,
     owner : Principal,
     input : Types.AnsweringPresetInput,
   ) : Types.AnsweringPresetMutationResult {
@@ -636,14 +710,13 @@ module {
         let id = state.nextAnsweringPresetId.value;
         state.nextAnsweringPresetId.value += 1;
         let now = Time.now();
-        let preset : Types.AnsweringPreset = {
+        let preset : Types.StoredAnsweringPreset = {
           id;
           ownerId = owner;
           name = cleanInput.name;
           phoneNumber = cleanInput.phoneNumber;
           systemPrompt = cleanInput.systemPrompt;
           voice = cleanInput.voice;
-          voiceId = cleanInput.voiceId;
           turnDetection = cleanInput.turnDetection;
           audioFormat = #pcmu;
           sampleRate = #hz8000;
@@ -659,6 +732,7 @@ module {
         };
 
         state.presets.add(id, preset);
+        setVoiceId(voiceIds, id, cleanInput.voiceId);
         state.presetIdByWebhookSecret.add(preset.webhookSecret, id);
         state.presetIdByPhoneNumber.add(preset.phoneNumber, id);
         switch (state.presetIdsByOwner.get(owner)) {
@@ -669,13 +743,14 @@ module {
           };
           case (?ids) { ids.add(id) };
         };
-        #ok(preset);
+        #ok(toPublicAnsweringPreset(voiceIds, preset));
       };
     };
   };
 
   public func listAnsweringPresetsForUser(
     state : AnsweringState,
+    voiceIds : VoiceIdState,
     owner : Principal,
   ) : [Types.AnsweringPreset] {
     let presets = List.empty<Types.AnsweringPreset>();
@@ -685,7 +760,7 @@ module {
         ids.forEach(func(id) {
           switch (state.presets.get(id)) {
             case null {};
-            case (?preset) { presets.add(preset) };
+            case (?preset) { presets.add(toPublicAnsweringPreset(voiceIds, preset)) };
           };
         });
       };
@@ -695,13 +770,18 @@ module {
 
   public func getAnsweringPreset(
     state : AnsweringState,
+    voiceIds : VoiceIdState,
     id : Common.PresetId,
   ) : ?Types.AnsweringPreset {
-    state.presets.get(id);
+    switch (state.presets.get(id)) {
+      case null { null };
+      case (?preset) { ?toPublicAnsweringPreset(voiceIds, preset) };
+    };
   };
 
   public func getAnsweringPresetForServer(
     state : AnsweringState,
+    voiceIds : VoiceIdState,
     webhookSecret : Text,
     phoneNumber : Text,
   ) : ?Types.AnsweringPreset {
@@ -711,7 +791,11 @@ module {
         switch (state.presets.get(id)) {
           case null { null };
           case (?preset) {
-            if (preset.phoneNumber == phoneNumber) { ?preset } else { null };
+            if (preset.phoneNumber == phoneNumber) {
+              ?toPublicAnsweringPreset(voiceIds, preset)
+            } else {
+              null
+            };
           };
         };
       };
@@ -720,10 +804,11 @@ module {
 
   public func getAnsweringPresetForIncoming(
     state : AnsweringState,
+    voiceIds : VoiceIdState,
     webhookSecret : Text,
     phoneNumber : Text,
   ) : { #ok : Types.AnsweringPreset; #err : Text } {
-    switch (getAnsweringPresetForServer(state, webhookSecret, phoneNumber)) {
+    switch (getAnsweringPresetForServer(state, voiceIds, webhookSecret, phoneNumber)) {
       case null { #err("Answering preset was not found for this Twilio number.") };
       case (?preset) {
         if (preset.verificationStatus != #verified) {
@@ -739,6 +824,7 @@ module {
 
   public func updateAnsweringPreset(
     state : AnsweringState,
+    voiceIds : VoiceIdState,
     caller : Principal,
     id : Common.PresetId,
     input : Types.AnsweringPresetInput,
@@ -783,14 +869,13 @@ module {
               state.presetIdByWebhookSecret.add(cleanInput.webhookSecret, id);
             };
 
-            let updated : Types.AnsweringPreset = {
+            let updated : Types.StoredAnsweringPreset = {
               id = existing.id;
               ownerId = existing.ownerId;
               name = cleanInput.name;
               phoneNumber = cleanInput.phoneNumber;
               systemPrompt = cleanInput.systemPrompt;
               voice = cleanInput.voice;
-              voiceId = cleanInput.voiceId;
               turnDetection = cleanInput.turnDetection;
               audioFormat = #pcmu;
               sampleRate = #hz8000;
@@ -805,7 +890,8 @@ module {
               lastIncomingAt = existing.lastIncomingAt;
             };
             state.presets.add(id, updated);
-            #ok(updated);
+            setVoiceId(voiceIds, id, cleanInput.voiceId);
+            #ok(toPublicAnsweringPreset(voiceIds, updated));
           };
         };
       };
@@ -814,6 +900,7 @@ module {
 
   public func updateAnsweringPresetInstructions(
     state : AnsweringState,
+    voiceIds : VoiceIdState,
     caller : Principal,
     id : Common.PresetId,
     systemPrompt : Text,
@@ -827,13 +914,13 @@ module {
         switch (sanitizeInstructions(systemPrompt, "AI answering instructions are required.")) {
           case (#err(message)) { #err(message) };
           case (#ok(prompt)) {
-            let updated : Types.AnsweringPreset = {
+            let updated : Types.StoredAnsweringPreset = {
               existing with
               systemPrompt = prompt;
               updatedAt = Time.now();
             };
             state.presets.add(id, updated);
-            #ok(updated);
+            #ok(toPublicAnsweringPreset(voiceIds, updated));
           };
         };
       };
@@ -842,6 +929,7 @@ module {
 
   public func deleteAnsweringPreset(
     state : AnsweringState,
+    voiceIds : VoiceIdState,
     caller : Principal,
     id : Common.PresetId,
   ) : Bool {
@@ -852,6 +940,7 @@ module {
           Runtime.trap("Unauthorized: not the owner");
         };
         state.presets.remove(id);
+        voiceIds.remove(id);
         state.presetIdByWebhookSecret.remove(existing.webhookSecret);
         state.presetIdByPhoneNumber.remove(existing.phoneNumber);
         true;
@@ -861,6 +950,7 @@ module {
 
   public func setAnsweringPresetEnabled(
     state : AnsweringState,
+    voiceIds : VoiceIdState,
     caller : Principal,
     id : Common.PresetId,
     enabled : Bool,
@@ -874,37 +964,46 @@ module {
         if (enabled and existing.verificationStatus != #verified) {
           return #err("Verify this Twilio number before turning on the answering service.");
         };
-        let updated : Types.AnsweringPreset = {
+        let updated : Types.StoredAnsweringPreset = {
           existing with
           enabled = enabled;
           updatedAt = Time.now();
         };
         state.presets.add(id, updated);
-        #ok(updated);
+        #ok(toPublicAnsweringPreset(voiceIds, updated));
       };
     };
   };
 
   public func verifyAnsweringPresetForServer(
     state : AnsweringState,
+    voiceIds : VoiceIdState,
     webhookSecret : Text,
     phoneNumber : Text,
   ) : Types.AnsweringPresetMutationResult {
     if (not isE164(phoneNumber)) {
       return #err("Twilio phone number must be E.164 format.");
     };
-    switch (getAnsweringPresetForServer(state, webhookSecret, phoneNumber)) {
+    switch (state.presetIdByWebhookSecret.get(webhookSecret)) {
       case null { #err("Answering preset was not found for this Twilio number.") };
-      case (?existing) {
-        let now = Time.now();
-        let updated : Types.AnsweringPreset = {
-          existing with
-          verificationStatus = #verified;
-          verifiedAt = ?now;
-          updatedAt = now;
+      case (?id) {
+        switch (state.presets.get(id)) {
+          case null { #err("Answering preset was not found for this Twilio number.") };
+          case (?existing) {
+            if (existing.phoneNumber != phoneNumber) {
+              return #err("Answering preset was not found for this Twilio number.");
+            };
+            let now = Time.now();
+            let updated : Types.StoredAnsweringPreset = {
+              existing with
+              verificationStatus = #verified;
+              verifiedAt = ?now;
+              updatedAt = now;
+            };
+            state.presets.add(existing.id, updated);
+            #ok(toPublicAnsweringPreset(voiceIds, updated));
+          };
         };
-        state.presets.add(existing.id, updated);
-        #ok(updated);
       };
     };
   };

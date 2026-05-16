@@ -874,6 +874,12 @@ video {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
 .block {
   display: block;
 }
@@ -1060,6 +1066,9 @@ video {
 }
 .min-h-16 {
   min-height: 4rem;
+}
+.min-h-20 {
+  min-height: 5rem;
 }
 .min-h-4 {
   min-height: 1rem;
@@ -1367,12 +1376,6 @@ video {
 .grid-cols-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-.grid-cols-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-.grid-cols-5 {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
 .grid-cols-\[0_1fr\] {
   grid-template-columns: 0 1fr;
 }
@@ -1536,8 +1539,14 @@ video {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.whitespace-normal {
+  white-space: normal;
+}
 .whitespace-nowrap {
   white-space: nowrap;
+}
+.whitespace-pre-line {
+  white-space: pre-line;
 }
 .whitespace-pre-wrap {
   white-space: pre-wrap;
@@ -2517,9 +2526,6 @@ video {
 .hover\:border-primary\/30:hover {
   border-color: oklch(var(--primary) / 0.3);
 }
-.hover\:border-primary\/40:hover {
-  border-color: oklch(var(--primary) / 0.4);
-}
 .hover\:bg-accent:hover {
   --tw-bg-opacity: 1;
   background-color: oklch(var(--accent) / var(--tw-bg-opacity, 1));
@@ -2624,6 +2630,10 @@ video {
 .focus-visible\:border-ring:focus-visible {
   --tw-border-opacity: 1;
   border-color: oklch(var(--ring) / var(--tw-border-opacity, 1));
+}
+.focus-visible\:outline-none:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
 }
 .focus-visible\:outline-1:focus-visible {
   outline-width: 1px;
@@ -3531,16 +3541,20 @@ video {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .sm\:grid-cols-5 {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
   .sm\:grid-cols-\[1fr_140px_90px_120px_40px\] {
     grid-template-columns: 1fr 140px 90px 120px 40px;
   }
 
+  .sm\:grid-cols-\[minmax\(0\2c 1fr\)_auto\] {
+    grid-template-columns: minmax(0,1fr) auto;
+  }
+
   .sm\:flex-row {
     flex-direction: row;
+  }
+
+  .sm\:items-end {
+    align-items: flex-end;
   }
 
   .sm\:items-center {
@@ -3709,6 +3723,10 @@ video {
 
   .lg\:grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lg\:grid-cols-5 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .lg\:grid-cols-\[1\.05fr_0\.95fr\] {

@@ -14,14 +14,16 @@ persistent actor {
 
   // Domain state
   let configState = ConfigLib.initState();
+  let callPresetVoiceIds = ConfigLib.initVoiceIdState();
   let twilioLineState = ConfigLib.initTwilioLineState();
   let answeringState = ConfigLib.initAnsweringState();
+  let answeringPresetVoiceIds = ConfigLib.initVoiceIdState();
   let callsState = CallsLib.initState();
   let answeringLiveState = CallsLib.initAnsweringLiveState();
   let billingState = BillingLib.initState();
 
   // Domain mixins
-  include ConfigApi(accessControlState, configState, twilioLineState, answeringState);
-  include CallsApi(accessControlState, callsState, answeringLiveState, configState);
-  include BillingApi(accessControlState, billingState, callsState, configState, answeringState);
+  include ConfigApi(accessControlState, configState, callPresetVoiceIds, twilioLineState, answeringState, answeringPresetVoiceIds);
+  include CallsApi(accessControlState, callsState, answeringLiveState, configState, callPresetVoiceIds);
+  include BillingApi(accessControlState, billingState, callsState, configState, callPresetVoiceIds, answeringState, answeringPresetVoiceIds);
 };
