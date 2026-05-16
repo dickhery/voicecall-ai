@@ -37686,7 +37686,7 @@ Separator$1.displayName = NAME$3;
 function isValidOrientation(orientation) {
   return ORIENTATIONS.includes(orientation);
 }
-var Root$5 = Separator$1;
+var Root$6 = Separator$1;
 function Separator({
   className,
   orientation = "horizontal",
@@ -37694,7 +37694,7 @@ function Separator({
   ...props
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    Root$5,
+    Root$6,
     {
       "data-slot": "separator",
       decorative,
@@ -37913,51 +37913,62 @@ const createLucideIcon = (iconName, iconNode) => {
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$O = [
+const __iconNode$P = [
   ["path", { d: "m12 19-7-7 7-7", key: "1l729n" }],
   ["path", { d: "M19 12H5", key: "x3x0zl" }]
 ];
-const ArrowLeft = createLucideIcon("arrow-left", __iconNode$O);
+const ArrowLeft = createLucideIcon("arrow-left", __iconNode$P);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$N = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
-const Check = createLucideIcon("check", __iconNode$N);
+const __iconNode$O = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
+const Check = createLucideIcon("check", __iconNode$O);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$M = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
-const ChevronDown = createLucideIcon("chevron-down", __iconNode$M);
+const __iconNode$N = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
+const ChevronDown = createLucideIcon("chevron-down", __iconNode$N);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$L = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
-const ChevronLeft = createLucideIcon("chevron-left", __iconNode$L);
+const __iconNode$M = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
+const ChevronLeft = createLucideIcon("chevron-left", __iconNode$M);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$K = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
-const ChevronRight = createLucideIcon("chevron-right", __iconNode$K);
+const __iconNode$L = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
+const ChevronRight = createLucideIcon("chevron-right", __iconNode$L);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$J = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
-const ChevronUp = createLucideIcon("chevron-up", __iconNode$J);
+const __iconNode$K = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
+const ChevronUp = createLucideIcon("chevron-up", __iconNode$K);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$J = [
+  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
+  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+];
+const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$J);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37965,10 +37976,10 @@ const ChevronUp = createLucideIcon("chevron-up", __iconNode$J);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$I = [
-  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
-  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
 ];
-const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$I);
+const CircleCheck = createLucideIcon("circle-check", __iconNode$I);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37977,9 +37988,10 @@ const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$I);
  */
 const __iconNode$H = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
+  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
+  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
 ];
-const CircleCheck = createLucideIcon("circle-check", __iconNode$H);
+const CircleX = createLucideIcon("circle-x", __iconNode$H);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37988,10 +38000,9 @@ const CircleCheck = createLucideIcon("circle-check", __iconNode$H);
  */
 const __iconNode$G = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
-  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
+  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
 ];
-const CircleX = createLucideIcon("circle-x", __iconNode$G);
+const Clock = createLucideIcon("clock", __iconNode$G);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37999,10 +38010,10 @@ const CircleX = createLucideIcon("circle-x", __iconNode$G);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$F = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
+  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
+  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
 ];
-const Clock = createLucideIcon("clock", __iconNode$F);
+const Copy = createLucideIcon("copy", __iconNode$F);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38010,10 +38021,10 @@ const Clock = createLucideIcon("clock", __iconNode$F);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$E = [
-  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
-  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
+  ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2", key: "ynyp8z" }],
+  ["line", { x1: "2", x2: "22", y1: "10", y2: "10", key: "1b3vmo" }]
 ];
-const Copy = createLucideIcon("copy", __iconNode$E);
+const CreditCard = createLucideIcon("credit-card", __iconNode$E);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38021,10 +38032,11 @@ const Copy = createLucideIcon("copy", __iconNode$E);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$D = [
-  ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2", key: "ynyp8z" }],
-  ["line", { x1: "2", x2: "22", y1: "10", y2: "10", key: "1b3vmo" }]
+  ["path", { d: "M12 15V3", key: "m9g1x1" }],
+  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
+  ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
 ];
-const CreditCard = createLucideIcon("credit-card", __iconNode$D);
+const Download = createLucideIcon("download", __iconNode$D);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38032,18 +38044,6 @@ const CreditCard = createLucideIcon("credit-card", __iconNode$D);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$C = [
-  ["path", { d: "M12 15V3", key: "m9g1x1" }],
-  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
-  ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
-];
-const Download = createLucideIcon("download", __iconNode$C);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$B = [
   [
     "path",
     {
@@ -38061,14 +38061,14 @@ const __iconNode$B = [
   ],
   ["path", { d: "m2 2 20 20", key: "1ooewy" }]
 ];
-const EyeOff = createLucideIcon("eye-off", __iconNode$B);
+const EyeOff = createLucideIcon("eye-off", __iconNode$C);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$A = [
+const __iconNode$B = [
   [
     "path",
     {
@@ -38078,7 +38078,21 @@ const __iconNode$A = [
   ],
   ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
 ];
-const Eye = createLucideIcon("eye", __iconNode$A);
+const Eye = createLucideIcon("eye", __iconNode$B);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$A = [
+  ["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", key: "1rqfz7" }],
+  ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4", key: "tnqrlb" }],
+  ["path", { d: "M10 9H8", key: "b1mrlr" }],
+  ["path", { d: "M16 13H8", key: "t4e002" }],
+  ["path", { d: "M16 17H8", key: "z1uh3a" }]
+];
+const FileText = createLucideIcon("file-text", __iconNode$A);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38086,20 +38100,6 @@ const Eye = createLucideIcon("eye", __iconNode$A);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$z = [
-  ["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", key: "1rqfz7" }],
-  ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4", key: "tnqrlb" }],
-  ["path", { d: "M10 9H8", key: "b1mrlr" }],
-  ["path", { d: "M16 13H8", key: "t4e002" }],
-  ["path", { d: "M16 17H8", key: "z1uh3a" }]
-];
-const FileText = createLucideIcon("file-text", __iconNode$z);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$y = [
   ["rect", { x: "3", y: "8", width: "18", height: "4", rx: "1", key: "bkv52" }],
   ["path", { d: "M12 8v13", key: "1c76mn" }],
   ["path", { d: "M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7", key: "6wjy6b" }],
@@ -38111,14 +38111,14 @@ const __iconNode$y = [
     }
   ]
 ];
-const Gift = createLucideIcon("gift", __iconNode$y);
+const Gift = createLucideIcon("gift", __iconNode$z);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$x = [
+const __iconNode$y = [
   [
     "path",
     {
@@ -38127,7 +38127,19 @@ const __iconNode$x = [
     }
   ]
 ];
-const Headphones = createLucideIcon("headphones", __iconNode$x);
+const Headphones = createLucideIcon("headphones", __iconNode$y);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$x = [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "M12 16v-4", key: "1dtifu" }],
+  ["path", { d: "M12 8h.01", key: "e9boi3" }]
+];
+const Info = createLucideIcon("info", __iconNode$x);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38135,18 +38147,6 @@ const Headphones = createLucideIcon("headphones", __iconNode$x);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$w = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "M12 16v-4", key: "1dtifu" }],
-  ["path", { d: "M12 8h.01", key: "e9boi3" }]
-];
-const Info = createLucideIcon("info", __iconNode$w);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$v = [
   [
     "path",
     {
@@ -38156,7 +38156,20 @@ const __iconNode$v = [
   ],
   ["circle", { cx: "16.5", cy: "7.5", r: ".5", fill: "currentColor", key: "w0ekpg" }]
 ];
-const KeyRound = createLucideIcon("key-round", __iconNode$v);
+const KeyRound = createLucideIcon("key-round", __iconNode$w);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$v = [
+  ["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1", key: "10lvy0" }],
+  ["rect", { width: "7", height: "5", x: "14", y: "3", rx: "1", key: "16une8" }],
+  ["rect", { width: "7", height: "9", x: "14", y: "12", rx: "1", key: "1hutg5" }],
+  ["rect", { width: "7", height: "5", x: "3", y: "16", rx: "1", key: "ldoo1y" }]
+];
+const LayoutDashboard = createLucideIcon("layout-dashboard", __iconNode$v);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38164,12 +38177,11 @@ const KeyRound = createLucideIcon("key-round", __iconNode$v);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$u = [
-  ["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1", key: "10lvy0" }],
-  ["rect", { width: "7", height: "5", x: "14", y: "3", rx: "1", key: "16une8" }],
-  ["rect", { width: "7", height: "9", x: "14", y: "12", rx: "1", key: "1hutg5" }],
-  ["rect", { width: "7", height: "5", x: "3", y: "16", rx: "1", key: "ldoo1y" }]
+  ["path", { d: "M3 6h18", key: "d0wm0j" }],
+  ["path", { d: "M7 12h10", key: "b7w52i" }],
+  ["path", { d: "M10 18h4", key: "1ulq68" }]
 ];
-const LayoutDashboard = createLucideIcon("layout-dashboard", __iconNode$u);
+const ListFilter = createLucideIcon("list-filter", __iconNode$u);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38949,13 +38961,13 @@ var Label$1 = reactExports.forwardRef((props, forwardedRef) => {
   );
 });
 Label$1.displayName = NAME$2;
-var Root$4 = Label$1;
+var Root$5 = Label$1;
 function Label({
   className,
   ...props
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    Root$4,
+    Root$5,
     {
       "data-slot": "label",
       className: cn(
@@ -39356,11 +39368,11 @@ var Switch$1 = reactExports.forwardRef(
   }
 );
 Switch$1.displayName = SWITCH_NAME;
-var THUMB_NAME$1 = "SwitchThumb";
+var THUMB_NAME$2 = "SwitchThumb";
 var SwitchThumb = reactExports.forwardRef(
   (props, forwardedRef) => {
     const { __scopeSwitch, ...thumbProps } = props;
-    const context = useSwitchContext(THUMB_NAME$1, __scopeSwitch);
+    const context = useSwitchContext(THUMB_NAME$2, __scopeSwitch);
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       Primitive.span,
       {
@@ -39372,7 +39384,7 @@ var SwitchThumb = reactExports.forwardRef(
     );
   }
 );
-SwitchThumb.displayName = THUMB_NAME$1;
+SwitchThumb.displayName = THUMB_NAME$2;
 var BUBBLE_INPUT_NAME$3 = "SwitchBubbleInput";
 var SwitchBubbleInput = reactExports.forwardRef(
   ({
@@ -39426,14 +39438,14 @@ SwitchBubbleInput.displayName = BUBBLE_INPUT_NAME$3;
 function getState$2(checked) {
   return checked ? "checked" : "unchecked";
 }
-var Root$3 = Switch$1;
+var Root$4 = Switch$1;
 var Thumb$1 = SwitchThumb;
 function Switch({
   className,
   ...props
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    Root$3,
+    Root$4,
     {
       "data-slot": "switch",
       className: cn(
@@ -43190,7 +43202,7 @@ var Arrow$1 = reactExports.forwardRef((props, forwardedRef) => {
   );
 });
 Arrow$1.displayName = NAME$1;
-var Root$2 = Arrow$1;
+var Root$3 = Arrow$1;
 var POPPER_NAME = "Popper";
 var [createPopperContext, createPopperScope] = createContextScope(POPPER_NAME);
 var [PopperProvider, usePopperContext] = createPopperContext(POPPER_NAME);
@@ -43403,7 +43415,7 @@ var PopperArrow = reactExports.forwardRef(function PopperArrow2(props, forwarded
           visibility: contentContext.shouldHideArrow ? "hidden" : void 0
         },
         children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Root$2,
+          Root$3,
           {
             ...arrowProps,
             ref: forwardedRef,
@@ -44959,12 +44971,12 @@ var SelectPopperPosition = reactExports.forwardRef((props, forwardedRef) => {
 });
 SelectPopperPosition.displayName = POPPER_POSITION_NAME;
 var [SelectViewportProvider, useSelectViewportContext] = createSelectContext(CONTENT_NAME$2, {});
-var VIEWPORT_NAME = "SelectViewport";
+var VIEWPORT_NAME$1 = "SelectViewport";
 var SelectViewport = reactExports.forwardRef(
   (props, forwardedRef) => {
     const { __scopeSelect, nonce, ...viewportProps } = props;
-    const contentContext = useSelectContentContext(VIEWPORT_NAME, __scopeSelect);
-    const viewportContext = useSelectViewportContext(VIEWPORT_NAME, __scopeSelect);
+    const contentContext = useSelectContentContext(VIEWPORT_NAME$1, __scopeSelect);
+    const viewportContext = useSelectViewportContext(VIEWPORT_NAME$1, __scopeSelect);
     const composedRefs = useComposedRefs(forwardedRef, contentContext.onViewportChange);
     const prevScrollTopRef = reactExports.useRef(0);
     return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
@@ -45026,7 +45038,7 @@ var SelectViewport = reactExports.forwardRef(
     ] });
   }
 );
-SelectViewport.displayName = VIEWPORT_NAME;
+SelectViewport.displayName = VIEWPORT_NAME$1;
 var GROUP_NAME = "SelectGroup";
 var [SelectGroupContextProvider, useSelectGroupContext] = createSelectContext(GROUP_NAME);
 var SelectGroup = reactExports.forwardRef(
@@ -45411,7 +45423,7 @@ var Value = SelectValue$1;
 var Icon = SelectIcon;
 var Portal$1 = SelectPortal;
 var Content2$1 = SelectContent$1;
-var Viewport = SelectViewport;
+var Viewport$1 = SelectViewport;
 var Item = SelectItem$1;
 var ItemText = SelectItemText;
 var ItemIndicator = SelectItemIndicator;
@@ -45470,7 +45482,7 @@ function SelectContent({
       children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(SelectScrollUpButton, {}),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Viewport,
+          Viewport$1,
           {
             className: cn(
               "p-1",
@@ -46425,153 +46437,7 @@ function IndexRoute$1() {
     }
   );
 }
-const DEFAULT_XAI_VOICE_OPTIONS = [
-  {
-    voiceId: "eve",
-    name: "Eve",
-    description: "Energetic, upbeat",
-    type: "built-in"
-  },
-  {
-    voiceId: "ara",
-    name: "Ara",
-    description: "Warm, friendly",
-    type: "built-in"
-  },
-  {
-    voiceId: "rex",
-    name: "Rex",
-    description: "Confident, clear",
-    type: "built-in"
-  },
-  {
-    voiceId: "sal",
-    name: "Sal",
-    description: "Smooth, balanced",
-    type: "built-in"
-  },
-  {
-    voiceId: "leo",
-    name: "Leo",
-    description: "Authoritative, strong",
-    type: "built-in"
-  }
-];
-const LEGACY_VOICE_BY_ID = {
-  eve: Voice.eve,
-  ara: Voice.ara,
-  rex: Voice.rex,
-  sal: Voice.sal,
-  leo: Voice.leo
-};
-const DEFAULT_VOICE_BY_ID = new Map(
-  DEFAULT_XAI_VOICE_OPTIONS.map((voice) => [voice.voiceId, voice])
-);
-function normalizeVoiceId(value) {
-  return String(value || "").trim().toLowerCase();
-}
-function voiceToVoiceId(voice) {
-  return String(voice).toLowerCase();
-}
-function mergeVoiceOptions(voices) {
-  const byId = /* @__PURE__ */ new Map();
-  for (const voice of DEFAULT_XAI_VOICE_OPTIONS) {
-    byId.set(normalizeVoiceId(voice.voiceId), voice);
-  }
-  for (const voice of voices) {
-    const voiceId = normalizeVoiceId(voice.voiceId);
-    if (!voiceId) continue;
-    byId.set(voiceId, {
-      ...voice,
-      voiceId: voice.voiceId.trim(),
-      name: voice.name || voice.voiceId
-    });
-  }
-  return Array.from(byId.values());
-}
-function getVoiceLabel(voice, voiceId) {
-  var _a3, _b3;
-  const normalized = normalizeVoiceId(voiceId);
-  if (normalized) {
-    return ((_a3 = DEFAULT_VOICE_BY_ID.get(normalized)) == null ? void 0 : _a3.name) ?? String(voiceId).trim();
-  }
-  return ((_b3 = DEFAULT_VOICE_BY_ID.get(voiceToVoiceId(voice))) == null ? void 0 : _b3.name) ?? String(voice);
-}
-function getVoiceInitial(voice, voiceId) {
-  return getVoiceLabel(voice, voiceId).slice(0, 1).toUpperCase() || "?";
-}
-function VoiceIdSelector({
-  value,
-  onChange,
-  dataOcidPrefix = "voice_selector"
-}) {
-  const [voices, setVoices] = reactExports.useState(
-    DEFAULT_XAI_VOICE_OPTIONS
-  );
-  const [isLoading, setIsLoading] = reactExports.useState(false);
-  reactExports.useEffect(() => {
-    let canceled = false;
-    setIsLoading(true);
-    listXaiVoiceLibrary().then((library) => {
-      if (!canceled) setVoices(mergeVoiceOptions(library.voices));
-    }).catch(() => {
-      if (!canceled) setVoices(DEFAULT_XAI_VOICE_OPTIONS);
-    }).finally(() => {
-      if (!canceled) setIsLoading(false);
-    });
-    return () => {
-      canceled = true;
-    };
-  }, []);
-  const activeVoiceId = normalizeVoiceId(value.voiceId) || voiceToVoiceId(value.voice);
-  const displayedVoices = reactExports.useMemo(() => mergeVoiceOptions(voices), [voices]);
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
-    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5", children: displayedVoices.map((voice) => {
-      const voiceId = normalizeVoiceId(voice.voiceId);
-      const isActive = activeVoiceId === voiceId;
-      return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-        Button,
-        {
-          type: "button",
-          variant: isActive ? "secondary" : "outline",
-          className: "h-auto min-h-20 flex-col items-start gap-1 whitespace-normal p-3 text-left",
-          onClick: () => {
-            const legacyVoice = LEGACY_VOICE_BY_ID[voiceId];
-            onChange({
-              voice: legacyVoice ?? value.voice,
-              voiceId: legacyVoice ? "" : voice.voiceId
-            });
-          },
-          "data-ocid": `${dataOcidPrefix}.preset_voice.${voiceId}`,
-          children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-tight", children: voice.name || voice.voiceId }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] leading-tight text-muted-foreground", children: voice.description || voice.voiceId })
-          ]
-        },
-        voice.voiceId
-      );
-    }) }),
-    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase tracking-wide text-muted-foreground", children: "Voice ID" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Input,
-          {
-            value: value.voiceId ?? "",
-            onChange: (event) => onChange({ voice: value.voice, voiceId: event.target.value }),
-            placeholder: "nlbqfwie",
-            "data-ocid": `${dataOcidPrefix}.custom_voice_id.input`
-          }
-        )
-      ] }),
-      isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-10 items-center gap-2 text-xs text-muted-foreground", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-3.5 w-3.5 animate-spin" }),
-        "Loading voices"
-      ] })
-    ] })
-  ] });
-}
-function useStateMachine(initialState, machine) {
+function useStateMachine$1(initialState, machine) {
   return reactExports.useReducer((state, event) => {
     const nextState = machine[state][event];
     return nextState ?? state;
@@ -46592,7 +46458,7 @@ function usePresence$1(present) {
   const prevPresentRef = reactExports.useRef(present);
   const prevAnimationNameRef = reactExports.useRef("none");
   const initialState = present ? "mounted" : "unmounted";
-  const [state, send] = useStateMachine(initialState, {
+  const [state, send] = useStateMachine$1(initialState, {
     mounted: {
       UNMOUNT: "unmounted",
       ANIMATION_OUT: "unmountSuspended"
@@ -46693,6 +46559,1234 @@ function getElementRef(element) {
     return element.props.ref;
   }
   return element.props.ref || element.ref;
+}
+function useStateMachine(initialState, machine) {
+  return reactExports.useReducer((state, event) => {
+    const nextState = machine[state][event];
+    return nextState ?? state;
+  }, initialState);
+}
+var SCROLL_AREA_NAME = "ScrollArea";
+var [createScrollAreaContext] = createContextScope(SCROLL_AREA_NAME);
+var [ScrollAreaProvider, useScrollAreaContext] = createScrollAreaContext(SCROLL_AREA_NAME);
+var ScrollArea$1 = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const {
+      __scopeScrollArea,
+      type = "hover",
+      dir,
+      scrollHideDelay = 600,
+      ...scrollAreaProps
+    } = props;
+    const [scrollArea, setScrollArea] = reactExports.useState(null);
+    const [viewport, setViewport] = reactExports.useState(null);
+    const [content, setContent] = reactExports.useState(null);
+    const [scrollbarX, setScrollbarX] = reactExports.useState(null);
+    const [scrollbarY, setScrollbarY] = reactExports.useState(null);
+    const [cornerWidth, setCornerWidth] = reactExports.useState(0);
+    const [cornerHeight, setCornerHeight] = reactExports.useState(0);
+    const [scrollbarXEnabled, setScrollbarXEnabled] = reactExports.useState(false);
+    const [scrollbarYEnabled, setScrollbarYEnabled] = reactExports.useState(false);
+    const composedRefs = useComposedRefs(forwardedRef, (node) => setScrollArea(node));
+    const direction = useDirection(dir);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ScrollAreaProvider,
+      {
+        scope: __scopeScrollArea,
+        type,
+        dir: direction,
+        scrollHideDelay,
+        scrollArea,
+        viewport,
+        onViewportChange: setViewport,
+        content,
+        onContentChange: setContent,
+        scrollbarX,
+        onScrollbarXChange: setScrollbarX,
+        scrollbarXEnabled,
+        onScrollbarXEnabledChange: setScrollbarXEnabled,
+        scrollbarY,
+        onScrollbarYChange: setScrollbarY,
+        scrollbarYEnabled,
+        onScrollbarYEnabledChange: setScrollbarYEnabled,
+        onCornerWidthChange: setCornerWidth,
+        onCornerHeightChange: setCornerHeight,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Primitive.div,
+          {
+            dir: direction,
+            ...scrollAreaProps,
+            ref: composedRefs,
+            style: {
+              position: "relative",
+              // Pass corner sizes as CSS vars to reduce re-renders of context consumers
+              ["--radix-scroll-area-corner-width"]: cornerWidth + "px",
+              ["--radix-scroll-area-corner-height"]: cornerHeight + "px",
+              ...props.style
+            }
+          }
+        )
+      }
+    );
+  }
+);
+ScrollArea$1.displayName = SCROLL_AREA_NAME;
+var VIEWPORT_NAME = "ScrollAreaViewport";
+var ScrollAreaViewport = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeScrollArea, children, nonce, ...viewportProps } = props;
+    const context = useScrollAreaContext(VIEWPORT_NAME, __scopeScrollArea);
+    const ref = reactExports.useRef(null);
+    const composedRefs = useComposedRefs(forwardedRef, ref, context.onViewportChange);
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "style",
+        {
+          dangerouslySetInnerHTML: {
+            __html: `[data-radix-scroll-area-viewport]{scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;}[data-radix-scroll-area-viewport]::-webkit-scrollbar{display:none}`
+          },
+          nonce
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Primitive.div,
+        {
+          "data-radix-scroll-area-viewport": "",
+          ...viewportProps,
+          ref: composedRefs,
+          style: {
+            /**
+             * We don't support `visible` because the intention is to have at least one scrollbar
+             * if this component is used and `visible` will behave like `auto` in that case
+             * https://developer.mozilla.org/en-US/docs/Web/CSS/overflow#description
+             *
+             * We don't handle `auto` because the intention is for the native implementation
+             * to be hidden if using this component. We just want to ensure the node is scrollable
+             * so could have used either `scroll` or `auto` here. We picked `scroll` to prevent
+             * the browser from having to work out whether to render native scrollbars or not,
+             * we tell it to with the intention of hiding them in CSS.
+             */
+            overflowX: context.scrollbarXEnabled ? "scroll" : "hidden",
+            overflowY: context.scrollbarYEnabled ? "scroll" : "hidden",
+            ...props.style
+          },
+          children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: context.onContentChange, style: { minWidth: "100%", display: "table" }, children })
+        }
+      )
+    ] });
+  }
+);
+ScrollAreaViewport.displayName = VIEWPORT_NAME;
+var SCROLLBAR_NAME = "ScrollAreaScrollbar";
+var ScrollAreaScrollbar = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { forceMount, ...scrollbarProps } = props;
+    const context = useScrollAreaContext(SCROLLBAR_NAME, props.__scopeScrollArea);
+    const { onScrollbarXEnabledChange, onScrollbarYEnabledChange } = context;
+    const isHorizontal = props.orientation === "horizontal";
+    reactExports.useEffect(() => {
+      isHorizontal ? onScrollbarXEnabledChange(true) : onScrollbarYEnabledChange(true);
+      return () => {
+        isHorizontal ? onScrollbarXEnabledChange(false) : onScrollbarYEnabledChange(false);
+      };
+    }, [isHorizontal, onScrollbarXEnabledChange, onScrollbarYEnabledChange]);
+    return context.type === "hover" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollAreaScrollbarHover, { ...scrollbarProps, ref: forwardedRef, forceMount }) : context.type === "scroll" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollAreaScrollbarScroll, { ...scrollbarProps, ref: forwardedRef, forceMount }) : context.type === "auto" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollAreaScrollbarAuto, { ...scrollbarProps, ref: forwardedRef, forceMount }) : context.type === "always" ? /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollAreaScrollbarVisible, { ...scrollbarProps, ref: forwardedRef }) : null;
+  }
+);
+ScrollAreaScrollbar.displayName = SCROLLBAR_NAME;
+var ScrollAreaScrollbarHover = reactExports.forwardRef((props, forwardedRef) => {
+  const { forceMount, ...scrollbarProps } = props;
+  const context = useScrollAreaContext(SCROLLBAR_NAME, props.__scopeScrollArea);
+  const [visible, setVisible] = reactExports.useState(false);
+  reactExports.useEffect(() => {
+    const scrollArea = context.scrollArea;
+    let hideTimer = 0;
+    if (scrollArea) {
+      const handlePointerEnter = () => {
+        window.clearTimeout(hideTimer);
+        setVisible(true);
+      };
+      const handlePointerLeave = () => {
+        hideTimer = window.setTimeout(() => setVisible(false), context.scrollHideDelay);
+      };
+      scrollArea.addEventListener("pointerenter", handlePointerEnter);
+      scrollArea.addEventListener("pointerleave", handlePointerLeave);
+      return () => {
+        window.clearTimeout(hideTimer);
+        scrollArea.removeEventListener("pointerenter", handlePointerEnter);
+        scrollArea.removeEventListener("pointerleave", handlePointerLeave);
+      };
+    }
+  }, [context.scrollArea, context.scrollHideDelay]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || visible, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ScrollAreaScrollbarAuto,
+    {
+      "data-state": visible ? "visible" : "hidden",
+      ...scrollbarProps,
+      ref: forwardedRef
+    }
+  ) });
+});
+var ScrollAreaScrollbarScroll = reactExports.forwardRef((props, forwardedRef) => {
+  const { forceMount, ...scrollbarProps } = props;
+  const context = useScrollAreaContext(SCROLLBAR_NAME, props.__scopeScrollArea);
+  const isHorizontal = props.orientation === "horizontal";
+  const debounceScrollEnd = useDebounceCallback(() => send("SCROLL_END"), 100);
+  const [state, send] = useStateMachine("hidden", {
+    hidden: {
+      SCROLL: "scrolling"
+    },
+    scrolling: {
+      SCROLL_END: "idle",
+      POINTER_ENTER: "interacting"
+    },
+    interacting: {
+      SCROLL: "interacting",
+      POINTER_LEAVE: "idle"
+    },
+    idle: {
+      HIDE: "hidden",
+      SCROLL: "scrolling",
+      POINTER_ENTER: "interacting"
+    }
+  });
+  reactExports.useEffect(() => {
+    if (state === "idle") {
+      const hideTimer = window.setTimeout(() => send("HIDE"), context.scrollHideDelay);
+      return () => window.clearTimeout(hideTimer);
+    }
+  }, [state, context.scrollHideDelay, send]);
+  reactExports.useEffect(() => {
+    const viewport = context.viewport;
+    const scrollDirection = isHorizontal ? "scrollLeft" : "scrollTop";
+    if (viewport) {
+      let prevScrollPos = viewport[scrollDirection];
+      const handleScroll2 = () => {
+        const scrollPos = viewport[scrollDirection];
+        const hasScrollInDirectionChanged = prevScrollPos !== scrollPos;
+        if (hasScrollInDirectionChanged) {
+          send("SCROLL");
+          debounceScrollEnd();
+        }
+        prevScrollPos = scrollPos;
+      };
+      viewport.addEventListener("scroll", handleScroll2);
+      return () => viewport.removeEventListener("scroll", handleScroll2);
+    }
+  }, [context.viewport, isHorizontal, send, debounceScrollEnd]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || state !== "hidden", children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ScrollAreaScrollbarVisible,
+    {
+      "data-state": state === "hidden" ? "hidden" : "visible",
+      ...scrollbarProps,
+      ref: forwardedRef,
+      onPointerEnter: composeEventHandlers(props.onPointerEnter, () => send("POINTER_ENTER")),
+      onPointerLeave: composeEventHandlers(props.onPointerLeave, () => send("POINTER_LEAVE"))
+    }
+  ) });
+});
+var ScrollAreaScrollbarAuto = reactExports.forwardRef((props, forwardedRef) => {
+  const context = useScrollAreaContext(SCROLLBAR_NAME, props.__scopeScrollArea);
+  const { forceMount, ...scrollbarProps } = props;
+  const [visible, setVisible] = reactExports.useState(false);
+  const isHorizontal = props.orientation === "horizontal";
+  const handleResize = useDebounceCallback(() => {
+    if (context.viewport) {
+      const isOverflowX = context.viewport.offsetWidth < context.viewport.scrollWidth;
+      const isOverflowY = context.viewport.offsetHeight < context.viewport.scrollHeight;
+      setVisible(isHorizontal ? isOverflowX : isOverflowY);
+    }
+  }, 10);
+  useResizeObserver(context.viewport, handleResize);
+  useResizeObserver(context.content, handleResize);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || visible, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ScrollAreaScrollbarVisible,
+    {
+      "data-state": visible ? "visible" : "hidden",
+      ...scrollbarProps,
+      ref: forwardedRef
+    }
+  ) });
+});
+var ScrollAreaScrollbarVisible = reactExports.forwardRef((props, forwardedRef) => {
+  const { orientation = "vertical", ...scrollbarProps } = props;
+  const context = useScrollAreaContext(SCROLLBAR_NAME, props.__scopeScrollArea);
+  const thumbRef = reactExports.useRef(null);
+  const pointerOffsetRef = reactExports.useRef(0);
+  const [sizes, setSizes] = reactExports.useState({
+    content: 0,
+    viewport: 0,
+    scrollbar: { size: 0, paddingStart: 0, paddingEnd: 0 }
+  });
+  const thumbRatio = getThumbRatio(sizes.viewport, sizes.content);
+  const commonProps = {
+    ...scrollbarProps,
+    sizes,
+    onSizesChange: setSizes,
+    hasThumb: Boolean(thumbRatio > 0 && thumbRatio < 1),
+    onThumbChange: (thumb) => thumbRef.current = thumb,
+    onThumbPointerUp: () => pointerOffsetRef.current = 0,
+    onThumbPointerDown: (pointerPos) => pointerOffsetRef.current = pointerPos
+  };
+  function getScrollPosition(pointerPos, dir) {
+    return getScrollPositionFromPointer(pointerPos, pointerOffsetRef.current, sizes, dir);
+  }
+  if (orientation === "horizontal") {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ScrollAreaScrollbarX,
+      {
+        ...commonProps,
+        ref: forwardedRef,
+        onThumbPositionChange: () => {
+          if (context.viewport && thumbRef.current) {
+            const scrollPos = context.viewport.scrollLeft;
+            const offset2 = getThumbOffsetFromScroll(scrollPos, sizes, context.dir);
+            thumbRef.current.style.transform = `translate3d(${offset2}px, 0, 0)`;
+          }
+        },
+        onWheelScroll: (scrollPos) => {
+          if (context.viewport) context.viewport.scrollLeft = scrollPos;
+        },
+        onDragScroll: (pointerPos) => {
+          if (context.viewport) {
+            context.viewport.scrollLeft = getScrollPosition(pointerPos, context.dir);
+          }
+        }
+      }
+    );
+  }
+  if (orientation === "vertical") {
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      ScrollAreaScrollbarY,
+      {
+        ...commonProps,
+        ref: forwardedRef,
+        onThumbPositionChange: () => {
+          if (context.viewport && thumbRef.current) {
+            const scrollPos = context.viewport.scrollTop;
+            const offset2 = getThumbOffsetFromScroll(scrollPos, sizes);
+            thumbRef.current.style.transform = `translate3d(0, ${offset2}px, 0)`;
+          }
+        },
+        onWheelScroll: (scrollPos) => {
+          if (context.viewport) context.viewport.scrollTop = scrollPos;
+        },
+        onDragScroll: (pointerPos) => {
+          if (context.viewport) context.viewport.scrollTop = getScrollPosition(pointerPos);
+        }
+      }
+    );
+  }
+  return null;
+});
+var ScrollAreaScrollbarX = reactExports.forwardRef((props, forwardedRef) => {
+  const { sizes, onSizesChange, ...scrollbarProps } = props;
+  const context = useScrollAreaContext(SCROLLBAR_NAME, props.__scopeScrollArea);
+  const [computedStyle, setComputedStyle] = reactExports.useState();
+  const ref = reactExports.useRef(null);
+  const composeRefs2 = useComposedRefs(forwardedRef, ref, context.onScrollbarXChange);
+  reactExports.useEffect(() => {
+    if (ref.current) setComputedStyle(getComputedStyle(ref.current));
+  }, [ref]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ScrollAreaScrollbarImpl,
+    {
+      "data-orientation": "horizontal",
+      ...scrollbarProps,
+      ref: composeRefs2,
+      sizes,
+      style: {
+        bottom: 0,
+        left: context.dir === "rtl" ? "var(--radix-scroll-area-corner-width)" : 0,
+        right: context.dir === "ltr" ? "var(--radix-scroll-area-corner-width)" : 0,
+        ["--radix-scroll-area-thumb-width"]: getThumbSize(sizes) + "px",
+        ...props.style
+      },
+      onThumbPointerDown: (pointerPos) => props.onThumbPointerDown(pointerPos.x),
+      onDragScroll: (pointerPos) => props.onDragScroll(pointerPos.x),
+      onWheelScroll: (event, maxScrollPos) => {
+        if (context.viewport) {
+          const scrollPos = context.viewport.scrollLeft + event.deltaX;
+          props.onWheelScroll(scrollPos);
+          if (isScrollingWithinScrollbarBounds(scrollPos, maxScrollPos)) {
+            event.preventDefault();
+          }
+        }
+      },
+      onResize: () => {
+        if (ref.current && context.viewport && computedStyle) {
+          onSizesChange({
+            content: context.viewport.scrollWidth,
+            viewport: context.viewport.offsetWidth,
+            scrollbar: {
+              size: ref.current.clientWidth,
+              paddingStart: toInt(computedStyle.paddingLeft),
+              paddingEnd: toInt(computedStyle.paddingRight)
+            }
+          });
+        }
+      }
+    }
+  );
+});
+var ScrollAreaScrollbarY = reactExports.forwardRef((props, forwardedRef) => {
+  const { sizes, onSizesChange, ...scrollbarProps } = props;
+  const context = useScrollAreaContext(SCROLLBAR_NAME, props.__scopeScrollArea);
+  const [computedStyle, setComputedStyle] = reactExports.useState();
+  const ref = reactExports.useRef(null);
+  const composeRefs2 = useComposedRefs(forwardedRef, ref, context.onScrollbarYChange);
+  reactExports.useEffect(() => {
+    if (ref.current) setComputedStyle(getComputedStyle(ref.current));
+  }, [ref]);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ScrollAreaScrollbarImpl,
+    {
+      "data-orientation": "vertical",
+      ...scrollbarProps,
+      ref: composeRefs2,
+      sizes,
+      style: {
+        top: 0,
+        right: context.dir === "ltr" ? 0 : void 0,
+        left: context.dir === "rtl" ? 0 : void 0,
+        bottom: "var(--radix-scroll-area-corner-height)",
+        ["--radix-scroll-area-thumb-height"]: getThumbSize(sizes) + "px",
+        ...props.style
+      },
+      onThumbPointerDown: (pointerPos) => props.onThumbPointerDown(pointerPos.y),
+      onDragScroll: (pointerPos) => props.onDragScroll(pointerPos.y),
+      onWheelScroll: (event, maxScrollPos) => {
+        if (context.viewport) {
+          const scrollPos = context.viewport.scrollTop + event.deltaY;
+          props.onWheelScroll(scrollPos);
+          if (isScrollingWithinScrollbarBounds(scrollPos, maxScrollPos)) {
+            event.preventDefault();
+          }
+        }
+      },
+      onResize: () => {
+        if (ref.current && context.viewport && computedStyle) {
+          onSizesChange({
+            content: context.viewport.scrollHeight,
+            viewport: context.viewport.offsetHeight,
+            scrollbar: {
+              size: ref.current.clientHeight,
+              paddingStart: toInt(computedStyle.paddingTop),
+              paddingEnd: toInt(computedStyle.paddingBottom)
+            }
+          });
+        }
+      }
+    }
+  );
+});
+var [ScrollbarProvider, useScrollbarContext] = createScrollAreaContext(SCROLLBAR_NAME);
+var ScrollAreaScrollbarImpl = reactExports.forwardRef((props, forwardedRef) => {
+  const {
+    __scopeScrollArea,
+    sizes,
+    hasThumb,
+    onThumbChange,
+    onThumbPointerUp,
+    onThumbPointerDown,
+    onThumbPositionChange,
+    onDragScroll,
+    onWheelScroll,
+    onResize,
+    ...scrollbarProps
+  } = props;
+  const context = useScrollAreaContext(SCROLLBAR_NAME, __scopeScrollArea);
+  const [scrollbar, setScrollbar] = reactExports.useState(null);
+  const composeRefs2 = useComposedRefs(forwardedRef, (node) => setScrollbar(node));
+  const rectRef = reactExports.useRef(null);
+  const prevWebkitUserSelectRef = reactExports.useRef("");
+  const viewport = context.viewport;
+  const maxScrollPos = sizes.content - sizes.viewport;
+  const handleWheelScroll = useCallbackRef$1(onWheelScroll);
+  const handleThumbPositionChange = useCallbackRef$1(onThumbPositionChange);
+  const handleResize = useDebounceCallback(onResize, 10);
+  function handleDragScroll(event) {
+    if (rectRef.current) {
+      const x3 = event.clientX - rectRef.current.left;
+      const y2 = event.clientY - rectRef.current.top;
+      onDragScroll({ x: x3, y: y2 });
+    }
+  }
+  reactExports.useEffect(() => {
+    const handleWheel = (event) => {
+      const element = event.target;
+      const isScrollbarWheel = scrollbar == null ? void 0 : scrollbar.contains(element);
+      if (isScrollbarWheel) handleWheelScroll(event, maxScrollPos);
+    };
+    document.addEventListener("wheel", handleWheel, { passive: false });
+    return () => document.removeEventListener("wheel", handleWheel, { passive: false });
+  }, [viewport, scrollbar, maxScrollPos, handleWheelScroll]);
+  reactExports.useEffect(handleThumbPositionChange, [sizes, handleThumbPositionChange]);
+  useResizeObserver(scrollbar, handleResize);
+  useResizeObserver(context.content, handleResize);
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ScrollbarProvider,
+    {
+      scope: __scopeScrollArea,
+      scrollbar,
+      hasThumb,
+      onThumbChange: useCallbackRef$1(onThumbChange),
+      onThumbPointerUp: useCallbackRef$1(onThumbPointerUp),
+      onThumbPositionChange: handleThumbPositionChange,
+      onThumbPointerDown: useCallbackRef$1(onThumbPointerDown),
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Primitive.div,
+        {
+          ...scrollbarProps,
+          ref: composeRefs2,
+          style: { position: "absolute", ...scrollbarProps.style },
+          onPointerDown: composeEventHandlers(props.onPointerDown, (event) => {
+            const mainPointer = 0;
+            if (event.button === mainPointer) {
+              const element = event.target;
+              element.setPointerCapture(event.pointerId);
+              rectRef.current = scrollbar.getBoundingClientRect();
+              prevWebkitUserSelectRef.current = document.body.style.webkitUserSelect;
+              document.body.style.webkitUserSelect = "none";
+              if (context.viewport) context.viewport.style.scrollBehavior = "auto";
+              handleDragScroll(event);
+            }
+          }),
+          onPointerMove: composeEventHandlers(props.onPointerMove, handleDragScroll),
+          onPointerUp: composeEventHandlers(props.onPointerUp, (event) => {
+            const element = event.target;
+            if (element.hasPointerCapture(event.pointerId)) {
+              element.releasePointerCapture(event.pointerId);
+            }
+            document.body.style.webkitUserSelect = prevWebkitUserSelectRef.current;
+            if (context.viewport) context.viewport.style.scrollBehavior = "";
+            rectRef.current = null;
+          })
+        }
+      )
+    }
+  );
+});
+var THUMB_NAME$1 = "ScrollAreaThumb";
+var ScrollAreaThumb = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { forceMount, ...thumbProps } = props;
+    const scrollbarContext = useScrollbarContext(THUMB_NAME$1, props.__scopeScrollArea);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(Presence, { present: forceMount || scrollbarContext.hasThumb, children: /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollAreaThumbImpl, { ref: forwardedRef, ...thumbProps }) });
+  }
+);
+var ScrollAreaThumbImpl = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeScrollArea, style: style2, ...thumbProps } = props;
+    const scrollAreaContext = useScrollAreaContext(THUMB_NAME$1, __scopeScrollArea);
+    const scrollbarContext = useScrollbarContext(THUMB_NAME$1, __scopeScrollArea);
+    const { onThumbPositionChange } = scrollbarContext;
+    const composedRef = useComposedRefs(
+      forwardedRef,
+      (node) => scrollbarContext.onThumbChange(node)
+    );
+    const removeUnlinkedScrollListenerRef = reactExports.useRef(void 0);
+    const debounceScrollEnd = useDebounceCallback(() => {
+      if (removeUnlinkedScrollListenerRef.current) {
+        removeUnlinkedScrollListenerRef.current();
+        removeUnlinkedScrollListenerRef.current = void 0;
+      }
+    }, 100);
+    reactExports.useEffect(() => {
+      const viewport = scrollAreaContext.viewport;
+      if (viewport) {
+        const handleScroll2 = () => {
+          debounceScrollEnd();
+          if (!removeUnlinkedScrollListenerRef.current) {
+            const listener = addUnlinkedScrollListener(viewport, onThumbPositionChange);
+            removeUnlinkedScrollListenerRef.current = listener;
+            onThumbPositionChange();
+          }
+        };
+        onThumbPositionChange();
+        viewport.addEventListener("scroll", handleScroll2);
+        return () => viewport.removeEventListener("scroll", handleScroll2);
+      }
+    }, [scrollAreaContext.viewport, debounceScrollEnd, onThumbPositionChange]);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.div,
+      {
+        "data-state": scrollbarContext.hasThumb ? "visible" : "hidden",
+        ...thumbProps,
+        ref: composedRef,
+        style: {
+          width: "var(--radix-scroll-area-thumb-width)",
+          height: "var(--radix-scroll-area-thumb-height)",
+          ...style2
+        },
+        onPointerDownCapture: composeEventHandlers(props.onPointerDownCapture, (event) => {
+          const thumb = event.target;
+          const thumbRect = thumb.getBoundingClientRect();
+          const x3 = event.clientX - thumbRect.left;
+          const y2 = event.clientY - thumbRect.top;
+          scrollbarContext.onThumbPointerDown({ x: x3, y: y2 });
+        }),
+        onPointerUp: composeEventHandlers(props.onPointerUp, scrollbarContext.onThumbPointerUp)
+      }
+    );
+  }
+);
+ScrollAreaThumb.displayName = THUMB_NAME$1;
+var CORNER_NAME = "ScrollAreaCorner";
+var ScrollAreaCorner = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const context = useScrollAreaContext(CORNER_NAME, props.__scopeScrollArea);
+    const hasBothScrollbarsVisible = Boolean(context.scrollbarX && context.scrollbarY);
+    const hasCorner = context.type !== "scroll" && hasBothScrollbarsVisible;
+    return hasCorner ? /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollAreaCornerImpl, { ...props, ref: forwardedRef }) : null;
+  }
+);
+ScrollAreaCorner.displayName = CORNER_NAME;
+var ScrollAreaCornerImpl = reactExports.forwardRef((props, forwardedRef) => {
+  const { __scopeScrollArea, ...cornerProps } = props;
+  const context = useScrollAreaContext(CORNER_NAME, __scopeScrollArea);
+  const [width, setWidth] = reactExports.useState(0);
+  const [height, setHeight] = reactExports.useState(0);
+  const hasSize = Boolean(width && height);
+  useResizeObserver(context.scrollbarX, () => {
+    var _a3;
+    const height2 = ((_a3 = context.scrollbarX) == null ? void 0 : _a3.offsetHeight) || 0;
+    context.onCornerHeightChange(height2);
+    setHeight(height2);
+  });
+  useResizeObserver(context.scrollbarY, () => {
+    var _a3;
+    const width2 = ((_a3 = context.scrollbarY) == null ? void 0 : _a3.offsetWidth) || 0;
+    context.onCornerWidthChange(width2);
+    setWidth(width2);
+  });
+  return hasSize ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Primitive.div,
+    {
+      ...cornerProps,
+      ref: forwardedRef,
+      style: {
+        width,
+        height,
+        position: "absolute",
+        right: context.dir === "ltr" ? 0 : void 0,
+        left: context.dir === "rtl" ? 0 : void 0,
+        bottom: 0,
+        ...props.style
+      }
+    }
+  ) : null;
+});
+function toInt(value) {
+  return value ? parseInt(value, 10) : 0;
+}
+function getThumbRatio(viewportSize, contentSize) {
+  const ratio = viewportSize / contentSize;
+  return isNaN(ratio) ? 0 : ratio;
+}
+function getThumbSize(sizes) {
+  const ratio = getThumbRatio(sizes.viewport, sizes.content);
+  const scrollbarPadding = sizes.scrollbar.paddingStart + sizes.scrollbar.paddingEnd;
+  const thumbSize = (sizes.scrollbar.size - scrollbarPadding) * ratio;
+  return Math.max(thumbSize, 18);
+}
+function getScrollPositionFromPointer(pointerPos, pointerOffset, sizes, dir = "ltr") {
+  const thumbSizePx = getThumbSize(sizes);
+  const thumbCenter = thumbSizePx / 2;
+  const offset2 = pointerOffset || thumbCenter;
+  const thumbOffsetFromEnd = thumbSizePx - offset2;
+  const minPointerPos = sizes.scrollbar.paddingStart + offset2;
+  const maxPointerPos = sizes.scrollbar.size - sizes.scrollbar.paddingEnd - thumbOffsetFromEnd;
+  const maxScrollPos = sizes.content - sizes.viewport;
+  const scrollRange = dir === "ltr" ? [0, maxScrollPos] : [maxScrollPos * -1, 0];
+  const interpolate2 = linearScale$1([minPointerPos, maxPointerPos], scrollRange);
+  return interpolate2(pointerPos);
+}
+function getThumbOffsetFromScroll(scrollPos, sizes, dir = "ltr") {
+  const thumbSizePx = getThumbSize(sizes);
+  const scrollbarPadding = sizes.scrollbar.paddingStart + sizes.scrollbar.paddingEnd;
+  const scrollbar = sizes.scrollbar.size - scrollbarPadding;
+  const maxScrollPos = sizes.content - sizes.viewport;
+  const maxThumbPos = scrollbar - thumbSizePx;
+  const scrollClampRange = dir === "ltr" ? [0, maxScrollPos] : [maxScrollPos * -1, 0];
+  const scrollWithoutMomentum = clamp$2(scrollPos, scrollClampRange);
+  const interpolate2 = linearScale$1([0, maxScrollPos], [0, maxThumbPos]);
+  return interpolate2(scrollWithoutMomentum);
+}
+function linearScale$1(input, output) {
+  return (value) => {
+    if (input[0] === input[1] || output[0] === output[1]) return output[0];
+    const ratio = (output[1] - output[0]) / (input[1] - input[0]);
+    return output[0] + ratio * (value - input[0]);
+  };
+}
+function isScrollingWithinScrollbarBounds(scrollPos, maxScrollPos) {
+  return scrollPos > 0 && scrollPos < maxScrollPos;
+}
+var addUnlinkedScrollListener = (node, handler = () => {
+}) => {
+  let prevPosition = { left: node.scrollLeft, top: node.scrollTop };
+  let rAF = 0;
+  (function loop() {
+    const position = { left: node.scrollLeft, top: node.scrollTop };
+    const isHorizontalScroll = prevPosition.left !== position.left;
+    const isVerticalScroll = prevPosition.top !== position.top;
+    if (isHorizontalScroll || isVerticalScroll) handler();
+    prevPosition = position;
+    rAF = window.requestAnimationFrame(loop);
+  })();
+  return () => window.cancelAnimationFrame(rAF);
+};
+function useDebounceCallback(callback, delay2) {
+  const handleCallback = useCallbackRef$1(callback);
+  const debounceTimerRef = reactExports.useRef(0);
+  reactExports.useEffect(() => () => window.clearTimeout(debounceTimerRef.current), []);
+  return reactExports.useCallback(() => {
+    window.clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = window.setTimeout(handleCallback, delay2);
+  }, [handleCallback, delay2]);
+}
+function useResizeObserver(element, onResize) {
+  const handleResize = useCallbackRef$1(onResize);
+  useLayoutEffect2(() => {
+    let rAF = 0;
+    if (element) {
+      const resizeObserver = new ResizeObserver(() => {
+        cancelAnimationFrame(rAF);
+        rAF = window.requestAnimationFrame(handleResize);
+      });
+      resizeObserver.observe(element);
+      return () => {
+        window.cancelAnimationFrame(rAF);
+        resizeObserver.unobserve(element);
+      };
+    }
+  }, [element, handleResize]);
+}
+var Root$2 = ScrollArea$1;
+var Viewport = ScrollAreaViewport;
+var Corner = ScrollAreaCorner;
+function ScrollArea({
+  className,
+  children,
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Root$2,
+    {
+      "data-slot": "scroll-area",
+      className: cn("relative", className),
+      ...props,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Viewport,
+          {
+            "data-slot": "scroll-area-viewport",
+            className: "focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] outline-none focus-visible:ring-[3px] focus-visible:outline-1",
+            children
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollBar, {}),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Corner, {})
+      ]
+    }
+  );
+}
+function ScrollBar({
+  className,
+  orientation = "vertical",
+  ...props
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    ScrollAreaScrollbar,
+    {
+      "data-slot": "scroll-area-scrollbar",
+      orientation,
+      className: cn(
+        "flex touch-none p-px transition-colors select-none",
+        orientation === "vertical" && "h-full w-2.5 border-l border-l-transparent",
+        orientation === "horizontal" && "h-2.5 flex-col border-t border-t-transparent",
+        className
+      ),
+      ...props,
+      children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ScrollAreaThumb,
+        {
+          "data-slot": "scroll-area-thumb",
+          className: "bg-border relative flex-1 rounded-full"
+        }
+      )
+    }
+  );
+}
+const DEFAULT_XAI_VOICE_OPTIONS = [
+  {
+    voiceId: "eve",
+    name: "Eve",
+    description: "Default voice, engaging and enthusiastic",
+    type: "built-in",
+    gender: "Female",
+    tone: "Energetic, upbeat"
+  },
+  {
+    voiceId: "ara",
+    name: "Ara",
+    description: "Balanced and conversational",
+    type: "built-in",
+    gender: "Female",
+    tone: "Warm, friendly"
+  },
+  {
+    voiceId: "rex",
+    name: "Rex",
+    description: "Professional and articulate, ideal for business",
+    type: "built-in",
+    gender: "Male",
+    tone: "Confident, clear"
+  },
+  {
+    voiceId: "sal",
+    name: "Sal",
+    description: "Versatile voice suitable for various contexts",
+    type: "built-in",
+    gender: "Neutral",
+    tone: "Smooth, balanced"
+  },
+  {
+    voiceId: "leo",
+    name: "Leo",
+    description: "Decisive and commanding, suitable for instructional content",
+    type: "built-in",
+    gender: "Male",
+    tone: "Authoritative, strong"
+  }
+];
+const EMPTY_FILTERS = {
+  source: [],
+  type: [],
+  tone: []
+};
+const FILTER_GROUPS = [
+  { key: "type", label: "Type" },
+  { key: "tone", label: "Tone" },
+  { key: "source", label: "Source" }
+];
+const FILTER_SORT_ORDER = {
+  source: ["built-in", "custom"],
+  type: ["female", "male", "neutral"],
+  tone: [
+    "energetic",
+    "upbeat",
+    "warm",
+    "friendly",
+    "confident",
+    "clear",
+    "professional",
+    "smooth",
+    "balanced",
+    "authoritative",
+    "strong",
+    "instructional",
+    "conversational",
+    "versatile"
+  ]
+};
+const TONE_FILTERS = [
+  { key: "energetic", aliases: ["energetic", "engaging", "enthusiastic"] },
+  { key: "upbeat", aliases: ["upbeat"] },
+  { key: "warm", aliases: ["warm"] },
+  { key: "friendly", aliases: ["friendly"] },
+  { key: "confident", aliases: ["confident"] },
+  { key: "clear", aliases: ["clear", "articulate"] },
+  { key: "professional", aliases: ["professional", "business"] },
+  { key: "smooth", aliases: ["smooth"] },
+  { key: "balanced", aliases: ["balanced"] },
+  { key: "authoritative", aliases: ["authoritative", "commanding"] },
+  { key: "strong", aliases: ["strong", "decisive"] },
+  { key: "instructional", aliases: ["instructional"] },
+  { key: "conversational", aliases: ["conversational"] },
+  { key: "versatile", aliases: ["versatile"] }
+];
+const FILTER_LABELS = {
+  "built-in": "Built-in",
+  custom: "Custom"
+};
+const LEGACY_VOICE_BY_ID = {
+  eve: Voice.eve,
+  ara: Voice.ara,
+  rex: Voice.rex,
+  sal: Voice.sal,
+  leo: Voice.leo
+};
+const DEFAULT_VOICE_BY_ID = new Map(
+  DEFAULT_XAI_VOICE_OPTIONS.map((voice) => [voice.voiceId, voice])
+);
+function normalizeVoiceId(value) {
+  return String(value || "").trim().toLowerCase();
+}
+function voiceToVoiceId(voice) {
+  return String(voice).toLowerCase();
+}
+function mergeVoiceOptions(voices) {
+  const byId = /* @__PURE__ */ new Map();
+  for (const voice of DEFAULT_XAI_VOICE_OPTIONS) {
+    byId.set(normalizeVoiceId(voice.voiceId), voice);
+  }
+  for (const voice of voices) {
+    const voiceId = normalizeVoiceId(voice.voiceId);
+    if (!voiceId) continue;
+    const existing = byId.get(voiceId);
+    byId.set(voiceId, {
+      ...existing,
+      ...voice,
+      voiceId: voice.voiceId.trim(),
+      name: voice.name || (existing == null ? void 0 : existing.name) || voice.voiceId,
+      description: voice.description || (existing == null ? void 0 : existing.description),
+      type: voice.type || (existing == null ? void 0 : existing.type),
+      gender: voice.gender || (existing == null ? void 0 : existing.gender),
+      tone: voice.tone || (existing == null ? void 0 : existing.tone)
+    });
+  }
+  return Array.from(byId.values());
+}
+function normalizeFilterKey(value) {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+}
+function formatFilterLabel(key) {
+  if (FILTER_LABELS[key]) return FILTER_LABELS[key];
+  return key.split("-").filter(Boolean).map((part) => part.slice(0, 1).toUpperCase() + part.slice(1)).join(" ");
+}
+function addUnique(values, next) {
+  const key = normalizeFilterKey(next);
+  if (key && !values.includes(key)) values.push(key);
+}
+function getSourceFilter(voice) {
+  const source = normalizeFilterKey(voice.type);
+  if (source.includes("custom")) return "custom";
+  return "built-in";
+}
+function getTypeFilters(voice) {
+  const values = [];
+  addUnique(values, voice.gender);
+  const type = normalizeFilterKey(voice.type);
+  if (type === "female" || type === "male" || type === "neutral") {
+    addUnique(values, type);
+  }
+  const searchable = [voice.name, voice.description, voice.tone].filter(Boolean).join(" ").toLowerCase();
+  for (const option of FILTER_SORT_ORDER.type) {
+    if (searchable.includes(option)) addUnique(values, option);
+  }
+  return values;
+}
+function getToneFilters(voice) {
+  const values = [];
+  const searchable = [voice.name, voice.description, voice.tone, voice.voiceId].filter(Boolean).join(" ").toLowerCase();
+  for (const option of TONE_FILTERS) {
+    if (option.aliases.some((alias) => searchable.includes(alias))) {
+      addUnique(values, option.key);
+    }
+  }
+  return values;
+}
+function getVoiceFilterValues(voice) {
+  return {
+    source: [getSourceFilter(voice)],
+    type: getTypeFilters(voice),
+    tone: getToneFilters(voice)
+  };
+}
+function buildFilterOptions(voices) {
+  const counts = {
+    source: /* @__PURE__ */ new Map(),
+    type: /* @__PURE__ */ new Map(),
+    tone: /* @__PURE__ */ new Map()
+  };
+  for (const voice of voices) {
+    const values = getVoiceFilterValues(voice);
+    for (const group of FILTER_GROUPS) {
+      for (const key of new Set(values[group.key])) {
+        counts[group.key].set(key, (counts[group.key].get(key) ?? 0) + 1);
+      }
+    }
+  }
+  return {
+    source: toFilterOptions("source", counts.source),
+    type: toFilterOptions("type", counts.type),
+    tone: toFilterOptions("tone", counts.tone)
+  };
+}
+function toFilterOptions(group, counts) {
+  const sortOrder = FILTER_SORT_ORDER[group];
+  return Array.from(counts.entries()).map(([key, count2]) => ({
+    key,
+    label: formatFilterLabel(key),
+    count: count2
+  })).sort((a2, b2) => {
+    const aIndex = sortOrder.indexOf(a2.key);
+    const bIndex = sortOrder.indexOf(b2.key);
+    if (aIndex !== -1 || bIndex !== -1) {
+      return (aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex) - (bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex);
+    }
+    return a2.label.localeCompare(b2.label);
+  });
+}
+function matchesVoiceFilters(voice, filters, searchTerm) {
+  const values = getVoiceFilterValues(voice);
+  for (const group of FILTER_GROUPS) {
+    const selected = filters[group.key];
+    if (selected.length > 0 && !selected.some((filter2) => values[group.key].includes(filter2))) {
+      return false;
+    }
+  }
+  const query = searchTerm.trim().toLowerCase();
+  if (!query) return true;
+  const searchable = [
+    voice.voiceId,
+    voice.name,
+    voice.description,
+    voice.type,
+    voice.gender,
+    voice.tone
+  ].filter(Boolean).join(" ").toLowerCase();
+  return query.split(/\s+/).filter(Boolean).every((part) => searchable.includes(part));
+}
+function getVoiceLabel(voice, voiceId) {
+  var _a3, _b3;
+  const normalized = normalizeVoiceId(voiceId);
+  if (normalized) {
+    return ((_a3 = DEFAULT_VOICE_BY_ID.get(normalized)) == null ? void 0 : _a3.name) ?? String(voiceId).trim();
+  }
+  return ((_b3 = DEFAULT_VOICE_BY_ID.get(voiceToVoiceId(voice))) == null ? void 0 : _b3.name) ?? String(voice);
+}
+function getVoiceInitial(voice, voiceId) {
+  return getVoiceLabel(voice, voiceId).slice(0, 1).toUpperCase() || "?";
+}
+function VoiceIdSelector({
+  value,
+  onChange,
+  dataOcidPrefix = "voice_selector"
+}) {
+  const [voices, setVoices] = reactExports.useState(
+    DEFAULT_XAI_VOICE_OPTIONS
+  );
+  const [isLoading, setIsLoading] = reactExports.useState(false);
+  const [showAllVoices, setShowAllVoices] = reactExports.useState(false);
+  const [searchTerm, setSearchTerm] = reactExports.useState("");
+  const [filters, setFilters] = reactExports.useState(EMPTY_FILTERS);
+  reactExports.useEffect(() => {
+    let canceled = false;
+    setIsLoading(true);
+    listXaiVoiceLibrary().then((library) => {
+      if (!canceled) setVoices(mergeVoiceOptions(library.voices));
+    }).catch(() => {
+      if (!canceled) setVoices(DEFAULT_XAI_VOICE_OPTIONS);
+    }).finally(() => {
+      if (!canceled) setIsLoading(false);
+    });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+  const activeVoiceId = normalizeVoiceId(value.voiceId) || voiceToVoiceId(value.voice);
+  const displayedVoices = reactExports.useMemo(() => mergeVoiceOptions(voices), [voices]);
+  const filterOptions = reactExports.useMemo(
+    () => buildFilterOptions(displayedVoices),
+    [displayedVoices]
+  );
+  const hasActiveFilters = searchTerm.trim() !== "" || FILTER_GROUPS.some((group) => filters[group.key].length > 0);
+  const shouldShowVoiceList = showAllVoices || hasActiveFilters;
+  const filteredVoices = reactExports.useMemo(() => {
+    if (!shouldShowVoiceList) return [];
+    if (showAllVoices && !hasActiveFilters) return displayedVoices;
+    return displayedVoices.filter(
+      (voice) => matchesVoiceFilters(voice, filters, searchTerm)
+    );
+  }, [
+    displayedVoices,
+    filters,
+    hasActiveFilters,
+    searchTerm,
+    shouldShowVoiceList,
+    showAllVoices
+  ]);
+  const activeVoiceOption = displayedVoices.find(
+    (voice) => normalizeVoiceId(voice.voiceId) === activeVoiceId
+  );
+  const activeVoiceLabel = (activeVoiceOption == null ? void 0 : activeVoiceOption.name) ?? getVoiceLabel(value.voice, value.voiceId);
+  const activeVoiceDescription = (activeVoiceOption == null ? void 0 : activeVoiceOption.description) || (activeVoiceOption == null ? void 0 : activeVoiceOption.tone) || activeVoiceId || "Custom voice";
+  function toggleFilter(group, option) {
+    setShowAllVoices(false);
+    setFilters((current) => {
+      const selected = new Set(current[group]);
+      if (selected.has(option)) {
+        selected.delete(option);
+      } else {
+        selected.add(option);
+      }
+      return { ...current, [group]: Array.from(selected) };
+    });
+  }
+  function clearFilters() {
+    setShowAllVoices(false);
+    setSearchTerm("");
+    setFilters(EMPTY_FILTERS);
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 rounded-md border border-border bg-muted/10 p-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "truncate text-sm font-semibold text-foreground", children: activeVoiceLabel }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "line-clamp-2 text-xs leading-relaxed text-muted-foreground", children: activeVoiceDescription })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-wrap gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            Button,
+            {
+              type: "button",
+              variant: showAllVoices ? "secondary" : "outline",
+              size: "sm",
+              onClick: () => setShowAllVoices((current) => !current),
+              "data-ocid": `${dataOcidPrefix}.voice_filters.show_all`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(ListFilter, { className: "h-4 w-4" }),
+                showAllVoices ? "Hide" : "Show all"
+              ]
+            }
+          ),
+          (hasActiveFilters || showAllVoices) && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            Button,
+            {
+              type: "button",
+              variant: "ghost",
+              size: "sm",
+              onClick: clearFilters,
+              "data-ocid": `${dataOcidPrefix}.voice_filters.clear`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(X, { className: "h-4 w-4" }),
+                "Clear"
+              ]
+            }
+          )
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "relative", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Search, { className: "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Input,
+          {
+            value: searchTerm,
+            onChange: (event) => {
+              setSearchTerm(event.target.value);
+              setShowAllVoices(false);
+            },
+            placeholder: "Search name, tone, or Voice ID",
+            className: "pl-9",
+            "data-ocid": `${dataOcidPrefix}.voice_filters.search`
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "space-y-2", children: FILTER_GROUPS.map((group) => {
+        const options = filterOptions[group.key];
+        if (options.length === 0) return null;
+        if (group.key === "source" && options.length < 2) return null;
+        return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] font-semibold uppercase tracking-wide text-muted-foreground", children: group.label }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1.5", children: options.map((option) => {
+            const isSelected = filters[group.key].includes(option.key);
+            return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              Button,
+              {
+                type: "button",
+                variant: isSelected ? "secondary" : "outline",
+                size: "sm",
+                className: "h-8 gap-1.5 px-2.5 text-xs",
+                onClick: () => toggleFilter(group.key, option.key),
+                "data-ocid": `${dataOcidPrefix}.voice_filters.${group.key}.${option.key}`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { children: option.label }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] text-muted-foreground", children: option.count })
+                ]
+              },
+              option.key
+            );
+          }) })
+        ] }, group.key);
+      }) }),
+      shouldShowVoiceList && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs text-muted-foreground", children: [
+            filteredVoices.length,
+            " of ",
+            displayedVoices.length,
+            " voices"
+          ] }),
+          isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 text-xs text-muted-foreground", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-3.5 w-3.5 animate-spin" }),
+            "Loading"
+          ] })
+        ] }),
+        filteredVoices.length === 0 ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground", children: "No voices match" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ScrollArea, { className: "max-h-72 rounded-md border border-border bg-background/60", children: /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 gap-2 p-2 sm:grid-cols-2 lg:grid-cols-3", children: filteredVoices.map((voice) => {
+          const voiceId = normalizeVoiceId(voice.voiceId);
+          const isActive = activeVoiceId === voiceId;
+          const voiceFilters = getVoiceFilterValues(voice);
+          const detailTags = [
+            ...voiceFilters.type,
+            ...voiceFilters.tone.slice(0, 2)
+          ].slice(0, 3);
+          return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            Button,
+            {
+              type: "button",
+              variant: isActive ? "secondary" : "outline",
+              className: cn(
+                "h-auto min-h-24 justify-start whitespace-normal p-3 text-left",
+                "flex-col items-start gap-1.5"
+              ),
+              onClick: () => {
+                const legacyVoice = LEGACY_VOICE_BY_ID[voiceId];
+                onChange({
+                  voice: legacyVoice ?? value.voice,
+                  voiceId: legacyVoice ? "" : voice.voiceId
+                });
+              },
+              "data-ocid": `${dataOcidPrefix}.preset_voice.${voiceId}`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-sm font-semibold leading-tight", children: voice.name || voice.voiceId }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-[10px] leading-tight text-muted-foreground", children: voice.description || voice.tone || voice.voiceId }),
+                detailTags.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex flex-wrap gap-1 pt-0.5", children: detailTags.map((tag) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: "rounded-sm bg-muted px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground",
+                    children: formatFilterLabel(tag)
+                  },
+                  tag
+                )) })
+              ]
+            },
+            voice.voiceId
+          );
+        }) }) })
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase tracking-wide text-muted-foreground", children: "Voice ID" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Input,
+          {
+            value: value.voiceId ?? "",
+            onChange: (event) => onChange({ voice: value.voice, voiceId: event.target.value }),
+            placeholder: "nlbqfwie",
+            "data-ocid": `${dataOcidPrefix}.custom_voice_id.input`
+          }
+        )
+      ] }),
+      isLoading && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex h-10 items-center gap-2 text-xs text-muted-foreground", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-3.5 w-3.5 animate-spin" }),
+        "Loading voices"
+      ] })
+    ] })
+  ] });
 }
 var CHECKBOX_NAME = "Checkbox";
 var [createCheckboxContext] = createContextScope(CHECKBOX_NAME);
