@@ -28,6 +28,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -36,7 +37,7 @@ import {
   useListMyAnsweringLiveSessions,
   useListMyAnsweringPresets,
   useSetAnsweringPresetEnabled,
-  useUpdateAnsweringPresetInstructions,
+  useUpdateAnsweringPreset,
 } from "@/hooks/use-backend";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { getLiveAudioMonitorUrl, getVoiceServerUrl } from "@/lib/voice-server";
@@ -71,6 +72,14 @@ const DEFAULT_TOOLS = {
   functionCalling: false,
 };
 const MAX_AI_INSTRUCTIONS_CHARS = 8000;
+const defaultTimingText = {
+  threshold: `Default: ${DEFAULT_TURN_DETECTION.threshold.toFixed(2)}`,
+  silenceDuration: `Default: ${Number(DEFAULT_TURN_DETECTION.silenceDurationMs)}ms`,
+  prefixPadding: `Default: ${Number(DEFAULT_TURN_DETECTION.prefixPaddingMs)}ms`,
+};
+
+const TURN_DETECTION_HELP =
+  "These settings control when the AI decides the caller has finished speaking and can respond. The defaults work well for most calls; adjust them if the AI interrupts too quickly or waits too long.";
 
 const MONITOR_SAMPLE_RATE = 8000;
 const MONITOR_JITTER_SECONDS = 0.12;
@@ -91,6 +100,54 @@ function generateWebhookSecret(): string {
     .replace(/=+$/g, "");
 }
 
+function cloneTurnDetection(
+  turnDetection: AnsweringPresetInput["turnDetection"] = DEFAULT_TURN_DETECTION,
+): AnsweringPresetInput["turnDetection"] {
+  return {
+    serverVad: turnDetection.serverVad,
+    threshold: turnDetection.threshold,
+    prefixPaddingMs: turnDetection.prefixPaddingMs,
+    silenceDurationMs: turnDetection.silenceDurationMs,
+  };
+}
+
+function answeringPresetToInput(preset: AnsweringPreset): AnsweringPresetInput {
+  return {
+    name: preset.name,
+    phoneNumber: preset.phoneNumber,
+    systemPrompt: preset.systemPrompt,
+    voice: preset.voice,
+    voiceId: preset.voiceId ?? "",
+    turnDetection: cloneTurnDetection(preset.turnDetection),
+    audioFormat: preset.audioFormat,
+    sampleRate: preset.sampleRate,
+    toolsEnabled: { ...preset.toolsEnabled },
+    captureOptions: { ...preset.captureOptions },
+    enabled: preset.enabled,
+    webhookSecret: preset.webhookSecret,
+  };
+}
+
+function normalizeAnsweringPresetInput(
+  input: AnsweringPresetInput,
+): AnsweringPresetInput {
+  return {
+    ...input,
+    name: input.name.trim(),
+    phoneNumber: input.phoneNumber.replace(/\s/g, ""),
+    systemPrompt: input.systemPrompt.trim(),
+    audioFormat: AudioFormat.pcmu,
+    sampleRate: SampleRate.hz8000,
+    toolsEnabled: {
+      webSearch: input.toolsEnabled.webSearch,
+      xSearch: input.toolsEnabled.xSearch,
+      functionCalling: false,
+    },
+    turnDetection: cloneTurnDetection(input.turnDetection),
+    captureOptions: { ...input.captureOptions },
+  };
+}
+
 function buildDefaultPreset(): AnsweringPresetInput {
   return {
     name: "",
@@ -98,10 +155,10 @@ function buildDefaultPreset(): AnsweringPresetInput {
     systemPrompt: "",
     voice: Voice.eve,
     voiceId: "",
-    turnDetection: DEFAULT_TURN_DETECTION,
+    turnDetection: cloneTurnDetection(),
     audioFormat: AudioFormat.pcmu,
     sampleRate: SampleRate.hz8000,
-    toolsEnabled: DEFAULT_TOOLS,
+    toolsEnabled: { ...DEFAULT_TOOLS },
     captureOptions: {
       saveTranscript: false,
       recordAudio: false,
@@ -149,6 +206,128 @@ function decodeMuLawSample(value: number): number {
   magnitude -= 0x84;
   const pcm = sign ? -magnitude : magnitude;
   return Math.max(-1, Math.min(1, pcm / 32768));
+}
+
+function TurnDetectionFields({
+  value,
+  onChange,
+  dataOcidPrefix,
+}: {
+  value: AnsweringPresetInput["turnDetection"];
+  onChange: (next: AnsweringPresetInput["turnDetection"]) => void;
+  dataOcidPrefix: string;
+}) {
+  const silenceMs = value.silenceDurationMs ?? 500n;
+  const prefixMs = value.prefixPaddingMs ?? 200n;
+
+  return (
+    <div className="space-y-4 rounded-md border border-border bg-muted/20 p-4">
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-wide text-foreground">
+            Turn Detection
+          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {TURN_DETECTION_HELP}
+          </p>
+        </div>
+        <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-background/60 p-3">
+          <div className="space-y-0.5">
+            <Label className="text-xs text-foreground">
+              Auto-detect end of speech
+            </Label>
+            <p className="text-[10px] leading-tight text-muted-foreground">
+              Leave this on for normal calls so the AI answers after the caller
+              pauses.
+            </p>
+          </div>
+          <Switch
+            checked={value.serverVad}
+            onCheckedChange={(serverVad) => onChange({ ...value, serverVad })}
+            data-ocid={`${dataOcidPrefix}.server_vad.switch`}
+            className="shrink-0"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs text-muted-foreground">
+            Speech Sensitivity
+          </Label>
+          <span className="font-mono text-xs tabular-nums text-primary">
+            {(value.threshold ?? 0.5).toFixed(2)}
+          </span>
+        </div>
+        <Slider
+          min={0}
+          max={1}
+          step={0.01}
+          value={[value.threshold ?? 0.5]}
+          onValueChange={([threshold]) => onChange({ ...value, threshold })}
+          data-ocid={`${dataOcidPrefix}.threshold.slider`}
+          className="py-1"
+        />
+        <p className="text-[10px] leading-relaxed text-muted-foreground">
+          Lower values make the AI more sensitive to quieter speech. Raise it if
+          background noise keeps the AI from responding.{" "}
+          {defaultTimingText.threshold}
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Pause Before Reply (ms)
+          </Label>
+          <Input
+            type="number"
+            min={0}
+            max={5000}
+            step={50}
+            value={Number(silenceMs)}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                silenceDurationMs: BigInt(event.target.value || "0"),
+              })
+            }
+            data-ocid={`${dataOcidPrefix}.silence_duration.input`}
+            className="font-mono text-sm"
+          />
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            How long the caller should be quiet before the AI starts answering.
+            Increase this if it cuts people off; decrease it if it feels slow.{" "}
+            {defaultTimingText.silenceDuration}
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Speech Start Buffer (ms)
+          </Label>
+          <Input
+            type="number"
+            min={0}
+            max={2000}
+            step={50}
+            value={Number(prefixMs)}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                prefixPaddingMs: BigInt(event.target.value || "0"),
+              })
+            }
+            data-ocid={`${dataOcidPrefix}.prefix_padding.input`}
+            className="font-mono text-sm"
+          />
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            Keeps a small amount of audio from just before speech starts so
+            first words do not get clipped. {defaultTimingText.prefixPadding}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function LiveAudioButton({
@@ -286,25 +465,28 @@ function AnsweringPresetCard({
 }) {
   const setEnabled = useSetAnsweringPresetEnabled();
   const deletePreset = useDeleteAnsweringPreset();
-  const updateInstructions = useUpdateAnsweringPresetInstructions();
-  const [isEditingInstructions, setIsEditingInstructions] = useState(false);
-  const [draftInstructions, setDraftInstructions] = useState(
-    preset.systemPrompt,
+  const updatePreset = useUpdateAnsweringPreset();
+  const [isEditingPreset, setIsEditingPreset] = useState(false);
+  const [draftPreset, setDraftPreset] = useState<AnsweringPresetInput>(() =>
+    answeringPresetToInput(preset),
   );
   const isVerified =
     preset.verificationStatus === AnsweringPresetStatus.verified;
   const url = webhookUrl(baseUrl, preset);
-  const trimmedDraftInstructions = draftInstructions.trim();
-  const canSaveInstructions =
-    trimmedDraftInstructions.length > 0 &&
-    trimmedDraftInstructions.length <= MAX_AI_INSTRUCTIONS_CHARS &&
-    trimmedDraftInstructions !== preset.systemPrompt.trim();
+  const draftCaptureRequested =
+    draftPreset.captureOptions.saveTranscript ||
+    draftPreset.captureOptions.recordAudio;
 
   useEffect(() => {
-    if (!isEditingInstructions) {
-      setDraftInstructions(preset.systemPrompt);
+    if (!isEditingPreset) {
+      setDraftPreset(answeringPresetToInput(preset));
     }
-  }, [isEditingInstructions, preset.systemPrompt]);
+  }, [isEditingPreset, preset]);
+
+  const openEditor = () => {
+    setDraftPreset(answeringPresetToInput(preset));
+    setIsEditingPreset(true);
+  };
 
   const toggleEnabled = async (enabled: boolean) => {
     const result = await setEnabled.mutateAsync({ id: preset.id, enabled });
@@ -320,25 +502,43 @@ function AnsweringPresetCard({
     toast.success("Answering preset deleted");
   };
 
-  const saveInstructions = async () => {
-    if (!trimmedDraftInstructions) {
+  const savePreset = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const cleanInput = normalizeAnsweringPresetInput(draftPreset);
+    if (!cleanInput.name) {
+      toast.error("Preset name is required");
+      return;
+    }
+    if (!cleanInput.systemPrompt) {
       toast.error("AI answering instructions are required");
       return;
     }
-    if (trimmedDraftInstructions.length > MAX_AI_INSTRUCTIONS_CHARS) {
+    if (cleanInput.systemPrompt.length > MAX_AI_INSTRUCTIONS_CHARS) {
       toast.error("AI instructions must be 8000 characters or fewer");
       return;
     }
-    const result = await updateInstructions.mutateAsync({
+    if (!validateE164(cleanInput.phoneNumber)) {
+      toast.error("Enter the Twilio number in E.164 format");
+      return;
+    }
+    if (
+      (cleanInput.captureOptions.saveTranscript ||
+        cleanInput.captureOptions.recordAudio) &&
+      !cleanInput.captureOptions.consentConfirmed
+    ) {
+      toast.error("Confirm caller consent before saving call artifacts");
+      return;
+    }
+    const result = await updatePreset.mutateAsync({
       id: preset.id,
-      systemPrompt: trimmedDraftInstructions,
+      input: cleanInput,
     });
     if (result.__kind__ === "err") {
       toast.error(result.err);
       return;
     }
-    toast.success("Answering instructions updated");
-    setIsEditingInstructions(false);
+    toast.success("Answering preset updated");
+    setIsEditingPreset(false);
   };
 
   return (
@@ -377,9 +577,9 @@ function AnsweringPresetCard({
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsEditingInstructions(true)}
-                aria-label="Edit answering instructions"
-                data-ocid={`answering.preset.edit_instructions.${preset.id.toString()}`}
+                onClick={openEditor}
+                aria-label="Edit answering preset"
+                data-ocid={`answering.preset.edit.${preset.id.toString()}`}
               >
                 <Pencil className="h-4 w-4" />
               </Button>
@@ -442,8 +642,8 @@ function AnsweringPresetCard({
                 variant="ghost"
                 size="sm"
                 className="h-7 gap-1.5 px-2 text-xs"
-                onClick={() => setIsEditingInstructions(true)}
-                data-ocid={`answering.preset.instructions_edit_button.${preset.id.toString()}`}
+                onClick={openEditor}
+                data-ocid={`answering.preset.edit_button.${preset.id.toString()}`}
               >
                 <Pencil className="h-3 w-3" />
                 Edit
@@ -485,67 +685,235 @@ function AnsweringPresetCard({
         </CardContent>
       </Card>
       <Dialog
-        open={isEditingInstructions}
+        open={isEditingPreset}
         onOpenChange={(open) => {
-          setIsEditingInstructions(open);
-          if (!open) setDraftInstructions(preset.systemPrompt);
+          setIsEditingPreset(open);
+          if (!open) setDraftPreset(answeringPresetToInput(preset));
         }}
       >
         <DialogContent
-          data-ocid={`answering.preset.instructions_dialog.${preset.id.toString()}`}
+          className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"
+          data-ocid={`answering.preset.edit_dialog.${preset.id.toString()}`}
         >
           <DialogHeader>
-            <DialogTitle>Edit AI Instructions</DialogTitle>
-            <DialogDescription>{preset.name}</DialogDescription>
+            <DialogTitle>Edit Answering Preset</DialogTitle>
+            <DialogDescription>
+              Update the phone routing, voice, capture, and response timing for
+              {` ${preset.name}`}.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
-            <Label
-              htmlFor={`answering-preset-instructions-${preset.id.toString()}`}
-            >
-              Instructions
-            </Label>
-            <Textarea
-              id={`answering-preset-instructions-${preset.id.toString()}`}
-              value={draftInstructions}
-              onChange={(event) => setDraftInstructions(event.target.value)}
-              rows={8}
-              maxLength={MAX_AI_INSTRUCTIONS_CHARS}
-              data-ocid={`answering.preset.instructions_textarea.${preset.id.toString()}`}
-              className="resize-none font-mono text-xs leading-relaxed"
-            />
-            <div className="flex justify-end">
-              <span className="text-[11px] text-muted-foreground font-mono">
-                {trimmedDraftInstructions.length}/{MAX_AI_INSTRUCTIONS_CHARS}
-              </span>
+
+          <form className="space-y-4" onSubmit={savePreset}>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`answering-preset-name-${preset.id}`}>
+                  Preset Name
+                </Label>
+                <Input
+                  id={`answering-preset-name-${preset.id}`}
+                  value={draftPreset.name}
+                  onChange={(event) =>
+                    setDraftPreset({
+                      ...draftPreset,
+                      name: event.target.value,
+                    })
+                  }
+                  data-ocid={`answering.preset.name_input.${preset.id.toString()}`}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`answering-preset-phone-${preset.id}`}>
+                  Twilio Number
+                </Label>
+                <Input
+                  id={`answering-preset-phone-${preset.id}`}
+                  value={draftPreset.phoneNumber}
+                  onChange={(event) =>
+                    setDraftPreset({
+                      ...draftPreset,
+                      phoneNumber: event.target.value.replace(/\s/g, ""),
+                    })
+                  }
+                  placeholder="+15551234567"
+                  data-ocid={`answering.preset.phone_input.${preset.id.toString()}`}
+                  required
+                />
+                {draftPreset.phoneNumber !== preset.phoneNumber && (
+                  <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    Changing the number will pause this preset until the new
+                    Twilio webhook is verified.
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsEditingInstructions(false);
-                setDraftInstructions(preset.systemPrompt);
-              }}
-              data-ocid={`answering.preset.instructions_cancel_button.${preset.id.toString()}`}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => void saveInstructions()}
-              disabled={!canSaveInstructions || updateInstructions.isPending}
-              data-ocid={`answering.preset.instructions_save_button.${preset.id.toString()}`}
-              className="gap-2"
-            >
-              {updateInstructions.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Pencil className="h-4 w-4" />
-              )}
-              Save Instructions
-            </Button>
-          </DialogFooter>
+
+            <div className="space-y-2">
+              <Label htmlFor={`answering-preset-instructions-${preset.id}`}>
+                Instructions
+              </Label>
+              <Textarea
+                id={`answering-preset-instructions-${preset.id}`}
+                value={draftPreset.systemPrompt}
+                onChange={(event) =>
+                  setDraftPreset({
+                    ...draftPreset,
+                    systemPrompt: event.target.value,
+                  })
+                }
+                rows={7}
+                maxLength={MAX_AI_INSTRUCTIONS_CHARS}
+                data-ocid={`answering.preset.instructions_textarea.${preset.id.toString()}`}
+                className="resize-none font-mono text-xs leading-relaxed"
+                required
+              />
+              <div className="flex justify-end">
+                <span className="font-mono text-[11px] text-muted-foreground">
+                  {draftPreset.systemPrompt.trim().length}/
+                  {MAX_AI_INSTRUCTIONS_CHARS}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Voice</Label>
+              <VoiceIdSelector
+                value={{
+                  voice: draftPreset.voice,
+                  voiceId: draftPreset.voiceId,
+                }}
+                onChange={(next) =>
+                  setDraftPreset({
+                    ...draftPreset,
+                    voice: next.voice,
+                    voiceId: next.voiceId ?? "",
+                  })
+                }
+                dataOcidPrefix={`answering.preset.${preset.id.toString()}`}
+              />
+            </div>
+
+            <TurnDetectionFields
+              value={draftPreset.turnDetection}
+              onChange={(turnDetection) =>
+                setDraftPreset({ ...draftPreset, turnDetection })
+              }
+              dataOcidPrefix={`answering.preset.${preset.id.toString()}.turn_detection`}
+            />
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="flex items-center gap-3 rounded-md border border-border p-3">
+                <Checkbox
+                  id={`answering-preset-save-transcript-${preset.id}`}
+                  checked={draftPreset.captureOptions.saveTranscript}
+                  onCheckedChange={(checked) =>
+                    setDraftPreset({
+                      ...draftPreset,
+                      captureOptions: {
+                        ...draftPreset.captureOptions,
+                        saveTranscript: checked === true,
+                      },
+                    })
+                  }
+                />
+                <Label
+                  htmlFor={`answering-preset-save-transcript-${preset.id}`}
+                  className="text-sm"
+                >
+                  Save transcripts
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 rounded-md border border-border p-3">
+                <Checkbox
+                  id={`answering-preset-record-audio-${preset.id}`}
+                  checked={draftPreset.captureOptions.recordAudio}
+                  onCheckedChange={(checked) =>
+                    setDraftPreset({
+                      ...draftPreset,
+                      captureOptions: {
+                        ...draftPreset.captureOptions,
+                        recordAudio: checked === true,
+                      },
+                    })
+                  }
+                />
+                <Label
+                  htmlFor={`answering-preset-record-audio-${preset.id}`}
+                  className="text-sm"
+                >
+                  Save audio recordings
+                </Label>
+              </div>
+            </div>
+
+            {draftCaptureRequested && (
+              <div className="flex items-start gap-3 rounded-md border border-border bg-muted/20 p-3">
+                <Checkbox
+                  id={`answering-preset-consent-${preset.id}`}
+                  checked={draftPreset.captureOptions.consentConfirmed}
+                  onCheckedChange={(checked) =>
+                    setDraftPreset({
+                      ...draftPreset,
+                      captureOptions: {
+                        ...draftPreset.captureOptions,
+                        consentConfirmed: checked === true,
+                      },
+                    })
+                  }
+                />
+                <Label
+                  htmlFor={`answering-preset-consent-${preset.id}`}
+                  className="text-sm leading-relaxed text-muted-foreground"
+                >
+                  I confirm this preset will only save recordings or transcripts
+                  where caller consent requirements are met.
+                </Label>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between rounded-md border border-border p-3">
+              <Label
+                htmlFor={`answering-preset-enabled-${preset.id}`}
+                className="text-sm"
+              >
+                Answer incoming calls
+              </Label>
+              <Switch
+                id={`answering-preset-enabled-${preset.id}`}
+                checked={draftPreset.enabled}
+                onCheckedChange={(enabled) =>
+                  setDraftPreset({ ...draftPreset, enabled })
+                }
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditingPreset(false);
+                  setDraftPreset(answeringPresetToInput(preset));
+                }}
+                data-ocid={`answering.preset.edit_cancel_button.${preset.id.toString()}`}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updatePreset.isPending}
+                data-ocid={`answering.preset.edit_save_button.${preset.id.toString()}`}
+                className="gap-2"
+              >
+                {updatePreset.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Pencil className="h-4 w-4" />
+                )}
+                Update Preset
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>
@@ -575,28 +943,32 @@ export default function AnsweringServicePage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const systemPrompt = input.systemPrompt.trim();
-    if (!systemPrompt) {
+    const cleanInput = normalizeAnsweringPresetInput(input);
+    if (!cleanInput.name) {
+      toast.error("Preset name is required");
+      return;
+    }
+    if (!cleanInput.systemPrompt) {
       toast.error("AI answering instructions are required");
       return;
     }
-    if (systemPrompt.length > MAX_AI_INSTRUCTIONS_CHARS) {
+    if (cleanInput.systemPrompt.length > MAX_AI_INSTRUCTIONS_CHARS) {
       toast.error("AI instructions must be 8000 characters or fewer");
       return;
     }
-    if (!validateE164(input.phoneNumber)) {
+    if (!validateE164(cleanInput.phoneNumber)) {
       toast.error("Enter the Twilio number in E.164 format");
       return;
     }
-    if (captureRequested && !input.captureOptions.consentConfirmed) {
+    if (
+      (cleanInput.captureOptions.saveTranscript ||
+        cleanInput.captureOptions.recordAudio) &&
+      !cleanInput.captureOptions.consentConfirmed
+    ) {
       toast.error("Confirm caller consent before saving call artifacts");
       return;
     }
-    const result = await createPreset.mutateAsync({
-      ...input,
-      name: input.name.trim(),
-      systemPrompt,
-    });
+    const result = await createPreset.mutateAsync(cleanInput);
     if (result.__kind__ === "err") {
       toast.error(result.err);
       return;
@@ -711,6 +1083,13 @@ export default function AnsweringServicePage() {
                         dataOcidPrefix="answering"
                       />
                     </div>
+                    <TurnDetectionFields
+                      value={input.turnDetection}
+                      onChange={(turnDetection) =>
+                        setInput({ ...input, turnDetection })
+                      }
+                      dataOcidPrefix="answering.turn_detection"
+                    />
                     <div className="grid gap-3 md:grid-cols-2">
                       <div className="flex items-center gap-3 rounded-md border border-border p-3">
                         <Checkbox

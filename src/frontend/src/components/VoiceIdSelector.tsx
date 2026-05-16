@@ -352,6 +352,7 @@ export function VoiceIdSelector({
   );
   const [isLoading, setIsLoading] = useState(false);
   const [showAllVoices, setShowAllVoices] = useState(false);
+  const [isVoiceListDismissed, setIsVoiceListDismissed] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<VoiceFilters>(EMPTY_FILTERS);
 
@@ -383,17 +384,17 @@ export function VoiceIdSelector({
   const hasActiveFilters =
     searchTerm.trim() !== "" ||
     FILTER_GROUPS.some((group) => filters[group.key].length > 0);
-  const shouldShowVoiceList = showAllVoices || hasActiveFilters;
+  const shouldShowVoiceList =
+    !isVoiceListDismissed && (showAllVoices || hasActiveFilters);
   const filteredVoices = useMemo(() => {
     if (!shouldShowVoiceList) return [];
-    if (showAllVoices && !hasActiveFilters) return displayedVoices;
+    if (showAllVoices) return displayedVoices;
     return displayedVoices.filter((voice) =>
       matchesVoiceFilters(voice, filters, searchTerm),
     );
   }, [
     displayedVoices,
     filters,
-    hasActiveFilters,
     searchTerm,
     shouldShowVoiceList,
     showAllVoices,
@@ -411,6 +412,7 @@ export function VoiceIdSelector({
 
   function toggleFilter(group: VoiceFilterGroup, option: string) {
     setShowAllVoices(false);
+    setIsVoiceListDismissed(false);
     setFilters((current) => {
       const selected = new Set(current[group]);
       if (selected.has(option)) {
@@ -424,6 +426,7 @@ export function VoiceIdSelector({
 
   function clearFilters() {
     setShowAllVoices(false);
+    setIsVoiceListDismissed(false);
     setSearchTerm("");
     setFilters(EMPTY_FILTERS);
   }
@@ -445,7 +448,16 @@ export function VoiceIdSelector({
               type="button"
               variant={showAllVoices ? "secondary" : "outline"}
               size="sm"
-              onClick={() => setShowAllVoices((current) => !current)}
+              onClick={() => {
+                setIsVoiceListDismissed(false);
+                if (showAllVoices) {
+                  setShowAllVoices(false);
+                } else {
+                  setSearchTerm("");
+                  setFilters(EMPTY_FILTERS);
+                  setShowAllVoices(true);
+                }
+              }}
               data-ocid={`${dataOcidPrefix}.voice_filters.show_all`}
             >
               <ListFilter className="h-4 w-4" />
@@ -473,6 +485,7 @@ export function VoiceIdSelector({
             onChange={(event) => {
               setSearchTerm(event.target.value);
               setShowAllVoices(false);
+              setIsVoiceListDismissed(false);
             }}
             placeholder="Search name, tone, or Voice ID"
             className="pl-9"
@@ -560,6 +573,8 @@ export function VoiceIdSelector({
                             voice: legacyVoice ?? value.voice,
                             voiceId: legacyVoice ? "" : voice.voiceId,
                           });
+                          setShowAllVoices(false);
+                          setIsVoiceListDismissed(true);
                         }}
                         data-ocid={`${dataOcidPrefix}.preset_voice.${voiceId}`}
                       >

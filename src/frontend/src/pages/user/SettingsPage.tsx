@@ -36,6 +36,7 @@ import {
   Copy,
   Loader2,
   LogOut,
+  Pencil,
   Plus,
   Save,
   Trash2,
@@ -600,6 +601,20 @@ export default function SettingsPage() {
 
                         {/* Quick actions */}
                         <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="w-8 h-8 text-muted-foreground hover:text-foreground"
+                            onClick={() =>
+                              setExpandedPreset(preset.id.toString())
+                            }
+                            data-ocid={`settings.preset.edit_button.${idx + 1}`}
+                            title="Edit preset"
+                            aria-label="Edit preset"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
                           <Button
                             type="button"
                             variant="ghost"

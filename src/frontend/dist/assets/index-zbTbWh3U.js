@@ -39576,13 +39576,13 @@ function useCreateAnsweringPreset() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["myAnsweringPresets"] })
   });
 }
-function useUpdateAnsweringPresetInstructions() {
+function useUpdateAnsweringPreset() {
   const { actor } = useBackendActor();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id: id2, systemPrompt }) => {
+    mutationFn: async ({ id: id2, input }) => {
       if (!actor) throw new Error("Actor not available");
-      return actor.updateAnsweringPresetInstructions(id2, systemPrompt);
+      return actor.updateAnsweringPreset(id2, input);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["myAnsweringPresets"] })
   });
@@ -47571,6 +47571,7 @@ function VoiceIdSelector({
   );
   const [isLoading, setIsLoading] = reactExports.useState(false);
   const [showAllVoices, setShowAllVoices] = reactExports.useState(false);
+  const [isVoiceListDismissed, setIsVoiceListDismissed] = reactExports.useState(false);
   const [searchTerm, setSearchTerm] = reactExports.useState("");
   const [filters, setFilters] = reactExports.useState(EMPTY_FILTERS);
   reactExports.useEffect(() => {
@@ -47594,17 +47595,16 @@ function VoiceIdSelector({
     [displayedVoices]
   );
   const hasActiveFilters = searchTerm.trim() !== "" || FILTER_GROUPS.some((group) => filters[group.key].length > 0);
-  const shouldShowVoiceList = showAllVoices || hasActiveFilters;
+  const shouldShowVoiceList = !isVoiceListDismissed && (showAllVoices || hasActiveFilters);
   const filteredVoices = reactExports.useMemo(() => {
     if (!shouldShowVoiceList) return [];
-    if (showAllVoices && !hasActiveFilters) return displayedVoices;
+    if (showAllVoices) return displayedVoices;
     return displayedVoices.filter(
       (voice) => matchesVoiceFilters(voice, filters, searchTerm)
     );
   }, [
     displayedVoices,
     filters,
-    hasActiveFilters,
     searchTerm,
     shouldShowVoiceList,
     showAllVoices
@@ -47616,6 +47616,7 @@ function VoiceIdSelector({
   const activeVoiceDescription = (activeVoiceOption == null ? void 0 : activeVoiceOption.description) || (activeVoiceOption == null ? void 0 : activeVoiceOption.tone) || activeVoiceId || "Custom voice";
   function toggleFilter(group, option) {
     setShowAllVoices(false);
+    setIsVoiceListDismissed(false);
     setFilters((current) => {
       const selected = new Set(current[group]);
       if (selected.has(option)) {
@@ -47628,6 +47629,7 @@ function VoiceIdSelector({
   }
   function clearFilters() {
     setShowAllVoices(false);
+    setIsVoiceListDismissed(false);
     setSearchTerm("");
     setFilters(EMPTY_FILTERS);
   }
@@ -47645,7 +47647,16 @@ function VoiceIdSelector({
               type: "button",
               variant: showAllVoices ? "secondary" : "outline",
               size: "sm",
-              onClick: () => setShowAllVoices((current) => !current),
+              onClick: () => {
+                setIsVoiceListDismissed(false);
+                if (showAllVoices) {
+                  setShowAllVoices(false);
+                } else {
+                  setSearchTerm("");
+                  setFilters(EMPTY_FILTERS);
+                  setShowAllVoices(true);
+                }
+              },
               "data-ocid": `${dataOcidPrefix}.voice_filters.show_all`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(ListFilter, { className: "h-4 w-4" }),
@@ -47678,6 +47689,7 @@ function VoiceIdSelector({
             onChange: (event) => {
               setSearchTerm(event.target.value);
               setShowAllVoices(false);
+              setIsVoiceListDismissed(false);
             },
             placeholder: "Search name, tone, or Voice ID",
             className: "pl-9",
@@ -47748,6 +47760,8 @@ function VoiceIdSelector({
                   voice: legacyVoice ?? value.voice,
                   voiceId: legacyVoice ? "" : voice.voiceId
                 });
+                setShowAllVoices(false);
+                setIsVoiceListDismissed(true);
               },
               "data-ocid": `${dataOcidPrefix}.preset_voice.${voiceId}`,
               children: [
@@ -48485,6 +48499,602 @@ function DialogDescription({
     }
   );
 }
+var PAGE_KEYS = ["PageUp", "PageDown"];
+var ARROW_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+var BACK_KEYS = {
+  "from-left": ["Home", "PageDown", "ArrowDown", "ArrowLeft"],
+  "from-right": ["Home", "PageDown", "ArrowDown", "ArrowRight"],
+  "from-bottom": ["Home", "PageDown", "ArrowDown", "ArrowLeft"],
+  "from-top": ["Home", "PageDown", "ArrowUp", "ArrowLeft"]
+};
+var SLIDER_NAME = "Slider";
+var [Collection, useCollection, createCollectionScope] = createCollection(SLIDER_NAME);
+var [createSliderContext] = createContextScope(SLIDER_NAME, [
+  createCollectionScope
+]);
+var [SliderProvider, useSliderContext] = createSliderContext(SLIDER_NAME);
+var Slider$1 = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const {
+      name,
+      min: min2 = 0,
+      max: max2 = 100,
+      step = 1,
+      orientation = "horizontal",
+      disabled = false,
+      minStepsBetweenThumbs = 0,
+      defaultValue = [min2],
+      value,
+      onValueChange = () => {
+      },
+      onValueCommit = () => {
+      },
+      inverted = false,
+      form,
+      ...sliderProps
+    } = props;
+    const thumbRefs = reactExports.useRef(/* @__PURE__ */ new Set());
+    const valueIndexToChangeRef = reactExports.useRef(0);
+    const isHorizontal = orientation === "horizontal";
+    const SliderOrientation = isHorizontal ? SliderHorizontal : SliderVertical;
+    const [values = [], setValues] = useControllableState({
+      prop: value,
+      defaultProp: defaultValue,
+      onChange: (value2) => {
+        var _a3;
+        const thumbs = [...thumbRefs.current];
+        (_a3 = thumbs[valueIndexToChangeRef.current]) == null ? void 0 : _a3.focus();
+        onValueChange(value2);
+      }
+    });
+    const valuesBeforeSlideStartRef = reactExports.useRef(values);
+    function handleSlideStart(value2) {
+      const closestIndex = getClosestValueIndex(values, value2);
+      updateValues(value2, closestIndex);
+    }
+    function handleSlideMove(value2) {
+      updateValues(value2, valueIndexToChangeRef.current);
+    }
+    function handleSlideEnd() {
+      const prevValue = valuesBeforeSlideStartRef.current[valueIndexToChangeRef.current];
+      const nextValue = values[valueIndexToChangeRef.current];
+      const hasChanged = nextValue !== prevValue;
+      if (hasChanged) onValueCommit(values);
+    }
+    function updateValues(value2, atIndex, { commit } = { commit: false }) {
+      const decimalCount = getDecimalCount(step);
+      const snapToStep = roundValue(Math.round((value2 - min2) / step) * step + min2, decimalCount);
+      const nextValue = clamp$2(snapToStep, [min2, max2]);
+      setValues((prevValues = []) => {
+        const nextValues = getNextSortedValues(prevValues, nextValue, atIndex);
+        if (hasMinStepsBetweenValues(nextValues, minStepsBetweenThumbs * step)) {
+          valueIndexToChangeRef.current = nextValues.indexOf(nextValue);
+          const hasChanged = String(nextValues) !== String(prevValues);
+          if (hasChanged && commit) onValueCommit(nextValues);
+          return hasChanged ? nextValues : prevValues;
+        } else {
+          return prevValues;
+        }
+      });
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      SliderProvider,
+      {
+        scope: props.__scopeSlider,
+        name,
+        disabled,
+        min: min2,
+        max: max2,
+        valueIndexToChangeRef,
+        thumbs: thumbRefs.current,
+        values,
+        orientation,
+        form,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(Collection.Provider, { scope: props.__scopeSlider, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Collection.Slot, { scope: props.__scopeSlider, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          SliderOrientation,
+          {
+            "aria-disabled": disabled,
+            "data-disabled": disabled ? "" : void 0,
+            ...sliderProps,
+            ref: forwardedRef,
+            onPointerDown: composeEventHandlers(sliderProps.onPointerDown, () => {
+              if (!disabled) valuesBeforeSlideStartRef.current = values;
+            }),
+            min: min2,
+            max: max2,
+            inverted,
+            onSlideStart: disabled ? void 0 : handleSlideStart,
+            onSlideMove: disabled ? void 0 : handleSlideMove,
+            onSlideEnd: disabled ? void 0 : handleSlideEnd,
+            onHomeKeyDown: () => !disabled && updateValues(min2, 0, { commit: true }),
+            onEndKeyDown: () => !disabled && updateValues(max2, values.length - 1, { commit: true }),
+            onStepKeyDown: ({ event, direction: stepDirection }) => {
+              if (!disabled) {
+                const isPageKey = PAGE_KEYS.includes(event.key);
+                const isSkipKey = isPageKey || event.shiftKey && ARROW_KEYS.includes(event.key);
+                const multiplier = isSkipKey ? 10 : 1;
+                const atIndex = valueIndexToChangeRef.current;
+                const value2 = values[atIndex];
+                const stepInDirection = step * multiplier * stepDirection;
+                updateValues(value2 + stepInDirection, atIndex, { commit: true });
+              }
+            }
+          }
+        ) }) })
+      }
+    );
+  }
+);
+Slider$1.displayName = SLIDER_NAME;
+var [SliderOrientationProvider, useSliderOrientationContext] = createSliderContext(SLIDER_NAME, {
+  startEdge: "left",
+  endEdge: "right",
+  size: "width",
+  direction: 1
+});
+var SliderHorizontal = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const {
+      min: min2,
+      max: max2,
+      dir,
+      inverted,
+      onSlideStart,
+      onSlideMove,
+      onSlideEnd,
+      onStepKeyDown,
+      ...sliderProps
+    } = props;
+    const [slider, setSlider] = reactExports.useState(null);
+    const composedRefs = useComposedRefs(forwardedRef, (node) => setSlider(node));
+    const rectRef = reactExports.useRef(void 0);
+    const direction = useDirection(dir);
+    const isDirectionLTR = direction === "ltr";
+    const isSlidingFromLeft = isDirectionLTR && !inverted || !isDirectionLTR && inverted;
+    function getValueFromPointer(pointerPosition) {
+      const rect = rectRef.current || slider.getBoundingClientRect();
+      const input = [0, rect.width];
+      const output = isSlidingFromLeft ? [min2, max2] : [max2, min2];
+      const value = linearScale(input, output);
+      rectRef.current = rect;
+      return value(pointerPosition - rect.left);
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      SliderOrientationProvider,
+      {
+        scope: props.__scopeSlider,
+        startEdge: isSlidingFromLeft ? "left" : "right",
+        endEdge: isSlidingFromLeft ? "right" : "left",
+        direction: isSlidingFromLeft ? 1 : -1,
+        size: "width",
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          SliderImpl,
+          {
+            dir: direction,
+            "data-orientation": "horizontal",
+            ...sliderProps,
+            ref: composedRefs,
+            style: {
+              ...sliderProps.style,
+              ["--radix-slider-thumb-transform"]: "translateX(-50%)"
+            },
+            onSlideStart: (event) => {
+              const value = getValueFromPointer(event.clientX);
+              onSlideStart == null ? void 0 : onSlideStart(value);
+            },
+            onSlideMove: (event) => {
+              const value = getValueFromPointer(event.clientX);
+              onSlideMove == null ? void 0 : onSlideMove(value);
+            },
+            onSlideEnd: () => {
+              rectRef.current = void 0;
+              onSlideEnd == null ? void 0 : onSlideEnd();
+            },
+            onStepKeyDown: (event) => {
+              const slideDirection = isSlidingFromLeft ? "from-left" : "from-right";
+              const isBackKey = BACK_KEYS[slideDirection].includes(event.key);
+              onStepKeyDown == null ? void 0 : onStepKeyDown({ event, direction: isBackKey ? -1 : 1 });
+            }
+          }
+        )
+      }
+    );
+  }
+);
+var SliderVertical = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const {
+      min: min2,
+      max: max2,
+      inverted,
+      onSlideStart,
+      onSlideMove,
+      onSlideEnd,
+      onStepKeyDown,
+      ...sliderProps
+    } = props;
+    const sliderRef = reactExports.useRef(null);
+    const ref = useComposedRefs(forwardedRef, sliderRef);
+    const rectRef = reactExports.useRef(void 0);
+    const isSlidingFromBottom = !inverted;
+    function getValueFromPointer(pointerPosition) {
+      const rect = rectRef.current || sliderRef.current.getBoundingClientRect();
+      const input = [0, rect.height];
+      const output = isSlidingFromBottom ? [max2, min2] : [min2, max2];
+      const value = linearScale(input, output);
+      rectRef.current = rect;
+      return value(pointerPosition - rect.top);
+    }
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      SliderOrientationProvider,
+      {
+        scope: props.__scopeSlider,
+        startEdge: isSlidingFromBottom ? "bottom" : "top",
+        endEdge: isSlidingFromBottom ? "top" : "bottom",
+        size: "height",
+        direction: isSlidingFromBottom ? 1 : -1,
+        children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+          SliderImpl,
+          {
+            "data-orientation": "vertical",
+            ...sliderProps,
+            ref,
+            style: {
+              ...sliderProps.style,
+              ["--radix-slider-thumb-transform"]: "translateY(50%)"
+            },
+            onSlideStart: (event) => {
+              const value = getValueFromPointer(event.clientY);
+              onSlideStart == null ? void 0 : onSlideStart(value);
+            },
+            onSlideMove: (event) => {
+              const value = getValueFromPointer(event.clientY);
+              onSlideMove == null ? void 0 : onSlideMove(value);
+            },
+            onSlideEnd: () => {
+              rectRef.current = void 0;
+              onSlideEnd == null ? void 0 : onSlideEnd();
+            },
+            onStepKeyDown: (event) => {
+              const slideDirection = isSlidingFromBottom ? "from-bottom" : "from-top";
+              const isBackKey = BACK_KEYS[slideDirection].includes(event.key);
+              onStepKeyDown == null ? void 0 : onStepKeyDown({ event, direction: isBackKey ? -1 : 1 });
+            }
+          }
+        )
+      }
+    );
+  }
+);
+var SliderImpl = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const {
+      __scopeSlider,
+      onSlideStart,
+      onSlideMove,
+      onSlideEnd,
+      onHomeKeyDown,
+      onEndKeyDown,
+      onStepKeyDown,
+      ...sliderProps
+    } = props;
+    const context = useSliderContext(SLIDER_NAME, __scopeSlider);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.span,
+      {
+        ...sliderProps,
+        ref: forwardedRef,
+        onKeyDown: composeEventHandlers(props.onKeyDown, (event) => {
+          if (event.key === "Home") {
+            onHomeKeyDown(event);
+            event.preventDefault();
+          } else if (event.key === "End") {
+            onEndKeyDown(event);
+            event.preventDefault();
+          } else if (PAGE_KEYS.concat(ARROW_KEYS).includes(event.key)) {
+            onStepKeyDown(event);
+            event.preventDefault();
+          }
+        }),
+        onPointerDown: composeEventHandlers(props.onPointerDown, (event) => {
+          const target = event.target;
+          target.setPointerCapture(event.pointerId);
+          event.preventDefault();
+          if (context.thumbs.has(target)) {
+            target.focus();
+          } else {
+            onSlideStart(event);
+          }
+        }),
+        onPointerMove: composeEventHandlers(props.onPointerMove, (event) => {
+          const target = event.target;
+          if (target.hasPointerCapture(event.pointerId)) onSlideMove(event);
+        }),
+        onPointerUp: composeEventHandlers(props.onPointerUp, (event) => {
+          const target = event.target;
+          if (target.hasPointerCapture(event.pointerId)) {
+            target.releasePointerCapture(event.pointerId);
+            onSlideEnd(event);
+          }
+        })
+      }
+    );
+  }
+);
+var TRACK_NAME = "SliderTrack";
+var SliderTrack = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeSlider, ...trackProps } = props;
+    const context = useSliderContext(TRACK_NAME, __scopeSlider);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.span,
+      {
+        "data-disabled": context.disabled ? "" : void 0,
+        "data-orientation": context.orientation,
+        ...trackProps,
+        ref: forwardedRef
+      }
+    );
+  }
+);
+SliderTrack.displayName = TRACK_NAME;
+var RANGE_NAME = "SliderRange";
+var SliderRange = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeSlider, ...rangeProps } = props;
+    const context = useSliderContext(RANGE_NAME, __scopeSlider);
+    const orientation = useSliderOrientationContext(RANGE_NAME, __scopeSlider);
+    const ref = reactExports.useRef(null);
+    const composedRefs = useComposedRefs(forwardedRef, ref);
+    const valuesCount = context.values.length;
+    const percentages = context.values.map(
+      (value) => convertValueToPercentage(value, context.min, context.max)
+    );
+    const offsetStart = valuesCount > 1 ? Math.min(...percentages) : 0;
+    const offsetEnd = 100 - Math.max(...percentages);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.span,
+      {
+        "data-orientation": context.orientation,
+        "data-disabled": context.disabled ? "" : void 0,
+        ...rangeProps,
+        ref: composedRefs,
+        style: {
+          ...props.style,
+          [orientation.startEdge]: offsetStart + "%",
+          [orientation.endEdge]: offsetEnd + "%"
+        }
+      }
+    );
+  }
+);
+SliderRange.displayName = RANGE_NAME;
+var THUMB_NAME = "SliderThumb";
+var SliderThumb = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const getItems = useCollection(props.__scopeSlider);
+    const [thumb, setThumb] = reactExports.useState(null);
+    const composedRefs = useComposedRefs(forwardedRef, (node) => setThumb(node));
+    const index2 = reactExports.useMemo(
+      () => thumb ? getItems().findIndex((item) => item.ref.current === thumb) : -1,
+      [getItems, thumb]
+    );
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(SliderThumbImpl, { ...props, ref: composedRefs, index: index2 });
+  }
+);
+var SliderThumbImpl = reactExports.forwardRef(
+  (props, forwardedRef) => {
+    const { __scopeSlider, index: index2, name, ...thumbProps } = props;
+    const context = useSliderContext(THUMB_NAME, __scopeSlider);
+    const orientation = useSliderOrientationContext(THUMB_NAME, __scopeSlider);
+    const [thumb, setThumb] = reactExports.useState(null);
+    const composedRefs = useComposedRefs(forwardedRef, (node) => setThumb(node));
+    const isFormControl = thumb ? context.form || !!thumb.closest("form") : true;
+    const size2 = useSize(thumb);
+    const value = context.values[index2];
+    const percent2 = value === void 0 ? 0 : convertValueToPercentage(value, context.min, context.max);
+    const label = getLabel(index2, context.values.length);
+    const orientationSize = size2 == null ? void 0 : size2[orientation.size];
+    const thumbInBoundsOffset = orientationSize ? getThumbInBoundsOffset(orientationSize, percent2, orientation.direction) : 0;
+    reactExports.useEffect(() => {
+      if (thumb) {
+        context.thumbs.add(thumb);
+        return () => {
+          context.thumbs.delete(thumb);
+        };
+      }
+    }, [thumb, context.thumbs]);
+    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "span",
+      {
+        style: {
+          transform: "var(--radix-slider-thumb-transform)",
+          position: "absolute",
+          [orientation.startEdge]: `calc(${percent2}% + ${thumbInBoundsOffset}px)`
+        },
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Collection.ItemSlot, { scope: props.__scopeSlider, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+            Primitive.span,
+            {
+              role: "slider",
+              "aria-label": props["aria-label"] || label,
+              "aria-valuemin": context.min,
+              "aria-valuenow": value,
+              "aria-valuemax": context.max,
+              "aria-orientation": context.orientation,
+              "data-orientation": context.orientation,
+              "data-disabled": context.disabled ? "" : void 0,
+              tabIndex: context.disabled ? void 0 : 0,
+              ...thumbProps,
+              ref: composedRefs,
+              style: value === void 0 ? { display: "none" } : props.style,
+              onFocus: composeEventHandlers(props.onFocus, () => {
+                context.valueIndexToChangeRef.current = index2;
+              })
+            }
+          ) }),
+          isFormControl && /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SliderBubbleInput,
+            {
+              name: name ?? (context.name ? context.name + (context.values.length > 1 ? "[]" : "") : void 0),
+              form: context.form,
+              value
+            },
+            index2
+          )
+        ]
+      }
+    );
+  }
+);
+SliderThumb.displayName = THUMB_NAME;
+var BUBBLE_INPUT_NAME = "RadioBubbleInput";
+var SliderBubbleInput = reactExports.forwardRef(
+  ({ __scopeSlider, value, ...props }, forwardedRef) => {
+    const ref = reactExports.useRef(null);
+    const composedRefs = useComposedRefs(ref, forwardedRef);
+    const prevValue = usePrevious(value);
+    reactExports.useEffect(() => {
+      const input = ref.current;
+      if (!input) return;
+      const inputProto = window.HTMLInputElement.prototype;
+      const descriptor = Object.getOwnPropertyDescriptor(inputProto, "value");
+      const setValue = descriptor.set;
+      if (prevValue !== value && setValue) {
+        const event = new Event("input", { bubbles: true });
+        setValue.call(input, value);
+        input.dispatchEvent(event);
+      }
+    }, [prevValue, value]);
+    return /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Primitive.input,
+      {
+        style: { display: "none" },
+        ...props,
+        ref: composedRefs,
+        defaultValue: value
+      }
+    );
+  }
+);
+SliderBubbleInput.displayName = BUBBLE_INPUT_NAME;
+function getNextSortedValues(prevValues = [], nextValue, atIndex) {
+  const nextValues = [...prevValues];
+  nextValues[atIndex] = nextValue;
+  return nextValues.sort((a2, b2) => a2 - b2);
+}
+function convertValueToPercentage(value, min2, max2) {
+  const maxSteps = max2 - min2;
+  const percentPerStep = 100 / maxSteps;
+  const percentage = percentPerStep * (value - min2);
+  return clamp$2(percentage, [0, 100]);
+}
+function getLabel(index2, totalValues) {
+  if (totalValues > 2) {
+    return `Value ${index2 + 1} of ${totalValues}`;
+  } else if (totalValues === 2) {
+    return ["Minimum", "Maximum"][index2];
+  } else {
+    return void 0;
+  }
+}
+function getClosestValueIndex(values, nextValue) {
+  if (values.length === 1) return 0;
+  const distances = values.map((value) => Math.abs(value - nextValue));
+  const closestDistance = Math.min(...distances);
+  return distances.indexOf(closestDistance);
+}
+function getThumbInBoundsOffset(width, left, direction) {
+  const halfWidth = width / 2;
+  const halfPercent = 50;
+  const offset2 = linearScale([0, halfPercent], [0, halfWidth]);
+  return (halfWidth - offset2(left) * direction) * direction;
+}
+function getStepsBetweenValues(values) {
+  return values.slice(0, -1).map((value, index2) => values[index2 + 1] - value);
+}
+function hasMinStepsBetweenValues(values, minStepsBetweenValues) {
+  if (minStepsBetweenValues > 0) {
+    const stepsBetweenValues = getStepsBetweenValues(values);
+    const actualMinStepsBetweenValues = Math.min(...stepsBetweenValues);
+    return actualMinStepsBetweenValues >= minStepsBetweenValues;
+  }
+  return true;
+}
+function linearScale(input, output) {
+  return (value) => {
+    if (input[0] === input[1] || output[0] === output[1]) return output[0];
+    const ratio = (output[1] - output[0]) / (input[1] - input[0]);
+    return output[0] + ratio * (value - input[0]);
+  };
+}
+function getDecimalCount(value) {
+  return (String(value).split(".")[1] || "").length;
+}
+function roundValue(value, decimalCount) {
+  const rounder = Math.pow(10, decimalCount);
+  return Math.round(value * rounder) / rounder;
+}
+var Root = Slider$1;
+var Track = SliderTrack;
+var Range = SliderRange;
+var Thumb = SliderThumb;
+function Slider({
+  className,
+  defaultValue,
+  value,
+  min: min2 = 0,
+  max: max2 = 100,
+  ...props
+}) {
+  const _values = reactExports.useMemo(
+    () => Array.isArray(value) ? value : Array.isArray(defaultValue) ? defaultValue : [min2, max2],
+    [value, defaultValue, min2, max2]
+  );
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Root,
+    {
+      "data-slot": "slider",
+      defaultValue,
+      value,
+      min: min2,
+      max: max2,
+      className: cn(
+        "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
+        className
+      ),
+      ...props,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Track,
+          {
+            "data-slot": "slider-track",
+            className: cn(
+              "bg-muted relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
+            ),
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Range,
+              {
+                "data-slot": "slider-range",
+                className: cn(
+                  "bg-primary absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
+                )
+              }
+            )
+          }
+        ),
+        Array.from({ length: _values.length }, (value2, _2) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Thumb,
+          {
+            "data-slot": "slider-thumb",
+            className: "border-primary bg-background ring-ring/50 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
+          },
+          `${value2}`
+        ))
+      ]
+    }
+  );
+}
 function Textarea({ className, ...props }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     "textarea",
@@ -48545,6 +49155,12 @@ const DEFAULT_TOOLS = {
   functionCalling: false
 };
 const MAX_AI_INSTRUCTIONS_CHARS$2 = 8e3;
+const defaultTimingText$1 = {
+  threshold: `Default: ${DEFAULT_TURN_DETECTION.threshold.toFixed(2)}`,
+  silenceDuration: `Default: ${Number(DEFAULT_TURN_DETECTION.silenceDurationMs)}ms`,
+  prefixPadding: `Default: ${Number(DEFAULT_TURN_DETECTION.prefixPaddingMs)}ms`
+};
+const TURN_DETECTION_HELP$1 = "These settings control when the AI decides the caller has finished speaking and can respond. The defaults work well for most calls; adjust them if the AI interrupts too quickly or waits too long.";
 const MONITOR_SAMPLE_RATE$1 = 8e3;
 const MONITOR_JITTER_SECONDS$1 = 0.12;
 function validateE164$1(phone) {
@@ -48557,6 +49173,47 @@ function generateWebhookSecret() {
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return window.btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
+function cloneTurnDetection(turnDetection = DEFAULT_TURN_DETECTION) {
+  return {
+    serverVad: turnDetection.serverVad,
+    threshold: turnDetection.threshold,
+    prefixPaddingMs: turnDetection.prefixPaddingMs,
+    silenceDurationMs: turnDetection.silenceDurationMs
+  };
+}
+function answeringPresetToInput(preset) {
+  return {
+    name: preset.name,
+    phoneNumber: preset.phoneNumber,
+    systemPrompt: preset.systemPrompt,
+    voice: preset.voice,
+    voiceId: preset.voiceId ?? "",
+    turnDetection: cloneTurnDetection(preset.turnDetection),
+    audioFormat: preset.audioFormat,
+    sampleRate: preset.sampleRate,
+    toolsEnabled: { ...preset.toolsEnabled },
+    captureOptions: { ...preset.captureOptions },
+    enabled: preset.enabled,
+    webhookSecret: preset.webhookSecret
+  };
+}
+function normalizeAnsweringPresetInput(input) {
+  return {
+    ...input,
+    name: input.name.trim(),
+    phoneNumber: input.phoneNumber.replace(/\s/g, ""),
+    systemPrompt: input.systemPrompt.trim(),
+    audioFormat: AudioFormat.pcmu,
+    sampleRate: SampleRate.hz8000,
+    toolsEnabled: {
+      webSearch: input.toolsEnabled.webSearch,
+      xSearch: input.toolsEnabled.xSearch,
+      functionCalling: false
+    },
+    turnDetection: cloneTurnDetection(input.turnDetection),
+    captureOptions: { ...input.captureOptions }
+  };
+}
 function buildDefaultPreset() {
   return {
     name: "",
@@ -48564,10 +49221,10 @@ function buildDefaultPreset() {
     systemPrompt: "",
     voice: Voice.eve,
     voiceId: "",
-    turnDetection: DEFAULT_TURN_DETECTION,
+    turnDetection: cloneTurnDetection(),
     audioFormat: AudioFormat.pcmu,
     sampleRate: SampleRate.hz8000,
-    toolsEnabled: DEFAULT_TOOLS,
+    toolsEnabled: { ...DEFAULT_TOOLS },
     captureOptions: {
       saveTranscript: false,
       recordAudio: false,
@@ -48607,6 +49264,109 @@ function decodeMuLawSample$1(value) {
   magnitude -= 132;
   const pcm = sign ? -magnitude : magnitude;
   return Math.max(-1, Math.min(1, pcm / 32768));
+}
+function TurnDetectionFields({
+  value,
+  onChange,
+  dataOcidPrefix
+}) {
+  const silenceMs = value.silenceDurationMs ?? 500n;
+  const prefixMs = value.prefixPaddingMs ?? 200n;
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 rounded-md border border-border bg-muted/20 p-4", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-wide text-foreground", children: "Turn Detection" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: TURN_DETECTION_HELP$1 })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 rounded-md border border-border bg-background/60 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-0.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-foreground", children: "Auto-detect end of speech" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] leading-tight text-muted-foreground", children: "Leave this on for normal calls so the AI answers after the caller pauses." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Switch,
+          {
+            checked: value.serverVad,
+            onCheckedChange: (serverVad) => onChange({ ...value, serverVad }),
+            "data-ocid": `${dataOcidPrefix}.server_vad.switch`,
+            className: "shrink-0"
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Speech Sensitivity" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono text-xs tabular-nums text-primary", children: (value.threshold ?? 0.5).toFixed(2) })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Slider,
+        {
+          min: 0,
+          max: 1,
+          step: 0.01,
+          value: [value.threshold ?? 0.5],
+          onValueChange: ([threshold]) => onChange({ ...value, threshold }),
+          "data-ocid": `${dataOcidPrefix}.threshold.slider`,
+          className: "py-1"
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] leading-relaxed text-muted-foreground", children: [
+        "Lower values make the AI more sensitive to quieter speech. Raise it if background noise keeps the AI from responding.",
+        " ",
+        defaultTimingText$1.threshold
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 sm:grid-cols-2", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Pause Before Reply (ms)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Input,
+          {
+            type: "number",
+            min: 0,
+            max: 5e3,
+            step: 50,
+            value: Number(silenceMs),
+            onChange: (event) => onChange({
+              ...value,
+              silenceDurationMs: BigInt(event.target.value || "0")
+            }),
+            "data-ocid": `${dataOcidPrefix}.silence_duration.input`,
+            className: "font-mono text-sm"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] leading-relaxed text-muted-foreground", children: [
+          "How long the caller should be quiet before the AI starts answering. Increase this if it cuts people off; decrease it if it feels slow.",
+          " ",
+          defaultTimingText$1.silenceDuration
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Speech Start Buffer (ms)" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Input,
+          {
+            type: "number",
+            min: 0,
+            max: 2e3,
+            step: 50,
+            value: Number(prefixMs),
+            onChange: (event) => onChange({
+              ...value,
+              prefixPaddingMs: BigInt(event.target.value || "0")
+            }),
+            "data-ocid": `${dataOcidPrefix}.prefix_padding.input`,
+            className: "font-mono text-sm"
+          }
+        ),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] leading-relaxed text-muted-foreground", children: [
+          "Keeps a small amount of audio from just before speech starts so first words do not get clipped. ",
+          defaultTimingText$1.prefixPadding
+        ] })
+      ] })
+    ] })
+  ] });
 }
 function LiveAudioButton({
   sessionId,
@@ -48724,20 +49484,23 @@ function AnsweringPresetCard({
 }) {
   const setEnabled = useSetAnsweringPresetEnabled();
   const deletePreset = useDeleteAnsweringPreset();
-  const updateInstructions = useUpdateAnsweringPresetInstructions();
-  const [isEditingInstructions, setIsEditingInstructions] = reactExports.useState(false);
-  const [draftInstructions, setDraftInstructions] = reactExports.useState(
-    preset.systemPrompt
+  const updatePreset = useUpdateAnsweringPreset();
+  const [isEditingPreset, setIsEditingPreset] = reactExports.useState(false);
+  const [draftPreset, setDraftPreset] = reactExports.useState(
+    () => answeringPresetToInput(preset)
   );
   const isVerified = preset.verificationStatus === AnsweringPresetStatus.verified;
   const url = webhookUrl(baseUrl, preset);
-  const trimmedDraftInstructions = draftInstructions.trim();
-  const canSaveInstructions = trimmedDraftInstructions.length > 0 && trimmedDraftInstructions.length <= MAX_AI_INSTRUCTIONS_CHARS$2 && trimmedDraftInstructions !== preset.systemPrompt.trim();
+  const draftCaptureRequested = draftPreset.captureOptions.saveTranscript || draftPreset.captureOptions.recordAudio;
   reactExports.useEffect(() => {
-    if (!isEditingInstructions) {
-      setDraftInstructions(preset.systemPrompt);
+    if (!isEditingPreset) {
+      setDraftPreset(answeringPresetToInput(preset));
     }
-  }, [isEditingInstructions, preset.systemPrompt]);
+  }, [isEditingPreset, preset]);
+  const openEditor = () => {
+    setDraftPreset(answeringPresetToInput(preset));
+    setIsEditingPreset(true);
+  };
   const toggleEnabled = async (enabled) => {
     const result = await setEnabled.mutateAsync({ id: preset.id, enabled });
     if (result.__kind__ === "err") {
@@ -48750,25 +49513,39 @@ function AnsweringPresetCard({
     await deletePreset.mutateAsync(preset.id);
     ue.success("Answering preset deleted");
   };
-  const saveInstructions = async () => {
-    if (!trimmedDraftInstructions) {
+  const savePreset = async (event) => {
+    event.preventDefault();
+    const cleanInput = normalizeAnsweringPresetInput(draftPreset);
+    if (!cleanInput.name) {
+      ue.error("Preset name is required");
+      return;
+    }
+    if (!cleanInput.systemPrompt) {
       ue.error("AI answering instructions are required");
       return;
     }
-    if (trimmedDraftInstructions.length > MAX_AI_INSTRUCTIONS_CHARS$2) {
+    if (cleanInput.systemPrompt.length > MAX_AI_INSTRUCTIONS_CHARS$2) {
       ue.error("AI instructions must be 8000 characters or fewer");
       return;
     }
-    const result = await updateInstructions.mutateAsync({
+    if (!validateE164$1(cleanInput.phoneNumber)) {
+      ue.error("Enter the Twilio number in E.164 format");
+      return;
+    }
+    if ((cleanInput.captureOptions.saveTranscript || cleanInput.captureOptions.recordAudio) && !cleanInput.captureOptions.consentConfirmed) {
+      ue.error("Confirm caller consent before saving call artifacts");
+      return;
+    }
+    const result = await updatePreset.mutateAsync({
       id: preset.id,
-      systemPrompt: trimmedDraftInstructions
+      input: cleanInput
     });
     if (result.__kind__ === "err") {
       ue.error(result.err);
       return;
     }
-    ue.success("Answering instructions updated");
-    setIsEditingInstructions(false);
+    ue.success("Answering preset updated");
+    setIsEditingPreset(false);
   };
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(Card, { className: "border-border bg-card", children: [
@@ -48803,9 +49580,9 @@ function AnsweringPresetCard({
               type: "button",
               variant: "ghost",
               size: "icon",
-              onClick: () => setIsEditingInstructions(true),
-              "aria-label": "Edit answering instructions",
-              "data-ocid": `answering.preset.edit_instructions.${preset.id.toString()}`,
+              onClick: openEditor,
+              "aria-label": "Edit answering preset",
+              "data-ocid": `answering.preset.edit.${preset.id.toString()}`,
               children: /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-4 w-4" })
             }
           ),
@@ -48851,8 +49628,8 @@ function AnsweringPresetCard({
                 variant: "ghost",
                 size: "sm",
                 className: "h-7 gap-1.5 px-2 text-xs",
-                onClick: () => setIsEditingInstructions(true),
-                "data-ocid": `answering.preset.instructions_edit_button.${preset.id.toString()}`,
+                onClick: openEditor,
+                "data-ocid": `answering.preset.edit_button.${preset.id.toString()}`,
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-3 w-3" }),
                   "Edit"
@@ -48894,74 +49671,232 @@ function AnsweringPresetCard({
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       Dialog,
       {
-        open: isEditingInstructions,
+        open: isEditingPreset,
         onOpenChange: (open) => {
-          setIsEditingInstructions(open);
-          if (!open) setDraftInstructions(preset.systemPrompt);
+          setIsEditingPreset(open);
+          if (!open) setDraftPreset(answeringPresetToInput(preset));
         },
         children: /* @__PURE__ */ jsxRuntimeExports.jsxs(
           DialogContent,
           {
-            "data-ocid": `answering.preset.instructions_dialog.${preset.id.toString()}`,
+            className: "max-h-[90vh] overflow-y-auto sm:max-w-2xl",
+            "data-ocid": `answering.preset.edit_dialog.${preset.id.toString()}`,
             children: [
               /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogHeader, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Edit AI Instructions" }),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(DialogDescription, { children: preset.name })
+                /* @__PURE__ */ jsxRuntimeExports.jsx(DialogTitle, { children: "Edit Answering Preset" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogDescription, { children: [
+                  "Update the phone routing, voice, capture, and response timing for",
+                  ` ${preset.name}`,
+                  "."
+                ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { className: "space-y-4", onSubmit: savePreset, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { htmlFor: `answering-preset-name-${preset.id}`, children: "Preset Name" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      Input,
+                      {
+                        id: `answering-preset-name-${preset.id}`,
+                        value: draftPreset.name,
+                        onChange: (event) => setDraftPreset({
+                          ...draftPreset,
+                          name: event.target.value
+                        }),
+                        "data-ocid": `answering.preset.name_input.${preset.id.toString()}`,
+                        required: true
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { htmlFor: `answering-preset-phone-${preset.id}`, children: "Twilio Number" }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      Input,
+                      {
+                        id: `answering-preset-phone-${preset.id}`,
+                        value: draftPreset.phoneNumber,
+                        onChange: (event) => setDraftPreset({
+                          ...draftPreset,
+                          phoneNumber: event.target.value.replace(/\s/g, "")
+                        }),
+                        placeholder: "+15551234567",
+                        "data-ocid": `answering.preset.phone_input.${preset.id.toString()}`,
+                        required: true
+                      }
+                    ),
+                    draftPreset.phoneNumber !== preset.phoneNumber && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] leading-relaxed text-muted-foreground", children: "Changing the number will pause this preset until the new Twilio webhook is verified." })
+                  ] })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { htmlFor: `answering-preset-instructions-${preset.id}`, children: "Instructions" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Textarea,
+                    {
+                      id: `answering-preset-instructions-${preset.id}`,
+                      value: draftPreset.systemPrompt,
+                      onChange: (event) => setDraftPreset({
+                        ...draftPreset,
+                        systemPrompt: event.target.value
+                      }),
+                      rows: 7,
+                      maxLength: MAX_AI_INSTRUCTIONS_CHARS$2,
+                      "data-ocid": `answering.preset.instructions_textarea.${preset.id.toString()}`,
+                      className: "resize-none font-mono text-xs leading-relaxed",
+                      required: true
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "font-mono text-[11px] text-muted-foreground", children: [
+                    draftPreset.systemPrompt.trim().length,
+                    "/",
+                    MAX_AI_INSTRUCTIONS_CHARS$2
+                  ] }) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { children: "Voice" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    VoiceIdSelector,
+                    {
+                      value: {
+                        voice: draftPreset.voice,
+                        voiceId: draftPreset.voiceId
+                      },
+                      onChange: (next) => setDraftPreset({
+                        ...draftPreset,
+                        voice: next.voice,
+                        voiceId: next.voiceId ?? ""
+                      }),
+                      dataOcidPrefix: `answering.preset.${preset.id.toString()}`
+                    }
+                  )
+                ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  Label,
+                  TurnDetectionFields,
                   {
-                    htmlFor: `answering-preset-instructions-${preset.id.toString()}`,
-                    children: "Instructions"
+                    value: draftPreset.turnDetection,
+                    onChange: (turnDetection) => setDraftPreset({ ...draftPreset, turnDetection }),
+                    dataOcidPrefix: `answering.preset.${preset.id.toString()}.turn_detection`
                   }
                 ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  Textarea,
-                  {
-                    id: `answering-preset-instructions-${preset.id.toString()}`,
-                    value: draftInstructions,
-                    onChange: (event) => setDraftInstructions(event.target.value),
-                    rows: 8,
-                    maxLength: MAX_AI_INSTRUCTIONS_CHARS$2,
-                    "data-ocid": `answering.preset.instructions_textarea.${preset.id.toString()}`,
-                    className: "resize-none font-mono text-xs leading-relaxed"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex justify-end", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-[11px] text-muted-foreground font-mono", children: [
-                  trimmedDraftInstructions.length,
-                  "/",
-                  MAX_AI_INSTRUCTIONS_CHARS$2
-                ] }) })
-              ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogFooter, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(
-                  Button,
-                  {
-                    type: "button",
-                    variant: "outline",
-                    onClick: () => {
-                      setIsEditingInstructions(false);
-                      setDraftInstructions(preset.systemPrompt);
-                    },
-                    "data-ocid": `answering.preset.instructions_cancel_button.${preset.id.toString()}`,
-                    children: "Cancel"
-                  }
-                ),
-                /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                  Button,
-                  {
-                    type: "button",
-                    onClick: () => void saveInstructions(),
-                    disabled: !canSaveInstructions || updateInstructions.isPending,
-                    "data-ocid": `answering.preset.instructions_save_button.${preset.id.toString()}`,
-                    className: "gap-2",
-                    children: [
-                      updateInstructions.isPending ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-4 w-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-4 w-4" }),
-                      "Save Instructions"
-                    ]
-                  }
-                )
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 rounded-md border border-border p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      Checkbox,
+                      {
+                        id: `answering-preset-save-transcript-${preset.id}`,
+                        checked: draftPreset.captureOptions.saveTranscript,
+                        onCheckedChange: (checked) => setDraftPreset({
+                          ...draftPreset,
+                          captureOptions: {
+                            ...draftPreset.captureOptions,
+                            saveTranscript: checked === true
+                          }
+                        })
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      Label,
+                      {
+                        htmlFor: `answering-preset-save-transcript-${preset.id}`,
+                        className: "text-sm",
+                        children: "Save transcripts"
+                      }
+                    )
+                  ] }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 rounded-md border border-border p-3", children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      Checkbox,
+                      {
+                        id: `answering-preset-record-audio-${preset.id}`,
+                        checked: draftPreset.captureOptions.recordAudio,
+                        onCheckedChange: (checked) => setDraftPreset({
+                          ...draftPreset,
+                          captureOptions: {
+                            ...draftPreset.captureOptions,
+                            recordAudio: checked === true
+                          }
+                        })
+                      }
+                    ),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx(
+                      Label,
+                      {
+                        htmlFor: `answering-preset-record-audio-${preset.id}`,
+                        className: "text-sm",
+                        children: "Save audio recordings"
+                      }
+                    )
+                  ] })
+                ] }),
+                draftCaptureRequested && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start gap-3 rounded-md border border-border bg-muted/20 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Checkbox,
+                    {
+                      id: `answering-preset-consent-${preset.id}`,
+                      checked: draftPreset.captureOptions.consentConfirmed,
+                      onCheckedChange: (checked) => setDraftPreset({
+                        ...draftPreset,
+                        captureOptions: {
+                          ...draftPreset.captureOptions,
+                          consentConfirmed: checked === true
+                        }
+                      })
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Label,
+                    {
+                      htmlFor: `answering-preset-consent-${preset.id}`,
+                      className: "text-sm leading-relaxed text-muted-foreground",
+                      children: "I confirm this preset will only save recordings or transcripts where caller consent requirements are met."
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between rounded-md border border-border p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Label,
+                    {
+                      htmlFor: `answering-preset-enabled-${preset.id}`,
+                      className: "text-sm",
+                      children: "Answer incoming calls"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Switch,
+                    {
+                      id: `answering-preset-enabled-${preset.id}`,
+                      checked: draftPreset.enabled,
+                      onCheckedChange: (enabled) => setDraftPreset({ ...draftPreset, enabled })
+                    }
+                  )
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(DialogFooter, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Button,
+                    {
+                      type: "button",
+                      variant: "outline",
+                      onClick: () => {
+                        setIsEditingPreset(false);
+                        setDraftPreset(answeringPresetToInput(preset));
+                      },
+                      "data-ocid": `answering.preset.edit_cancel_button.${preset.id.toString()}`,
+                      children: "Cancel"
+                    }
+                  ),
+                  /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                    Button,
+                    {
+                      type: "submit",
+                      disabled: updatePreset.isPending,
+                      "data-ocid": `answering.preset.edit_save_button.${preset.id.toString()}`,
+                      className: "gap-2",
+                      children: [
+                        updatePreset.isPending ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "h-4 w-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "h-4 w-4" }),
+                        "Update Preset"
+                      ]
+                    }
+                  )
+                ] })
               ] })
             ]
           }
@@ -48988,28 +49923,28 @@ function AnsweringServicePage() {
   }, []);
   const submit = async (event) => {
     event.preventDefault();
-    const systemPrompt = input.systemPrompt.trim();
-    if (!systemPrompt) {
+    const cleanInput = normalizeAnsweringPresetInput(input);
+    if (!cleanInput.name) {
+      ue.error("Preset name is required");
+      return;
+    }
+    if (!cleanInput.systemPrompt) {
       ue.error("AI answering instructions are required");
       return;
     }
-    if (systemPrompt.length > MAX_AI_INSTRUCTIONS_CHARS$2) {
+    if (cleanInput.systemPrompt.length > MAX_AI_INSTRUCTIONS_CHARS$2) {
       ue.error("AI instructions must be 8000 characters or fewer");
       return;
     }
-    if (!validateE164$1(input.phoneNumber)) {
+    if (!validateE164$1(cleanInput.phoneNumber)) {
       ue.error("Enter the Twilio number in E.164 format");
       return;
     }
-    if (captureRequested && !input.captureOptions.consentConfirmed) {
+    if ((cleanInput.captureOptions.saveTranscript || cleanInput.captureOptions.recordAudio) && !cleanInput.captureOptions.consentConfirmed) {
       ue.error("Confirm caller consent before saving call artifacts");
       return;
     }
-    const result = await createPreset.mutateAsync({
-      ...input,
-      name: input.name.trim(),
-      systemPrompt
-    });
+    const result = await createPreset.mutateAsync(cleanInput);
     if (result.__kind__ === "err") {
       ue.error(result.err);
       return;
@@ -49115,6 +50050,14 @@ function AnsweringServicePage() {
               }
             )
           ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            TurnDetectionFields,
+            {
+              value: input.turnDetection,
+              onChange: (turnDetection) => setInput({ ...input, turnDetection }),
+              dataOcidPrefix: "answering.turn_detection"
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 rounded-md border border-border p-3", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59536,602 +60479,6 @@ function EmptyState({
 const Route$1 = createFileRoute("/user/history")({
   component: HistoryPage
 });
-var PAGE_KEYS = ["PageUp", "PageDown"];
-var ARROW_KEYS = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
-var BACK_KEYS = {
-  "from-left": ["Home", "PageDown", "ArrowDown", "ArrowLeft"],
-  "from-right": ["Home", "PageDown", "ArrowDown", "ArrowRight"],
-  "from-bottom": ["Home", "PageDown", "ArrowDown", "ArrowLeft"],
-  "from-top": ["Home", "PageDown", "ArrowUp", "ArrowLeft"]
-};
-var SLIDER_NAME = "Slider";
-var [Collection, useCollection, createCollectionScope] = createCollection(SLIDER_NAME);
-var [createSliderContext] = createContextScope(SLIDER_NAME, [
-  createCollectionScope
-]);
-var [SliderProvider, useSliderContext] = createSliderContext(SLIDER_NAME);
-var Slider$1 = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const {
-      name,
-      min: min2 = 0,
-      max: max2 = 100,
-      step = 1,
-      orientation = "horizontal",
-      disabled = false,
-      minStepsBetweenThumbs = 0,
-      defaultValue = [min2],
-      value,
-      onValueChange = () => {
-      },
-      onValueCommit = () => {
-      },
-      inverted = false,
-      form,
-      ...sliderProps
-    } = props;
-    const thumbRefs = reactExports.useRef(/* @__PURE__ */ new Set());
-    const valueIndexToChangeRef = reactExports.useRef(0);
-    const isHorizontal = orientation === "horizontal";
-    const SliderOrientation = isHorizontal ? SliderHorizontal : SliderVertical;
-    const [values = [], setValues] = useControllableState({
-      prop: value,
-      defaultProp: defaultValue,
-      onChange: (value2) => {
-        var _a3;
-        const thumbs = [...thumbRefs.current];
-        (_a3 = thumbs[valueIndexToChangeRef.current]) == null ? void 0 : _a3.focus();
-        onValueChange(value2);
-      }
-    });
-    const valuesBeforeSlideStartRef = reactExports.useRef(values);
-    function handleSlideStart(value2) {
-      const closestIndex = getClosestValueIndex(values, value2);
-      updateValues(value2, closestIndex);
-    }
-    function handleSlideMove(value2) {
-      updateValues(value2, valueIndexToChangeRef.current);
-    }
-    function handleSlideEnd() {
-      const prevValue = valuesBeforeSlideStartRef.current[valueIndexToChangeRef.current];
-      const nextValue = values[valueIndexToChangeRef.current];
-      const hasChanged = nextValue !== prevValue;
-      if (hasChanged) onValueCommit(values);
-    }
-    function updateValues(value2, atIndex, { commit } = { commit: false }) {
-      const decimalCount = getDecimalCount(step);
-      const snapToStep = roundValue(Math.round((value2 - min2) / step) * step + min2, decimalCount);
-      const nextValue = clamp$2(snapToStep, [min2, max2]);
-      setValues((prevValues = []) => {
-        const nextValues = getNextSortedValues(prevValues, nextValue, atIndex);
-        if (hasMinStepsBetweenValues(nextValues, minStepsBetweenThumbs * step)) {
-          valueIndexToChangeRef.current = nextValues.indexOf(nextValue);
-          const hasChanged = String(nextValues) !== String(prevValues);
-          if (hasChanged && commit) onValueCommit(nextValues);
-          return hasChanged ? nextValues : prevValues;
-        } else {
-          return prevValues;
-        }
-      });
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      SliderProvider,
-      {
-        scope: props.__scopeSlider,
-        name,
-        disabled,
-        min: min2,
-        max: max2,
-        valueIndexToChangeRef,
-        thumbs: thumbRefs.current,
-        values,
-        orientation,
-        form,
-        children: /* @__PURE__ */ jsxRuntimeExports.jsx(Collection.Provider, { scope: props.__scopeSlider, children: /* @__PURE__ */ jsxRuntimeExports.jsx(Collection.Slot, { scope: props.__scopeSlider, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          SliderOrientation,
-          {
-            "aria-disabled": disabled,
-            "data-disabled": disabled ? "" : void 0,
-            ...sliderProps,
-            ref: forwardedRef,
-            onPointerDown: composeEventHandlers(sliderProps.onPointerDown, () => {
-              if (!disabled) valuesBeforeSlideStartRef.current = values;
-            }),
-            min: min2,
-            max: max2,
-            inverted,
-            onSlideStart: disabled ? void 0 : handleSlideStart,
-            onSlideMove: disabled ? void 0 : handleSlideMove,
-            onSlideEnd: disabled ? void 0 : handleSlideEnd,
-            onHomeKeyDown: () => !disabled && updateValues(min2, 0, { commit: true }),
-            onEndKeyDown: () => !disabled && updateValues(max2, values.length - 1, { commit: true }),
-            onStepKeyDown: ({ event, direction: stepDirection }) => {
-              if (!disabled) {
-                const isPageKey = PAGE_KEYS.includes(event.key);
-                const isSkipKey = isPageKey || event.shiftKey && ARROW_KEYS.includes(event.key);
-                const multiplier = isSkipKey ? 10 : 1;
-                const atIndex = valueIndexToChangeRef.current;
-                const value2 = values[atIndex];
-                const stepInDirection = step * multiplier * stepDirection;
-                updateValues(value2 + stepInDirection, atIndex, { commit: true });
-              }
-            }
-          }
-        ) }) })
-      }
-    );
-  }
-);
-Slider$1.displayName = SLIDER_NAME;
-var [SliderOrientationProvider, useSliderOrientationContext] = createSliderContext(SLIDER_NAME, {
-  startEdge: "left",
-  endEdge: "right",
-  size: "width",
-  direction: 1
-});
-var SliderHorizontal = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const {
-      min: min2,
-      max: max2,
-      dir,
-      inverted,
-      onSlideStart,
-      onSlideMove,
-      onSlideEnd,
-      onStepKeyDown,
-      ...sliderProps
-    } = props;
-    const [slider, setSlider] = reactExports.useState(null);
-    const composedRefs = useComposedRefs(forwardedRef, (node) => setSlider(node));
-    const rectRef = reactExports.useRef(void 0);
-    const direction = useDirection(dir);
-    const isDirectionLTR = direction === "ltr";
-    const isSlidingFromLeft = isDirectionLTR && !inverted || !isDirectionLTR && inverted;
-    function getValueFromPointer(pointerPosition) {
-      const rect = rectRef.current || slider.getBoundingClientRect();
-      const input = [0, rect.width];
-      const output = isSlidingFromLeft ? [min2, max2] : [max2, min2];
-      const value = linearScale(input, output);
-      rectRef.current = rect;
-      return value(pointerPosition - rect.left);
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      SliderOrientationProvider,
-      {
-        scope: props.__scopeSlider,
-        startEdge: isSlidingFromLeft ? "left" : "right",
-        endEdge: isSlidingFromLeft ? "right" : "left",
-        direction: isSlidingFromLeft ? 1 : -1,
-        size: "width",
-        children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          SliderImpl,
-          {
-            dir: direction,
-            "data-orientation": "horizontal",
-            ...sliderProps,
-            ref: composedRefs,
-            style: {
-              ...sliderProps.style,
-              ["--radix-slider-thumb-transform"]: "translateX(-50%)"
-            },
-            onSlideStart: (event) => {
-              const value = getValueFromPointer(event.clientX);
-              onSlideStart == null ? void 0 : onSlideStart(value);
-            },
-            onSlideMove: (event) => {
-              const value = getValueFromPointer(event.clientX);
-              onSlideMove == null ? void 0 : onSlideMove(value);
-            },
-            onSlideEnd: () => {
-              rectRef.current = void 0;
-              onSlideEnd == null ? void 0 : onSlideEnd();
-            },
-            onStepKeyDown: (event) => {
-              const slideDirection = isSlidingFromLeft ? "from-left" : "from-right";
-              const isBackKey = BACK_KEYS[slideDirection].includes(event.key);
-              onStepKeyDown == null ? void 0 : onStepKeyDown({ event, direction: isBackKey ? -1 : 1 });
-            }
-          }
-        )
-      }
-    );
-  }
-);
-var SliderVertical = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const {
-      min: min2,
-      max: max2,
-      inverted,
-      onSlideStart,
-      onSlideMove,
-      onSlideEnd,
-      onStepKeyDown,
-      ...sliderProps
-    } = props;
-    const sliderRef = reactExports.useRef(null);
-    const ref = useComposedRefs(forwardedRef, sliderRef);
-    const rectRef = reactExports.useRef(void 0);
-    const isSlidingFromBottom = !inverted;
-    function getValueFromPointer(pointerPosition) {
-      const rect = rectRef.current || sliderRef.current.getBoundingClientRect();
-      const input = [0, rect.height];
-      const output = isSlidingFromBottom ? [max2, min2] : [min2, max2];
-      const value = linearScale(input, output);
-      rectRef.current = rect;
-      return value(pointerPosition - rect.top);
-    }
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      SliderOrientationProvider,
-      {
-        scope: props.__scopeSlider,
-        startEdge: isSlidingFromBottom ? "bottom" : "top",
-        endEdge: isSlidingFromBottom ? "top" : "bottom",
-        size: "height",
-        direction: isSlidingFromBottom ? 1 : -1,
-        children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-          SliderImpl,
-          {
-            "data-orientation": "vertical",
-            ...sliderProps,
-            ref,
-            style: {
-              ...sliderProps.style,
-              ["--radix-slider-thumb-transform"]: "translateY(50%)"
-            },
-            onSlideStart: (event) => {
-              const value = getValueFromPointer(event.clientY);
-              onSlideStart == null ? void 0 : onSlideStart(value);
-            },
-            onSlideMove: (event) => {
-              const value = getValueFromPointer(event.clientY);
-              onSlideMove == null ? void 0 : onSlideMove(value);
-            },
-            onSlideEnd: () => {
-              rectRef.current = void 0;
-              onSlideEnd == null ? void 0 : onSlideEnd();
-            },
-            onStepKeyDown: (event) => {
-              const slideDirection = isSlidingFromBottom ? "from-bottom" : "from-top";
-              const isBackKey = BACK_KEYS[slideDirection].includes(event.key);
-              onStepKeyDown == null ? void 0 : onStepKeyDown({ event, direction: isBackKey ? -1 : 1 });
-            }
-          }
-        )
-      }
-    );
-  }
-);
-var SliderImpl = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const {
-      __scopeSlider,
-      onSlideStart,
-      onSlideMove,
-      onSlideEnd,
-      onHomeKeyDown,
-      onEndKeyDown,
-      onStepKeyDown,
-      ...sliderProps
-    } = props;
-    const context = useSliderContext(SLIDER_NAME, __scopeSlider);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.span,
-      {
-        ...sliderProps,
-        ref: forwardedRef,
-        onKeyDown: composeEventHandlers(props.onKeyDown, (event) => {
-          if (event.key === "Home") {
-            onHomeKeyDown(event);
-            event.preventDefault();
-          } else if (event.key === "End") {
-            onEndKeyDown(event);
-            event.preventDefault();
-          } else if (PAGE_KEYS.concat(ARROW_KEYS).includes(event.key)) {
-            onStepKeyDown(event);
-            event.preventDefault();
-          }
-        }),
-        onPointerDown: composeEventHandlers(props.onPointerDown, (event) => {
-          const target = event.target;
-          target.setPointerCapture(event.pointerId);
-          event.preventDefault();
-          if (context.thumbs.has(target)) {
-            target.focus();
-          } else {
-            onSlideStart(event);
-          }
-        }),
-        onPointerMove: composeEventHandlers(props.onPointerMove, (event) => {
-          const target = event.target;
-          if (target.hasPointerCapture(event.pointerId)) onSlideMove(event);
-        }),
-        onPointerUp: composeEventHandlers(props.onPointerUp, (event) => {
-          const target = event.target;
-          if (target.hasPointerCapture(event.pointerId)) {
-            target.releasePointerCapture(event.pointerId);
-            onSlideEnd(event);
-          }
-        })
-      }
-    );
-  }
-);
-var TRACK_NAME = "SliderTrack";
-var SliderTrack = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeSlider, ...trackProps } = props;
-    const context = useSliderContext(TRACK_NAME, __scopeSlider);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.span,
-      {
-        "data-disabled": context.disabled ? "" : void 0,
-        "data-orientation": context.orientation,
-        ...trackProps,
-        ref: forwardedRef
-      }
-    );
-  }
-);
-SliderTrack.displayName = TRACK_NAME;
-var RANGE_NAME = "SliderRange";
-var SliderRange = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeSlider, ...rangeProps } = props;
-    const context = useSliderContext(RANGE_NAME, __scopeSlider);
-    const orientation = useSliderOrientationContext(RANGE_NAME, __scopeSlider);
-    const ref = reactExports.useRef(null);
-    const composedRefs = useComposedRefs(forwardedRef, ref);
-    const valuesCount = context.values.length;
-    const percentages = context.values.map(
-      (value) => convertValueToPercentage(value, context.min, context.max)
-    );
-    const offsetStart = valuesCount > 1 ? Math.min(...percentages) : 0;
-    const offsetEnd = 100 - Math.max(...percentages);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.span,
-      {
-        "data-orientation": context.orientation,
-        "data-disabled": context.disabled ? "" : void 0,
-        ...rangeProps,
-        ref: composedRefs,
-        style: {
-          ...props.style,
-          [orientation.startEdge]: offsetStart + "%",
-          [orientation.endEdge]: offsetEnd + "%"
-        }
-      }
-    );
-  }
-);
-SliderRange.displayName = RANGE_NAME;
-var THUMB_NAME = "SliderThumb";
-var SliderThumb = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const getItems = useCollection(props.__scopeSlider);
-    const [thumb, setThumb] = reactExports.useState(null);
-    const composedRefs = useComposedRefs(forwardedRef, (node) => setThumb(node));
-    const index2 = reactExports.useMemo(
-      () => thumb ? getItems().findIndex((item) => item.ref.current === thumb) : -1,
-      [getItems, thumb]
-    );
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(SliderThumbImpl, { ...props, ref: composedRefs, index: index2 });
-  }
-);
-var SliderThumbImpl = reactExports.forwardRef(
-  (props, forwardedRef) => {
-    const { __scopeSlider, index: index2, name, ...thumbProps } = props;
-    const context = useSliderContext(THUMB_NAME, __scopeSlider);
-    const orientation = useSliderOrientationContext(THUMB_NAME, __scopeSlider);
-    const [thumb, setThumb] = reactExports.useState(null);
-    const composedRefs = useComposedRefs(forwardedRef, (node) => setThumb(node));
-    const isFormControl = thumb ? context.form || !!thumb.closest("form") : true;
-    const size2 = useSize(thumb);
-    const value = context.values[index2];
-    const percent2 = value === void 0 ? 0 : convertValueToPercentage(value, context.min, context.max);
-    const label = getLabel(index2, context.values.length);
-    const orientationSize = size2 == null ? void 0 : size2[orientation.size];
-    const thumbInBoundsOffset = orientationSize ? getThumbInBoundsOffset(orientationSize, percent2, orientation.direction) : 0;
-    reactExports.useEffect(() => {
-      if (thumb) {
-        context.thumbs.add(thumb);
-        return () => {
-          context.thumbs.delete(thumb);
-        };
-      }
-    }, [thumb, context.thumbs]);
-    return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "span",
-      {
-        style: {
-          transform: "var(--radix-slider-thumb-transform)",
-          position: "absolute",
-          [orientation.startEdge]: `calc(${percent2}% + ${thumbInBoundsOffset}px)`
-        },
-        children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Collection.ItemSlot, { scope: props.__scopeSlider, children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Primitive.span,
-            {
-              role: "slider",
-              "aria-label": props["aria-label"] || label,
-              "aria-valuemin": context.min,
-              "aria-valuenow": value,
-              "aria-valuemax": context.max,
-              "aria-orientation": context.orientation,
-              "data-orientation": context.orientation,
-              "data-disabled": context.disabled ? "" : void 0,
-              tabIndex: context.disabled ? void 0 : 0,
-              ...thumbProps,
-              ref: composedRefs,
-              style: value === void 0 ? { display: "none" } : props.style,
-              onFocus: composeEventHandlers(props.onFocus, () => {
-                context.valueIndexToChangeRef.current = index2;
-              })
-            }
-          ) }),
-          isFormControl && /* @__PURE__ */ jsxRuntimeExports.jsx(
-            SliderBubbleInput,
-            {
-              name: name ?? (context.name ? context.name + (context.values.length > 1 ? "[]" : "") : void 0),
-              form: context.form,
-              value
-            },
-            index2
-          )
-        ]
-      }
-    );
-  }
-);
-SliderThumb.displayName = THUMB_NAME;
-var BUBBLE_INPUT_NAME = "RadioBubbleInput";
-var SliderBubbleInput = reactExports.forwardRef(
-  ({ __scopeSlider, value, ...props }, forwardedRef) => {
-    const ref = reactExports.useRef(null);
-    const composedRefs = useComposedRefs(ref, forwardedRef);
-    const prevValue = usePrevious(value);
-    reactExports.useEffect(() => {
-      const input = ref.current;
-      if (!input) return;
-      const inputProto = window.HTMLInputElement.prototype;
-      const descriptor = Object.getOwnPropertyDescriptor(inputProto, "value");
-      const setValue = descriptor.set;
-      if (prevValue !== value && setValue) {
-        const event = new Event("input", { bubbles: true });
-        setValue.call(input, value);
-        input.dispatchEvent(event);
-      }
-    }, [prevValue, value]);
-    return /* @__PURE__ */ jsxRuntimeExports.jsx(
-      Primitive.input,
-      {
-        style: { display: "none" },
-        ...props,
-        ref: composedRefs,
-        defaultValue: value
-      }
-    );
-  }
-);
-SliderBubbleInput.displayName = BUBBLE_INPUT_NAME;
-function getNextSortedValues(prevValues = [], nextValue, atIndex) {
-  const nextValues = [...prevValues];
-  nextValues[atIndex] = nextValue;
-  return nextValues.sort((a2, b2) => a2 - b2);
-}
-function convertValueToPercentage(value, min2, max2) {
-  const maxSteps = max2 - min2;
-  const percentPerStep = 100 / maxSteps;
-  const percentage = percentPerStep * (value - min2);
-  return clamp$2(percentage, [0, 100]);
-}
-function getLabel(index2, totalValues) {
-  if (totalValues > 2) {
-    return `Value ${index2 + 1} of ${totalValues}`;
-  } else if (totalValues === 2) {
-    return ["Minimum", "Maximum"][index2];
-  } else {
-    return void 0;
-  }
-}
-function getClosestValueIndex(values, nextValue) {
-  if (values.length === 1) return 0;
-  const distances = values.map((value) => Math.abs(value - nextValue));
-  const closestDistance = Math.min(...distances);
-  return distances.indexOf(closestDistance);
-}
-function getThumbInBoundsOffset(width, left, direction) {
-  const halfWidth = width / 2;
-  const halfPercent = 50;
-  const offset2 = linearScale([0, halfPercent], [0, halfWidth]);
-  return (halfWidth - offset2(left) * direction) * direction;
-}
-function getStepsBetweenValues(values) {
-  return values.slice(0, -1).map((value, index2) => values[index2 + 1] - value);
-}
-function hasMinStepsBetweenValues(values, minStepsBetweenValues) {
-  if (minStepsBetweenValues > 0) {
-    const stepsBetweenValues = getStepsBetweenValues(values);
-    const actualMinStepsBetweenValues = Math.min(...stepsBetweenValues);
-    return actualMinStepsBetweenValues >= minStepsBetweenValues;
-  }
-  return true;
-}
-function linearScale(input, output) {
-  return (value) => {
-    if (input[0] === input[1] || output[0] === output[1]) return output[0];
-    const ratio = (output[1] - output[0]) / (input[1] - input[0]);
-    return output[0] + ratio * (value - input[0]);
-  };
-}
-function getDecimalCount(value) {
-  return (String(value).split(".")[1] || "").length;
-}
-function roundValue(value, decimalCount) {
-  const rounder = Math.pow(10, decimalCount);
-  return Math.round(value * rounder) / rounder;
-}
-var Root = Slider$1;
-var Track = SliderTrack;
-var Range = SliderRange;
-var Thumb = SliderThumb;
-function Slider({
-  className,
-  defaultValue,
-  value,
-  min: min2 = 0,
-  max: max2 = 100,
-  ...props
-}) {
-  const _values = reactExports.useMemo(
-    () => Array.isArray(value) ? value : Array.isArray(defaultValue) ? defaultValue : [min2, max2],
-    [value, defaultValue, min2, max2]
-  );
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    Root,
-    {
-      "data-slot": "slider",
-      defaultValue,
-      value,
-      min: min2,
-      max: max2,
-      className: cn(
-        "relative flex w-full touch-none items-center select-none data-[disabled]:opacity-50 data-[orientation=vertical]:h-full data-[orientation=vertical]:min-h-44 data-[orientation=vertical]:w-auto data-[orientation=vertical]:flex-col",
-        className
-      ),
-      ...props,
-      children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Track,
-          {
-            "data-slot": "slider-track",
-            className: cn(
-              "bg-muted relative grow overflow-hidden rounded-full data-[orientation=horizontal]:h-1.5 data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-1.5"
-            ),
-            children: /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Range,
-              {
-                "data-slot": "slider-range",
-                className: cn(
-                  "bg-primary absolute data-[orientation=horizontal]:h-full data-[orientation=vertical]:w-full"
-                )
-              }
-            )
-          }
-        ),
-        Array.from({ length: _values.length }, (value2, _2) => /* @__PURE__ */ jsxRuntimeExports.jsx(
-          Thumb,
-          {
-            "data-slot": "slider-thumb",
-            className: "border-primary bg-background ring-ring/50 block size-4 shrink-0 rounded-full border shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden disabled:pointer-events-none disabled:opacity-50"
-          },
-          `${value2}`
-        ))
-      ]
-    }
-  );
-}
 var isCheckBoxInput = (element) => element.type === "checkbox";
 var isDateObject = (value) => value instanceof Date;
 var isNullOrUndefined = (value) => value == null;
@@ -62318,6 +62665,20 @@ function SettingsPage() {
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1 shrink-0", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Button,
+                    {
+                      type: "button",
+                      variant: "ghost",
+                      size: "icon",
+                      className: "w-8 h-8 text-muted-foreground hover:text-foreground",
+                      onClick: () => setExpandedPreset(preset.id.toString()),
+                      "data-ocid": `settings.preset.edit_button.${idx + 1}`,
+                      title: "Edit preset",
+                      "aria-label": "Edit preset",
+                      children: /* @__PURE__ */ jsxRuntimeExports.jsx(Pencil, { className: "w-3.5 h-3.5" })
+                    }
+                  ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     Button,
                     {
