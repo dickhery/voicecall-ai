@@ -1,6 +1,11 @@
 import { AudioFormat, SampleRate, Voice } from "@/backend";
 import { AppLayout } from "@/components/AppLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import {
+  VoiceIdSelector,
+  getVoiceInitial,
+  getVoiceLabel,
+} from "@/components/VoiceIdSelector";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -54,6 +59,7 @@ function createDefaultPreset(): CallPresetInput {
   return {
     name: "",
     voice: Voice.eve,
+    voiceId: "",
     systemPrompt: "",
     audioFormat: DEFAULT_AUDIO_FORMAT,
     sampleRate: DEFAULT_SAMPLE_RATE,
@@ -87,56 +93,6 @@ const defaultTimingText = {
 const TURN_DETECTION_HELP =
   "These settings control when the AI decides the caller has finished speaking and can respond. The defaults work well for most calls; adjust them if the AI interrupts too quickly or waits too long.";
 
-// ── Voice metadata ─────────────────────────────────────────────────────────────
-const VOICE_META: Record<Voice, { label: string; description: string }> = {
-  [Voice.eve]: { label: "Eve", description: "Warm, conversational" },
-  [Voice.ara]: { label: "Ara", description: "Clear, professional" },
-  [Voice.rex]: { label: "Rex", description: "Deep, authoritative" },
-  [Voice.sal]: { label: "Sal", description: "Friendly, upbeat" },
-  [Voice.leo]: { label: "Leo", description: "Calm, deliberate" },
-};
-
-// ── Voice Card Selector ────────────────────────────────────────────────────────
-function VoiceCardSelector({
-  value,
-  onChange,
-}: {
-  value: Voice;
-  onChange: (v: Voice) => void;
-}) {
-  return (
-    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
-      {(Object.values(Voice) as Voice[]).map((v) => {
-        const meta = VOICE_META[v];
-        const isActive = value === v;
-        return (
-          <button
-            key={v}
-            type="button"
-            onClick={() => onChange(v)}
-            data-ocid={`settings.preset.voice.${v}`}
-            className={[
-              "flex flex-col items-center gap-1 rounded-lg border p-3 text-center transition-smooth cursor-pointer",
-              isActive
-                ? "border-primary bg-primary/10 text-primary shadow-sm"
-                : "border-border bg-card hover:border-primary/40 hover:bg-muted/20 text-muted-foreground hover:text-foreground",
-            ].join(" ")}
-          >
-            <span
-              className={`text-sm font-semibold ${isActive ? "text-primary" : "text-foreground"}`}
-            >
-              {meta.label}
-            </span>
-            <span className="text-[10px] leading-tight opacity-70">
-              {meta.description}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 // ── Preset Form ────────────────────────────────────────────────────────────────
 interface PresetFormProps {
   initial?: CallPreset;
@@ -157,6 +113,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
       ? {
           name: initial.name,
           voice: initial.voice,
+          voiceId: initial.voiceId ?? "",
           systemPrompt: initial.systemPrompt,
           audioFormat: DEFAULT_AUDIO_FORMAT,
           sampleRate: DEFAULT_SAMPLE_RATE,
@@ -235,9 +192,13 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Voice
         </Label>
-        <VoiceCardSelector
-          value={values.voice}
-          onChange={(v) => setValue("voice", v)}
+        <VoiceIdSelector
+          value={{ voice: values.voice, voiceId: values.voiceId }}
+          onChange={(next) => {
+            setValue("voice", next.voice);
+            setValue("voiceId", next.voiceId ?? "");
+          }}
+          dataOcidPrefix="settings"
         />
       </div>
 
@@ -622,7 +583,7 @@ export default function SettingsPage() {
                         >
                           <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                             <span className="text-xs font-bold text-primary">
-                              {VOICE_META[preset.voice]?.label?.[0] ?? "?"}
+                              {getVoiceInitial(preset.voice, preset.voiceId)}
                             </span>
                           </div>
                           <div className="min-w-0">
@@ -630,7 +591,7 @@ export default function SettingsPage() {
                               {preset.name}
                             </p>
                             <p className="text-[11px] text-muted-foreground mt-0.5">
-                              {VOICE_META[preset.voice]?.label} ·{" "}
+                              {getVoiceLabel(preset.voice, preset.voiceId)} ·{" "}
                               {preset.systemPrompt.substring(0, 70)}
                               {preset.systemPrompt.length > 70 ? "..." : ""}
                             </p>

@@ -48,6 +48,7 @@ module {
     name : Text;
     systemPrompt : Text;
     voice : Voice;
+    voiceId : ?Text;
     turnDetection : TurnDetection;
     audioFormat : AudioFormat;
     sampleRate : SampleRate;
@@ -59,6 +60,7 @@ module {
     name : Text;
     systemPrompt : Text;
     voice : Voice;
+    voiceId : ?Text;
     turnDetection : TurnDetection;
     audioFormat : AudioFormat;
     sampleRate : SampleRate;
@@ -88,6 +90,7 @@ module {
     phoneNumber : Text;
     systemPrompt : Text;
     voice : Voice;
+    voiceId : ?Text;
     turnDetection : TurnDetection;
     audioFormat : AudioFormat;
     sampleRate : SampleRate;
@@ -107,6 +110,7 @@ module {
     phoneNumber : Text;
     systemPrompt : Text;
     voice : Voice;
+    voiceId : ?Text;
     turnDetection : TurnDetection;
     audioFormat : AudioFormat;
     sampleRate : SampleRate;

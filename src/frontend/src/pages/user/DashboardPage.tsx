@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/AppLayout";
 import { CallStatusBadge } from "@/components/CallStatusBadge";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { getVoiceLabel } from "@/components/VoiceIdSelector";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -803,7 +804,10 @@ export default function DashboardPage() {
                     </p>
                     <div className="flex items-center gap-1.5 pt-0.5">
                       <Badge variant="outline" className="text-xs h-4 px-1">
-                        {selectedPreset.voice}
+                        {getVoiceLabel(
+                          selectedPreset.voice,
+                          selectedPreset.voiceId,
+                        )}
                       </Badge>
                       <Badge variant="outline" className="text-xs h-4 px-1">
                         {selectedPreset.sampleRate}
@@ -995,7 +999,7 @@ export default function DashboardPage() {
                                 )}
                               </div>
                               <p className="text-xs text-muted-foreground truncate">
-                                {preset.voice} ·{" "}
+                                {getVoiceLabel(preset.voice, preset.voiceId)} ·{" "}
                                 {preset.systemPrompt.substring(0, 60)}
                                 {preset.systemPrompt.length > 60 ? "..." : ""}
                               </p>

@@ -76,6 +76,7 @@ const AnsweringPreset = IDL.Record({
   phoneNumber: IDL.Text,
   systemPrompt: IDL.Text,
   voice: Voice,
+  voiceId: IDL.Opt(IDL.Text),
   turnDetection: TurnDetection,
   audioFormat: AudioFormat,
   sampleRate: SampleRate,
@@ -342,6 +343,7 @@ export function normalizeAnsweringPreset(preset) {
     phoneNumber: preset.phoneNumber,
     systemPrompt: preset.systemPrompt,
     voice: variantKey(preset.voice),
+    voiceId: unwrapOptional(preset.voiceId),
     turnDetection: {
       serverVad: preset.turnDetection.serverVad,
       threshold: Number(preset.turnDetection.threshold ?? 0.5),

@@ -46,6 +46,7 @@ export interface CallPreset {
     toolsEnabled: ToolsEnabled;
     ownerId: Principal;
     voice: Voice;
+    voiceId?: string;
     name: string;
     sampleRate: SampleRate;
     systemPrompt: string;
@@ -105,6 +106,7 @@ export interface TransformationInput {
 export interface CallPresetInput {
     toolsEnabled: ToolsEnabled;
     voice: Voice;
+    voiceId?: string;
     name: string;
     sampleRate: SampleRate;
     systemPrompt: string;

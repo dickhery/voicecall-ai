@@ -24,6 +24,7 @@ const samplePreset = {
   name: "Professional Sales Call",
   ownerId: samplePrincipal,
   voice: Voice.eve,
+  voiceId: "",
   systemPrompt:
     "You are a professional sales assistant. Greet the customer warmly, ask how you can assist them with their recent order, and guide them to relevant support articles if needed.",
   sampleRate: SampleRate.hz8000,
@@ -46,6 +47,7 @@ const samplePreset2 = {
   name: "Customer Support",
   ownerId: samplePrincipal,
   voice: Voice.ara,
+  voiceId: "",
   systemPrompt:
     "You are a helpful customer support agent. Listen carefully and resolve issues efficiently.",
   sampleRate: SampleRate.hz8000,
@@ -94,6 +96,7 @@ const sampleAnsweringPreset = {
   systemPrompt:
     "You answer calls after hours. Collect the caller's name, reason for calling, and preferred callback time.",
   voice: Voice.eve,
+  voiceId: "",
   sampleRate: SampleRate.hz8000,
   audioFormat: AudioFormat.pcmu,
   toolsEnabled: {

@@ -43,6 +43,22 @@ export interface VoiceServerHealth {
   model: string;
 }
 
+export interface XaiVoiceOption {
+  voiceId: string;
+  name: string;
+  description?: string;
+  type?: string;
+  gender?: string;
+  tone?: string;
+}
+
+export interface XaiVoiceLibraryResponse {
+  ok: true;
+  source: "xai" | "fallback";
+  voices: XaiVoiceOption[];
+  warning?: string;
+}
+
 export interface CheckoutSessionResponse {
   ok: true;
   id: string;
@@ -96,6 +112,7 @@ function serializePreset(preset: CallPreset) {
     name: preset.name,
     systemPrompt: preset.systemPrompt,
     voice: preset.voice,
+    voiceId: preset.voiceId ?? null,
     audioFormat: preset.audioFormat,
     sampleRate: preset.sampleRate,
     turnDetection: {
@@ -106,6 +123,23 @@ function serializePreset(preset: CallPreset) {
     },
     toolsEnabled: preset.toolsEnabled,
   };
+}
+
+async function getJson<T>(path: string): Promise<T> {
+  const baseUrl = await getVoiceServerUrl();
+  const response = await fetch(`${baseUrl}${path}`);
+  const payload = (await response.json().catch(() => ({}))) as {
+    ok?: boolean;
+    error?: string;
+  };
+
+  if (!response.ok || payload.ok === false) {
+    throw new Error(
+      payload.error || `Voice server request failed (${response.status})`,
+    );
+  }
+
+  return payload as T;
 }
 
 async function postJson<T>(
@@ -130,6 +164,10 @@ async function postJson<T>(
   }
 
   return payload as T;
+}
+
+export async function listXaiVoiceLibrary(): Promise<XaiVoiceLibraryResponse> {
+  return getJson<XaiVoiceLibraryResponse>("/xai/voices");
 }
 
 export async function startVoiceServerCall({

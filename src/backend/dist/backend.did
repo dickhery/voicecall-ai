@@ -201,6 +201,7 @@ type CallPresetInput =
    toolsEnabled: ToolsEnabled;
    turnDetection: TurnDetection;
    voice: Voice;
+   voiceId: opt text;
  };
 type CallPreset = 
  record {
@@ -213,6 +214,7 @@ type CallPreset =
    toolsEnabled: ToolsEnabled;
    turnDetection: TurnDetection;
    voice: Voice;
+   voiceId: opt text;
  };
 type CallId = nat;
 type BillingStatus = 
@@ -262,6 +264,7 @@ type AnsweringPresetInput =
    toolsEnabled: ToolsEnabled;
    turnDetection: TurnDetection;
    voice: Voice;
+   voiceId: opt text;
    webhookSecret: text;
  };
 type AnsweringPreset = 
@@ -283,6 +286,7 @@ type AnsweringPreset =
    verificationStatus: AnsweringPresetStatus;
    verifiedAt: opt int;
    voice: Voice;
+   voiceId: opt text;
    webhookSecret: text;
  };
 type AnsweringLiveSession = 

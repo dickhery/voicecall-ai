@@ -64,6 +64,11 @@ module {
     code >= 48 and code <= 57;
   };
 
+  private func isAlpha(c : Char) : Bool {
+    let code = c.toNat32();
+    (code >= 65 and code <= 90) or (code >= 97 and code <= 122);
+  };
+
   private func isNonZeroDigit(c : Char) : Bool {
     let code = c.toNat32();
     code >= 49 and code <= 57;
@@ -132,6 +137,35 @@ module {
     #ok(prompt);
   };
 
+  private func isVoiceIdChar(c : Char) : Bool {
+    isAlpha(c) or isDigit(c) or c == '-' or c == '_';
+  };
+
+  private func sanitizeVoiceId(input : ?Text) : {
+    #ok : ?Text;
+    #err : Text;
+  } {
+    switch (input) {
+      case null { #ok(null) };
+      case (?raw) {
+        let value = raw.trim(#char ' ');
+        if (value == "") {
+          return #ok(null);
+        };
+        let chars = value.toArray();
+        if (chars.size() > 80) {
+          return #err("Voice ID must be 80 characters or fewer.");
+        };
+        for (char in chars.values()) {
+          if (not isVoiceIdChar(char)) {
+            return #err("Voice ID can only contain letters, numbers, dashes, and underscores.");
+          };
+        };
+        #ok(?value);
+      };
+    };
+  };
+
   private func requireCallPresetInput(input : Types.CallPresetInput) : Types.CallPresetInput {
     let name = input.name.trim(#char ' ');
     if (name == "") {
@@ -141,10 +175,15 @@ module {
       case (#err(message)) { Runtime.trap(message) };
       case (#ok(value)) { value };
     };
+    let voiceId = switch (sanitizeVoiceId(input.voiceId)) {
+      case (#err(message)) { Runtime.trap(message) };
+      case (#ok(value)) { value };
+    };
     {
       input with
       name = name;
       systemPrompt = prompt;
+      voiceId = voiceId;
       audioFormat = #pcmu;
       sampleRate = #hz8000;
       toolsEnabled = {
@@ -217,6 +256,10 @@ module {
       case (#err(message)) { return #err(message) };
       case (#ok(value)) { value };
     };
+    let voiceId = switch (sanitizeVoiceId(input.voiceId)) {
+      case (#err(message)) { return #err(message) };
+      case (#ok(value)) { value };
+    };
     if (not isE164(input.phoneNumber)) {
       return #err("Twilio phone number must be E.164 format, for example +15551234567.");
     };
@@ -233,6 +276,7 @@ module {
       input with
       name = name;
       systemPrompt = prompt;
+      voiceId = voiceId;
       audioFormat = #pcmu;
       sampleRate = #hz8000;
       toolsEnabled = {
@@ -436,6 +480,7 @@ module {
       name = cleanInput.name;
       systemPrompt = cleanInput.systemPrompt;
       voice = cleanInput.voice;
+      voiceId = cleanInput.voiceId;
       turnDetection = cleanInput.turnDetection;
       audioFormat = cleanInput.audioFormat;
       sampleRate = cleanInput.sampleRate;
@@ -481,6 +526,7 @@ module {
           name = cleanInput.name;
           systemPrompt = cleanInput.systemPrompt;
           voice = cleanInput.voice;
+          voiceId = cleanInput.voiceId;
           turnDetection = cleanInput.turnDetection;
           audioFormat = cleanInput.audioFormat;
           sampleRate = cleanInput.sampleRate;
@@ -552,6 +598,7 @@ module {
           name = existing.name # " (copy)";
           systemPrompt = existing.systemPrompt;
           voice = existing.voice;
+          voiceId = existing.voiceId;
           turnDetection = existing.turnDetection;
           audioFormat = existing.audioFormat;
           sampleRate = existing.sampleRate;
@@ -596,6 +643,7 @@ module {
           phoneNumber = cleanInput.phoneNumber;
           systemPrompt = cleanInput.systemPrompt;
           voice = cleanInput.voice;
+          voiceId = cleanInput.voiceId;
           turnDetection = cleanInput.turnDetection;
           audioFormat = #pcmu;
           sampleRate = #hz8000;
@@ -742,6 +790,7 @@ module {
               phoneNumber = cleanInput.phoneNumber;
               systemPrompt = cleanInput.systemPrompt;
               voice = cleanInput.voice;
+              voiceId = cleanInput.voiceId;
               turnDetection = cleanInput.turnDetection;
               audioFormat = #pcmu;
               sampleRate = #hz8000;

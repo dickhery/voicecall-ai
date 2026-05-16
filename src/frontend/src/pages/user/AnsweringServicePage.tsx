@@ -6,6 +6,7 @@ import {
 } from "@/backend";
 import { AppLayout } from "@/components/AppLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { VoiceIdSelector, getVoiceLabel } from "@/components/VoiceIdSelector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,14 +72,6 @@ const DEFAULT_TOOLS = {
 };
 const MAX_AI_INSTRUCTIONS_CHARS = 8000;
 
-const VOICES: Array<{ value: Voice; label: string }> = [
-  { value: Voice.eve, label: "Eve" },
-  { value: Voice.ara, label: "Ara" },
-  { value: Voice.rex, label: "Rex" },
-  { value: Voice.sal, label: "Sal" },
-  { value: Voice.leo, label: "Leo" },
-];
-
 const MONITOR_SAMPLE_RATE = 8000;
 const MONITOR_JITTER_SECONDS = 0.12;
 
@@ -104,6 +97,7 @@ function buildDefaultPreset(): AnsweringPresetInput {
     phoneNumber: "",
     systemPrompt: "",
     voice: Voice.eve,
+    voiceId: "",
     turnDetection: DEFAULT_TURN_DETECTION,
     audioFormat: AudioFormat.pcmu,
     sampleRate: SampleRate.hz8000,
@@ -412,7 +406,9 @@ function AnsweringPresetCard({
               <p className="text-xs font-medium uppercase text-muted-foreground">
                 Voice
               </p>
-              <p className="mt-1 text-sm font-semibold">{preset.voice}</p>
+              <p className="mt-1 text-sm font-semibold">
+                {getVoiceLabel(preset.voice, preset.voiceId)}
+              </p>
             </div>
             <div className="rounded-md border border-border p-3">
               <p className="text-xs font-medium uppercase text-muted-foreground">
@@ -703,24 +699,17 @@ export default function AnsweringServicePage() {
                     </div>
                     <div className="space-y-2">
                       <Label>Voice</Label>
-                      <div className="grid grid-cols-5 gap-2">
-                        {VOICES.map((voice) => (
-                          <Button
-                            key={voice.value}
-                            type="button"
-                            variant={
-                              input.voice === voice.value
-                                ? "secondary"
-                                : "outline"
-                            }
-                            onClick={() =>
-                              setInput({ ...input, voice: voice.value })
-                            }
-                          >
-                            {voice.label}
-                          </Button>
-                        ))}
-                      </div>
+                      <VoiceIdSelector
+                        value={{ voice: input.voice, voiceId: input.voiceId }}
+                        onChange={(next) =>
+                          setInput({
+                            ...input,
+                            voice: next.voice,
+                            voiceId: next.voiceId ?? "",
+                          })
+                        }
+                        dataOcidPrefix="answering"
+                      />
                     </div>
                     <div className="grid gap-3 md:grid-cols-2">
                       <div className="flex items-center gap-3 rounded-md border border-border p-3">

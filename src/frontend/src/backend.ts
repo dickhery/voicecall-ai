@@ -128,6 +128,7 @@ export interface CallPreset {
     toolsEnabled: ToolsEnabled;
     ownerId: Principal;
     voice: Voice;
+    voiceId?: string;
     name: string;
     sampleRate: SampleRate;
     systemPrompt: string;
@@ -157,6 +158,7 @@ export interface AnsweringPreset {
     phoneNumber: string;
     systemPrompt: string;
     voice: Voice;
+    voiceId?: string;
     turnDetection: TurnDetection;
     audioFormat: AudioFormat;
     sampleRate: SampleRate;
@@ -175,6 +177,7 @@ export interface AnsweringPresetInput {
     phoneNumber: string;
     systemPrompt: string;
     voice: Voice;
+    voiceId?: string;
     turnDetection: TurnDetection;
     audioFormat: AudioFormat;
     sampleRate: SampleRate;
@@ -333,6 +336,7 @@ export interface TransformationInput {
 export interface CallPresetInput {
     toolsEnabled: ToolsEnabled;
     voice: Voice;
+    voiceId?: string;
     name: string;
     sampleRate: SampleRate;
     systemPrompt: string;
@@ -1103,6 +1107,7 @@ function from_candid_AnsweringPreset(value: any): AnsweringPreset {
         phoneNumber: value.phoneNumber,
         systemPrompt: value.systemPrompt,
         voice: from_candid_Voice_n25(undefined as any, undefined as any, value.voice),
+        voiceId: from_candid_opt_text(value.voiceId),
         turnDetection: value.turnDetection,
         audioFormat: from_candid_AudioFormat_n29(undefined as any, undefined as any, value.audioFormat),
         sampleRate: from_candid_SampleRate_n27(undefined as any, undefined as any, value.sampleRate),
@@ -1157,6 +1162,7 @@ function to_candid_AnsweringPresetInput(value: AnsweringPresetInput): any {
         phoneNumber: value.phoneNumber,
         systemPrompt: value.systemPrompt,
         voice: to_candid_Voice_n17(undefined as any, undefined as any, value.voice),
+        voiceId: to_candid_opt_n42(undefined as any, undefined as any, value.voiceId ?? null),
         turnDetection: value.turnDetection,
         audioFormat: to_candid_AudioFormat_n21(undefined as any, undefined as any, value.audioFormat),
         sampleRate: to_candid_SampleRate_n19(undefined as any, undefined as any, value.sampleRate),
@@ -1216,6 +1222,7 @@ function from_candid_record_n24(_uploadFile: (file: ExternalBlob) => Promise<Uin
     toolsEnabled: _ToolsEnabled;
     ownerId: Principal;
     voice: _Voice;
+    voiceId: [] | [string];
     name: string;
     sampleRate: _SampleRate;
     systemPrompt: string;
@@ -1226,6 +1233,7 @@ function from_candid_record_n24(_uploadFile: (file: ExternalBlob) => Promise<Uin
     toolsEnabled: ToolsEnabled;
     ownerId: Principal;
     voice: Voice;
+    voiceId?: string;
     name: string;
     sampleRate: SampleRate;
     systemPrompt: string;
@@ -1237,6 +1245,7 @@ function from_candid_record_n24(_uploadFile: (file: ExternalBlob) => Promise<Uin
         toolsEnabled: value.toolsEnabled,
         ownerId: value.ownerId,
         voice: from_candid_Voice_n25(_uploadFile, _downloadFile, value.voice),
+        voiceId: record_opt_to_undefined(from_candid_opt_n12(_uploadFile, _downloadFile, value.voiceId)),
         name: value.name,
         sampleRate: from_candid_SampleRate_n27(_uploadFile, _downloadFile, value.sampleRate),
         systemPrompt: value.systemPrompt,
@@ -1452,6 +1461,7 @@ function to_candid_opt_n42(_uploadFile: (file: ExternalBlob) => Promise<Uint8Arr
 function to_candid_record_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     toolsEnabled: ToolsEnabled;
     voice: Voice;
+    voiceId?: string;
     name: string;
     sampleRate: SampleRate;
     systemPrompt: string;
@@ -1460,6 +1470,7 @@ function to_candid_record_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8
 }): {
     toolsEnabled: _ToolsEnabled;
     voice: _Voice;
+    voiceId: [] | [string];
     name: string;
     sampleRate: _SampleRate;
     systemPrompt: string;
@@ -1469,6 +1480,7 @@ function to_candid_record_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8
     return {
         toolsEnabled: value.toolsEnabled,
         voice: to_candid_Voice_n17(_uploadFile, _downloadFile, value.voice),
+        voiceId: to_candid_opt_n42(_uploadFile, _downloadFile, value.voiceId ?? null),
         name: value.name,
         sampleRate: to_candid_SampleRate_n19(_uploadFile, _downloadFile, value.sampleRate),
         systemPrompt: value.systemPrompt,

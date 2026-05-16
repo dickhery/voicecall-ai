@@ -21,6 +21,7 @@ import {
 
 const PORT = Number(process.env.PORT || 3000);
 const XAI_MODEL = process.env.XAI_MODEL || "grok-voice-think-fast-1.0";
+const XAI_TTS_VOICES_URL = "https://api.x.ai/v1/tts/voices";
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
 const TRANSCRIPT_FINISH_GRACE_MS = 2_500;
@@ -33,6 +34,38 @@ const CALL_QUEUE_MAX_WAIT_MS = Number(process.env.CALL_QUEUE_MAX_WAIT_MS || 30 *
 const MAX_STEERING_PROMPT_CHARS = 800;
 const SERVER_VERSION = "2026-05-14-incoming-answering";
 const SERVER_STARTED_AT = new Date().toISOString();
+const DEFAULT_XAI_VOICES = [
+  {
+    voiceId: "eve",
+    name: "Eve",
+    description: "Energetic, upbeat default voice",
+    type: "built-in",
+  },
+  {
+    voiceId: "ara",
+    name: "Ara",
+    description: "Warm, friendly conversational voice",
+    type: "built-in",
+  },
+  {
+    voiceId: "rex",
+    name: "Rex",
+    description: "Confident, clear professional voice",
+    type: "built-in",
+  },
+  {
+    voiceId: "sal",
+    name: "Sal",
+    description: "Smooth, balanced versatile voice",
+    type: "built-in",
+  },
+  {
+    voiceId: "leo",
+    name: "Leo",
+    description: "Authoritative, strong instructional voice",
+    type: "built-in",
+  },
+];
 
 const APP_SAFETY_INSTRUCTIONS = [
   "VoiceCall AI safety policy:",
@@ -536,6 +569,55 @@ async function getLinePoolSnapshot() {
   };
 }
 
+function normalizeVoiceIdForXai(value) {
+  return String(value || "").trim();
+}
+
+function resolveVoiceId(input = {}) {
+  return (
+    normalizeVoiceIdForXai(input.voiceId) ||
+    normalizeVoiceIdForXai(input.voice) ||
+    normalizeVoiceIdForXai(process.env.XAI_VOICE) ||
+    "eve"
+  );
+}
+
+function normalizeXaiVoice(rawVoice = {}) {
+  const voiceId = normalizeVoiceIdForXai(
+    rawVoice.voice_id || rawVoice.voiceId || rawVoice.id,
+  );
+  if (!voiceId) return null;
+  return {
+    voiceId,
+    name: String(rawVoice.name || voiceId),
+    description: String(rawVoice.description || rawVoice.tone || ""),
+    type: String(rawVoice.type || rawVoice.category || "built-in"),
+    gender: rawVoice.gender ? String(rawVoice.gender) : undefined,
+    tone: rawVoice.tone ? String(rawVoice.tone) : undefined,
+  };
+}
+
+async function fetchXaiVoiceLibrary() {
+  if (!process.env.XAI_API_KEY) {
+    return { source: "fallback", voices: DEFAULT_XAI_VOICES };
+  }
+
+  const response = await fetch(XAI_TTS_VOICES_URL, {
+    headers: { Authorization: `Bearer ${process.env.XAI_API_KEY}` },
+  });
+  if (!response.ok) {
+    throw new Error(`xAI voice list failed (${response.status})`);
+  }
+  const payload = await response.json();
+  const voices = Array.isArray(payload?.voices)
+    ? payload.voices.map(normalizeXaiVoice).filter(Boolean)
+    : [];
+  return {
+    source: "xai",
+    voices: voices.length > 0 ? voices : DEFAULT_XAI_VOICES,
+  };
+}
+
 function toPlainPreset(input = {}) {
   const turnDetection = input.turnDetection || {};
   return {
@@ -545,7 +627,8 @@ function toPlainPreset(input = {}) {
       input.systemPrompt ||
         "You are a helpful AI phone agent. Be concise, natural, and respectful.",
     ),
-    voice: String(input.voice || process.env.XAI_VOICE || "eve"),
+    voice: resolveVoiceId(input),
+    voiceId: normalizeVoiceIdForXai(input.voiceId) || null,
     turnDetection: {
       serverVad: turnDetection.serverVad !== false,
       threshold: Number(turnDetection.threshold ?? 0.5),
@@ -1520,6 +1603,23 @@ app.get("/health", async (_req, res) => {
     icpServerPrincipal: getIcpServerPrincipalText(),
     model: XAI_MODEL,
   });
+});
+
+app.get("/xai/voices", async (_req, res) => {
+  try {
+    const library = await fetchXaiVoiceLibrary();
+    res.json({ ok: true, ...library });
+  } catch (error) {
+    log("warn", "Unable to fetch xAI voice library", {
+      error: error.message,
+    });
+    res.json({
+      ok: true,
+      source: "fallback",
+      voices: DEFAULT_XAI_VOICES,
+      warning: error.message,
+    });
+  }
 });
 
 app.get("/recordings/:recordingSid/access", async (req, res) => {
