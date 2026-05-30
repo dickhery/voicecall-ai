@@ -41,6 +41,12 @@ function normalizeUrl(value, defaultProtocol = "https") {
   return `${defaultProtocol}://${trimmed}`;
 }
 
+function normalizeOriginUrl(value, defaultProtocol = "https") {
+  const url = normalizeUrl(value, defaultProtocol);
+  if (!url) return "";
+  return new URL(url).origin;
+}
+
 function isLocalUrl(value) {
   return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/i.test(value);
 }
@@ -111,6 +117,18 @@ function resolveVoiceServerUrl(targetMode, existingEnv) {
   return url;
 }
 
+function resolveIiDerivationOrigin(targetMode, frontendUrl, existingEnv) {
+  if (targetMode !== "ic") return "";
+
+  const fromArg = getArg("ii-derivation-origin");
+  const fromEnv = process.env.II_DERIVATION_ORIGIN;
+  const fromExisting = !isPlaceholderValue(existingEnv.ii_derivation_origin)
+    ? existingEnv.ii_derivation_origin
+    : "";
+
+  return normalizeOriginUrl(fromArg || fromEnv || fromExisting || frontendUrl, "https");
+}
+
 if (!["local", "ic"].includes(mode)) {
   throw new Error("Usage: node scripts/configure-frontend-env.mjs <local|ic> [--voice-server-url URL]");
 }
@@ -131,6 +149,7 @@ const frontendUrl =
   mode === "ic"
     ? `https://${frontendId}.icp0.io`
     : `http://${frontendId}.localhost:8000`;
+const iiDerivationOrigin = resolveIiDerivationOrigin(mode, frontendUrl, existingEnv);
 
 const nextEnv = {
   backend_host: mode === "ic" ? "https://icp-api.io" : "http://127.0.0.1:8000",
@@ -145,6 +164,10 @@ const nextEnv = {
   voice_server_url: voiceServerUrl,
 };
 
+if (iiDerivationOrigin) {
+  nextEnv.ii_derivation_origin = iiDerivationOrigin;
+}
+
 writeFileSync(envPath, `${JSON.stringify(nextEnv, null, 2)}\n`);
 
 console.log(`Wrote ${envPath}`);
@@ -152,3 +175,6 @@ console.log(`Backend canister: ${mappings.backend}`);
 console.log(`Frontend canister: ${frontendId}`);
 console.log(`Open frontend at: ${frontendUrl}`);
 console.log(`Voice server URL: ${voiceServerUrl}`);
+if (iiDerivationOrigin) {
+  console.log(`Internet Identity derivation origin: ${iiDerivationOrigin}`);
+}

@@ -2,7 +2,6 @@ import { Voice } from "@/backend";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
   TooltipContent,
@@ -628,7 +627,7 @@ export function VoiceIdSelector({
                 No voices match
               </div>
             ) : (
-              <ScrollArea className="max-h-72 rounded-md border border-border bg-background/60">
+              <div className="max-h-[min(18rem,60vh)] overflow-y-auto rounded-md border border-border bg-background/60">
                 <div className="grid grid-cols-1 gap-2 p-2 sm:grid-cols-2 lg:grid-cols-3">
                   {filteredVoices.map((voice) => {
                     const voiceId = normalizeVoiceId(voice.voiceId);
@@ -691,7 +690,7 @@ export function VoiceIdSelector({
                     );
                   })}
                 </div>
-              </ScrollArea>
+              </div>
             )}
           </div>
         )}

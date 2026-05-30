@@ -1,5 +1,9 @@
 [
   {
+    "match": ".well-known",
+    "ignore": false
+  },
+  {
     "match": "**/*",
     "security_policy": "standard",
     "headers": {
@@ -8,6 +12,21 @@
       "Content-Security-Policy": "default-src 'self'; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 ws://localhost:3000 ws://127.0.0.1:3000 https://icp-api.io https://ic0.app https://*.ic0.app https://icp0.io https://*.icp0.io https://id.ai https://identity.internetcomputer.org https://identity.ic0.app https://blob.caffeine.ai https://voicecall.richardhery.com wss://voicecall.richardhery.com; img-src 'self' data: blob: https://blob.caffeine.ai; media-src 'self' data: blob: http://localhost:3000 http://127.0.0.1:3000 https://voicecall.richardhery.com; style-src 'self' 'unsafe-inline'; font-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; frame-src https://id.ai https://identity.internetcomputer.org https://identity.ic0.app; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
     },
     "allow_raw_access": false
+  },
+  {
+    "match": ".well-known/ic-domains",
+    "headers": {
+      "Content-Type": "text/plain; charset=utf-8"
+    },
+    "ignore": false
+  },
+  {
+    "match": ".well-known/ii-alternative-origins",
+    "headers": {
+      "Access-Control-Allow-Origin": "*",
+      "Content-Type": "application/json"
+    },
+    "ignore": false
   },
   {
     "match": "assets/**/*",

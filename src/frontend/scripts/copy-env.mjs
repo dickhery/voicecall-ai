@@ -57,6 +57,16 @@ for (const key of requiredKeys) {
   }
 }
 
+if (
+  env.ii_derivation_origin &&
+  String(env.ii_derivation_origin).trim().toLowerCase() !== "undefined" &&
+  isPlaceholder(env.ii_derivation_origin)
+) {
+  throw new Error(
+    `${source} has an invalid ii_derivation_origin. Run pnpm configure:frontend:ic before building for mainnet.`,
+  );
+}
+
 const usesMainnetBackend =
   String(env.backend_host || "").replace(/\/+$/, "") === "https://icp-api.io";
 

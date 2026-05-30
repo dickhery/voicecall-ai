@@ -1052,9 +1052,6 @@ video {
 .max-h-48 {
   max-height: 12rem;
 }
-.max-h-72 {
-  max-height: 18rem;
-}
 .max-h-\[300px\] {
   max-height: 300px;
 }
@@ -1066,6 +1063,9 @@ video {
 }
 .max-h-\[90vh\] {
   max-height: 90vh;
+}
+.max-h-\[min\(18rem\2c 60vh\)\] {
+  max-height: min(18rem, 60vh);
 }
 .min-h-0 {
   min-height: 0px;

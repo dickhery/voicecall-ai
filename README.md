@@ -451,6 +451,80 @@ https://<frontendId>.icp0.io
 
 If Chrome shows a certificate warning on `*.icp-api.io`, you are on the wrong host for the frontend. Switch the address to `*.icp0.io` or `*.ic0.app`.
 
+## Custom Domain
+
+The frontend canister is prepared for:
+
+```text
+https://voicecallerai.online
+https://www.voicecallerai.online
+```
+
+The deployed frontend canister ID is:
+
+```text
+2nukr-cyaaa-aaaak-qy2ja-cai
+```
+
+The IC custom-domain verifier needs these files in the asset canister:
+
+```text
+src/frontend/public/.well-known/ic-domains
+src/frontend/public/.well-known/ii-alternative-origins
+```
+
+`ic-domains` proves the canister is willing to serve the custom domains. `ii-alternative-origins` lets Internet Identity keep using the existing `https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io` principal derivation origin when users sign in from the custom domain.
+
+Before registering the domain, rebuild and redeploy the frontend:
+
+```powershell
+pnpm configure:frontend:ic -- --voice-server-url https://voicecall.richardhery.com
+icp deploy -e ic frontend
+```
+
+Then confirm the deployed files are visible:
+
+```powershell
+curl -sL https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io/.well-known/ic-domains
+curl -sL https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io/.well-known/ii-alternative-origins
+```
+
+In Namecheap Advanced DNS, remove the parking and redirect records, then add IC records for both the apex and `www` host:
+
+```text
+ALIAS  @                    voicecallerai.online.icp1.io
+CNAME  _acme-challenge      _acme-challenge.voicecallerai.online.icp2.io
+TXT    _canister-id         2nukr-cyaaa-aaaak-qy2ja-cai
+
+ALIAS  www                  www.voicecallerai.online.icp1.io
+CNAME  _acme-challenge.www  _acme-challenge.www.voicecallerai.online.icp2.io
+TXT    _canister-id.www     2nukr-cyaaa-aaaak-qy2ja-cai
+```
+
+After DNS propagates, validate and register each host:
+
+```powershell
+curl -sL -X GET https://icp0.io/custom-domains/v1/voicecallerai.online/validate
+curl -sL -X POST https://icp0.io/custom-domains/v1/voicecallerai.online
+curl -sL -X GET https://icp0.io/custom-domains/v1/www.voicecallerai.online/validate
+curl -sL -X POST https://icp0.io/custom-domains/v1/www.voicecallerai.online
+```
+
+Poll until each returns `registration_status` as `registered`:
+
+```powershell
+curl -sL -X GET https://icp0.io/custom-domains/v1/voicecallerai.online
+curl -sL -X GET https://icp0.io/custom-domains/v1/www.voicecallerai.online
+```
+
+Update the Windows voice server `.env` so browser calls and Stripe returns use the custom domain, then restart the service:
+
+```text
+FRONTEND_ORIGIN=https://voicecallerai.online,https://www.voicecallerai.online,https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+FRONTEND_URL=https://voicecallerai.online
+FRONTEND_CANISTER_ID=2nukr-cyaaa-aaaak-qy2ja-cai
+```
+
 ## Test an End-To-End Call
 
 1. Keep the Windows voice server running.
