@@ -94,7 +94,7 @@ try {
       $frontendOrigin = "https://$frontendCanisterId.icp0.io"
     } else {
       Write-Warning "FRONTEND_ORIGIN is not restricted. Use * only for temporary local testing."
-      $frontendOrigin = "https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io"
+      $frontendOrigin = "https://voicecallai.online"
     }
   }
 

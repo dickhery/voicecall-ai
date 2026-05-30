@@ -293,7 +293,7 @@ Expected:
 ```text
 ok                : True
 publicHost        : your-tunnel-host
-cors.allowedOrigins includes https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+cors.allowedOrigins includes https://voicecallai.online
 twilioConfigured  : True
 xaiConfigured     : True
 ```
@@ -301,13 +301,13 @@ xaiConfigured     : True
 From the MacBook, test the public CORS path after the Windows server is restarted:
 
 ```bash
-curl -i -H "Origin: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io" https://voicecall.richardhery.com/health
+curl -i -H "Origin: https://voicecallai.online" https://voicecall.richardhery.com/health
 ```
 
 The response headers must include:
 
 ```text
-Access-Control-Allow-Origin: https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+Access-Control-Allow-Origin: https://voicecallai.online
 ```
 
 ### 6. Update and restart the NSSM service
@@ -339,7 +339,7 @@ Then verify:
 ```powershell
 Invoke-WebRequest `
   -Uri https://voicecall.richardhery.com/health `
-  -Headers @{ Origin = "https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io" } `
+  -Headers @{ Origin = "https://voicecallai.online" } `
   -UseBasicParsing
 ```
 
@@ -456,8 +456,8 @@ If Chrome shows a certificate warning on `*.icp-api.io`, you are on the wrong ho
 The frontend canister is prepared for:
 
 ```text
-https://voicecallerai.online
-https://www.voicecallerai.online
+https://voicecallai.online
+https://www.voicecallai.online
 ```
 
 The deployed frontend canister ID is:
@@ -492,36 +492,36 @@ curl -sL https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io/.well-known/ii-alternative-
 In Namecheap Advanced DNS, remove the parking and redirect records, then add IC records for both the apex and `www` host:
 
 ```text
-ALIAS  @                    voicecallerai.online.icp1.io
-CNAME  _acme-challenge      _acme-challenge.voicecallerai.online.icp2.io
+ALIAS  @                    voicecallai.online.icp1.io
+CNAME  _acme-challenge      _acme-challenge.voicecallai.online.icp2.io
 TXT    _canister-id         2nukr-cyaaa-aaaak-qy2ja-cai
 
-ALIAS  www                  www.voicecallerai.online.icp1.io
-CNAME  _acme-challenge.www  _acme-challenge.www.voicecallerai.online.icp2.io
+ALIAS  www                  www.voicecallai.online.icp1.io
+CNAME  _acme-challenge.www  _acme-challenge.www.voicecallai.online.icp2.io
 TXT    _canister-id.www     2nukr-cyaaa-aaaak-qy2ja-cai
 ```
 
 After DNS propagates, validate and register each host:
 
 ```powershell
-curl -sL -X GET https://icp0.io/custom-domains/v1/voicecallerai.online/validate
-curl -sL -X POST https://icp0.io/custom-domains/v1/voicecallerai.online
-curl -sL -X GET https://icp0.io/custom-domains/v1/www.voicecallerai.online/validate
-curl -sL -X POST https://icp0.io/custom-domains/v1/www.voicecallerai.online
+curl -sL -X GET https://icp0.io/custom-domains/v1/voicecallai.online/validate
+curl -sL -X POST https://icp0.io/custom-domains/v1/voicecallai.online
+curl -sL -X GET https://icp0.io/custom-domains/v1/www.voicecallai.online/validate
+curl -sL -X POST https://icp0.io/custom-domains/v1/www.voicecallai.online
 ```
 
 Poll until each returns `registration_status` as `registered`:
 
 ```powershell
-curl -sL -X GET https://icp0.io/custom-domains/v1/voicecallerai.online
-curl -sL -X GET https://icp0.io/custom-domains/v1/www.voicecallerai.online
+curl -sL -X GET https://icp0.io/custom-domains/v1/voicecallai.online
+curl -sL -X GET https://icp0.io/custom-domains/v1/www.voicecallai.online
 ```
 
 Update the Windows voice server `.env` so browser calls and Stripe returns use the custom domain, then restart the service:
 
 ```text
-FRONTEND_ORIGIN=https://voicecallerai.online,https://www.voicecallerai.online,https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
-FRONTEND_URL=https://voicecallerai.online
+FRONTEND_ORIGIN=https://voicecallai.online,https://www.voicecallai.online,https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+FRONTEND_URL=https://voicecallai.online
 FRONTEND_CANISTER_ID=2nukr-cyaaa-aaaak-qy2ja-cai
 ```
 
@@ -574,7 +574,7 @@ If `voice_server_url` changes, add the new origin to both `connect-src` and `med
 The Windows Node server also enforces CORS. If the browser console says `No 'Access-Control-Allow-Origin' header`, check `src/server/.env` on the Windows PC:
 
 ```text
-FRONTEND_ORIGIN=https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
+FRONTEND_ORIGIN=https://voicecallai.online,https://www.voicecallai.online,https://2nukr-cyaaa-aaaak-qy2ja-cai.icp0.io
 FRONTEND_CANISTER_ID=2nukr-cyaaa-aaaak-qy2ja-cai
 ```
 
