@@ -3,10 +3,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { type XaiVoiceOption, listXaiVoiceLibrary } from "@/lib/voice-server";
-import { ListFilter, Loader2, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  type XaiVoiceOption,
+  listXaiVoiceLibrary,
+  previewXaiVoice,
+} from "@/lib/voice-server";
+import { ListFilter, Loader2, Search, Volume2, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 export const DEFAULT_XAI_VOICE_OPTIONS: XaiVoiceOption[] = [
   {
@@ -355,6 +365,10 @@ export function VoiceIdSelector({
   const [isVoiceListDismissed, setIsVoiceListDismissed] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState<VoiceFilters>(EMPTY_FILTERS);
+  const [previewingVoiceId, setPreviewingVoiceId] = useState<string | null>(
+    null,
+  );
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     let canceled = false;
@@ -371,6 +385,13 @@ export function VoiceIdSelector({
       });
     return () => {
       canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+      audioRef.current = null;
     };
   }, []);
 
@@ -431,6 +452,61 @@ export function VoiceIdSelector({
     setFilters(EMPTY_FILTERS);
   }
 
+  async function handlePreviewVoice(voiceId: string) {
+    const normalized = normalizeVoiceId(voiceId);
+    if (!normalized) return;
+    audioRef.current?.pause();
+    audioRef.current = null;
+    setPreviewingVoiceId(normalized);
+    try {
+      const preview = await previewXaiVoice({ voiceId });
+      const audio = new Audio(
+        `data:${preview.contentType};base64,${preview.audioBase64}`,
+      );
+      audioRef.current = audio;
+      await audio.play();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Unable to preview voice",
+      );
+    } finally {
+      setPreviewingVoiceId((current) =>
+        current === normalized ? null : current,
+      );
+    }
+  }
+
+  function renderPreviewButton(voiceId: string, label: string) {
+    const normalized = normalizeVoiceId(voiceId);
+    const isPreviewing = previewingVoiceId === normalized;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={(event) => {
+              event.stopPropagation();
+              void handlePreviewVoice(voiceId);
+            }}
+            disabled={isPreviewing || !normalized}
+            aria-label={`Preview ${label}`}
+            data-ocid={`${dataOcidPrefix}.voice_preview.${normalized || "custom"}`}
+          >
+            {isPreviewing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Volume2 className="h-4 w-4" />
+            )}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Preview voice</TooltipContent>
+      </Tooltip>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="space-y-3 rounded-md border border-border bg-muted/10 p-3">
@@ -444,6 +520,10 @@ export function VoiceIdSelector({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            {renderPreviewButton(
+              activeVoiceOption?.voiceId ?? activeVoiceId,
+              activeVoiceLabel,
+            )}
             <Button
               type="button"
               variant={showAllVoices ? "secondary" : "outline"}
@@ -559,44 +639,55 @@ export function VoiceIdSelector({
                       ...voiceFilters.tone.slice(0, 2),
                     ].slice(0, 3);
                     return (
-                      <Button
+                      <div
                         key={voice.voiceId}
-                        type="button"
-                        variant={isActive ? "secondary" : "outline"}
                         className={cn(
-                          "h-auto min-h-24 justify-start whitespace-normal p-3 text-left",
-                          "flex-col items-start gap-1.5",
+                          "flex min-h-24 gap-1 rounded-md border p-1 transition-colors",
+                          isActive
+                            ? "border-primary/40 bg-secondary text-secondary-foreground"
+                            : "border-input bg-background hover:bg-accent hover:text-accent-foreground",
                         )}
-                        onClick={() => {
-                          const legacyVoice = LEGACY_VOICE_BY_ID[voiceId];
-                          onChange({
-                            voice: legacyVoice ?? value.voice,
-                            voiceId: legacyVoice ? "" : voice.voiceId,
-                          });
-                          setShowAllVoices(false);
-                          setIsVoiceListDismissed(true);
-                        }}
-                        data-ocid={`${dataOcidPrefix}.preset_voice.${voiceId}`}
                       >
-                        <span className="text-sm font-semibold leading-tight">
-                          {voice.name || voice.voiceId}
-                        </span>
-                        <span className="text-[10px] leading-tight text-muted-foreground">
-                          {voice.description || voice.tone || voice.voiceId}
-                        </span>
-                        {detailTags.length > 0 && (
-                          <span className="flex flex-wrap gap-1 pt-0.5">
-                            {detailTags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="rounded-sm bg-muted px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground"
-                              >
-                                {formatFilterLabel(tag)}
-                              </span>
-                            ))}
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 flex-col items-start gap-1.5 rounded-sm px-2 py-2 text-left"
+                          onClick={() => {
+                            const legacyVoice = LEGACY_VOICE_BY_ID[voiceId];
+                            onChange({
+                              voice: legacyVoice ?? value.voice,
+                              voiceId: legacyVoice ? "" : voice.voiceId,
+                            });
+                            setShowAllVoices(false);
+                            setIsVoiceListDismissed(true);
+                          }}
+                          data-ocid={`${dataOcidPrefix}.preset_voice.${voiceId}`}
+                        >
+                          <span className="text-sm font-semibold leading-tight">
+                            {voice.name || voice.voiceId}
                           </span>
-                        )}
-                      </Button>
+                          <span className="line-clamp-2 text-[10px] leading-tight text-muted-foreground">
+                            {voice.description || voice.tone || voice.voiceId}
+                          </span>
+                          {detailTags.length > 0 && (
+                            <span className="flex flex-wrap gap-1 pt-0.5">
+                              {detailTags.map((tag) => (
+                                <span
+                                  key={tag}
+                                  className="rounded-sm bg-muted px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground"
+                                >
+                                  {formatFilterLabel(tag)}
+                                </span>
+                              ))}
+                            </span>
+                          )}
+                        </button>
+                        <div className="pt-1">
+                          {renderPreviewButton(
+                            voice.voiceId,
+                            voice.name || voice.voiceId,
+                          )}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

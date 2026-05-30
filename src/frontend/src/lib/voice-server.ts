@@ -59,6 +59,13 @@ export interface XaiVoiceLibraryResponse {
   warning?: string;
 }
 
+export interface XaiVoicePreviewResponse {
+  ok: true;
+  voiceId: string;
+  contentType: "audio/wav";
+  audioBase64: string;
+}
+
 export interface CheckoutSessionResponse {
   ok: true;
   id: string;
@@ -168,6 +175,19 @@ async function postJson<T>(
 
 export async function listXaiVoiceLibrary(): Promise<XaiVoiceLibraryResponse> {
   return getJson<XaiVoiceLibraryResponse>("/xai/voices");
+}
+
+export async function previewXaiVoice({
+  voiceId,
+  text,
+}: {
+  voiceId: string;
+  text?: string;
+}): Promise<XaiVoicePreviewResponse> {
+  return postJson<XaiVoicePreviewResponse>("/xai/voice-preview", {
+    voiceId,
+    text,
+  });
 }
 
 export async function startVoiceServerCall({

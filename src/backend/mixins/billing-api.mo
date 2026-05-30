@@ -76,7 +76,7 @@ mixin (
         CallsLib.addSystemLog(
           callsState,
           #info,
-          "Credited " # debug_show(seconds) # " paid seconds for " # Principal.toText(user),
+          "Credited " # debug_show(seconds) # " paid seconds for " # user.toText(),
           null,
         );
       };
@@ -100,7 +100,7 @@ mixin (
         CallsLib.addSystemLog(
           callsState,
           #info,
-          "Added " # debug_show(minutes) # " promo minutes for " # Principal.toText(user),
+          "Added " # debug_show(minutes) # " promo minutes for " # user.toText(),
           null,
         );
       };

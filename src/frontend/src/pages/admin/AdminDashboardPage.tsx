@@ -550,10 +550,7 @@ export default function AdminDashboardPage() {
                           <Switch
                             checked={line.enabled}
                             onCheckedChange={(enabled) =>
-                              handleToggleTwilioLine(
-                                line.phoneNumber,
-                                enabled,
-                              )
+                              handleToggleTwilioLine(line.phoneNumber, enabled)
                             }
                             aria-label={`Toggle ${line.phoneNumber}`}
                             data-ocid={`admin.twilio_line.toggle.${line.phoneNumber}`}

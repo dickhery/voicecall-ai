@@ -375,7 +375,7 @@ module {
         case (?line) { [line] };
       };
     } else {
-      Array.sort(configured, compareLines);
+      configured.sort(compareLines);
     };
   };
 
@@ -765,7 +765,7 @@ module {
         });
       };
     };
-    Array.sort(presets.toArray(), compareAnsweringNewestFirst);
+    presets.toArray().sort(compareAnsweringNewestFirst);
   };
 
   public func getAnsweringPreset(

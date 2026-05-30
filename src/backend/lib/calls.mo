@@ -132,7 +132,7 @@ module {
             case (?r) { buf.add(toPublic(r)) };
           };
         });
-        Array.sort(buf.toArray(), compareCallsNewestFirst);
+        buf.toArray().sort(compareCallsNewestFirst);
       };
     };
   };
@@ -140,7 +140,7 @@ module {
   public func listAllCalls(state : State) : [Types.CallRecordPublic] {
     let buf = List.empty<Types.CallRecordPublic>();
     state.callRecords.forEach(func(_k, r) { buf.add(toPublic(r)) });
-    Array.sort(buf.toArray(), compareCallsNewestFirst);
+    buf.toArray().sort(compareCallsNewestFirst);
   };
 
   public func addSystemLog(
@@ -161,7 +161,7 @@ module {
   public func getSystemLogs(state : State, limit : Nat) : [Types.SystemLog] {
     let total = state.systemLogs.size();
     let start : Nat = if (total > limit) { total - limit } else { 0 };
-    Array.reverse(state.systemLogs.sliceToArray(start, total));
+    state.systemLogs.sliceToArray(start, total).reverse();
   };
 
   public func registerAnsweringLiveSession(

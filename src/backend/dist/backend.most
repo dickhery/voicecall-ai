@@ -6,20 +6,23 @@ type AdminConfig__36162014 =
     var twilioFromNumber : Text;
     var xaiApiKey : Text
   };
+type AnsweringCaptureOptions__754259101 =
+  {consentConfirmed : Bool; recordAudio : Bool; saveTranscript : Bool};
+type AnsweringLiveSession__281546138 =
+  {
+    allowedSeconds : Nat;
+    answeringPresetId : Nat;
+    answeringPresetName : Text;
+    callSid : Text;
+    callerPhone : Text;
+    monitorToken : Text;
+    sessionId : Text;
+    startedAt : Int;
+    userId : Principal
+  };
+type AnsweringPresetStatus__939164445 = {#pendingVerification; #verified};
 type AudioFormat__500525639 = {#pcm; #pcma; #pcmu};
 type CallId__642369320 = Nat;
-type CallPreset__736603966 =
-  {
-    audioFormat : AudioFormat__500525639;
-    id : Nat;
-    name : Text;
-    ownerId : Principal;
-    sampleRate : SampleRate__591095646;
-    systemPrompt : Text;
-    toolsEnabled : ToolsEnabled__811196006;
-    turnDetection : TurnDetection__119024512;
-    voice : Voice__817973016
-  };
 type CallRecord__52248411 =
   {
     var callSid : ?Text;
@@ -92,6 +95,39 @@ type PurchaseIntent__399492561 =
   };
 type SampleRate__591095646 =
   {#hz16000; #hz22050; #hz24000; #hz32000; #hz44100; #hz48000; #hz8000};
+type StoredAnsweringPreset__731606231 =
+  {
+    audioFormat : AudioFormat__500525639;
+    captureOptions : AnsweringCaptureOptions__754259101;
+    createdAt : Int;
+    enabled : Bool;
+    id : Nat;
+    lastIncomingAt : ?Int;
+    name : Text;
+    ownerId : Principal;
+    phoneNumber : Text;
+    sampleRate : SampleRate__591095646;
+    systemPrompt : Text;
+    toolsEnabled : ToolsEnabled__811196006;
+    turnDetection : TurnDetection__119024512;
+    updatedAt : Int;
+    verificationStatus : AnsweringPresetStatus__939164445;
+    verifiedAt : ?Int;
+    voice : Voice__817973016;
+    webhookSecret : Text
+  };
+type StoredCallPreset__999262307 =
+  {
+    audioFormat : AudioFormat__500525639;
+    id : Nat;
+    name : Text;
+    ownerId : Principal;
+    sampleRate : SampleRate__591095646;
+    systemPrompt : Text;
+    toolsEnabled : ToolsEnabled__811196006;
+    turnDetection : TurnDetection__119024512;
+    voice : Voice__817973016
+  };
 type StripeMode__732299346 = {#live; #test};
 type SystemLog__934239505 =
   {
@@ -114,10 +150,28 @@ type TwilioLine__653727659 =
 type UserRole__1073662873 = {#admin; #guest; #user};
 type Voice__817973016 = {#ara; #eve; #leo; #rex; #sal};
 actor {
+  stable ANSWERING_PRESET_ID_OFFSET : Nat;
   stable accessControlState :
     {
       var adminAssigned : Bool;
       userRoles : Map__605269027<Principal, UserRole__1073662873>
+    };
+  stable answeringLiveState :
+    {activeSessions : Map__605269027<Text, AnsweringLiveSession__281546138>};
+  stable answeringPresetVoiceIds :
+    {
+      var root : Node__46230540<PresetId__8920344, Text>;
+      var size : Nat__490723111
+    };
+  stable answeringState :
+    {
+      nextAnsweringPresetId : {var value : Nat};
+      presetIdByPhoneNumber : Map__605269027<Text, PresetId__8920344>;
+      presetIdByWebhookSecret : Map__605269027<Text, PresetId__8920344>;
+      presetIdsByOwner :
+        Map__605269027<Principal, List__415060402<PresetId__8920344>>;
+      presets :
+        Map__605269027<PresetId__8920344, StoredAnsweringPreset__731606231>
     };
   stable billingState :
     {
@@ -128,6 +182,11 @@ actor {
       processedStripeSessions : Map__605269027<Text, Bool>;
       purchaseIntents : Map__605269027<Text, PurchaseIntent__399492561>;
       reservedSecondsByUser : Map__605269027<Principal, Nat>
+    };
+  stable callPresetVoiceIds :
+    {
+      var root : Node__46230540<PresetId__8920344, Text>;
+      var size : Nat__490723111
     };
   stable callsState :
     {
@@ -141,7 +200,8 @@ actor {
     {
       adminConfig : AdminConfig__36162014;
       nextPresetId : {var value : Nat};
-      presets : Map__605269027<PresetId__8920344, CallPreset__736603966>
+      presets :
+        Map__605269027<PresetId__8920344, StoredCallPreset__999262307>
     };
   stable twilioLineState :
     {

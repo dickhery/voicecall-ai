@@ -356,7 +356,9 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
             return;
           }
           if (serverCall.queuePosition) {
-            setErrorMessage(`Waiting for a free line. Position ${serverCall.queuePosition}.`);
+            setErrorMessage(
+              `Waiting for a free line. Position ${serverCall.queuePosition}.`,
+            );
           }
         } catch (err) {
           cleanupQueuePolling();
@@ -536,39 +538,44 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     await startLiveAudio();
   }, [isListeningLive, startLiveAudio, stopLiveAudio]);
 
-  const steerConversation = useCallback(async (prompt: string) => {
-    const cleanPrompt = prompt.trim();
-    const sessionId = activeSessionIdRef.current;
-    const monitorToken = monitorTokenRef.current;
+  const steerConversation = useCallback(
+    async (prompt: string) => {
+      const cleanPrompt = prompt.trim();
+      const sessionId = activeSessionIdRef.current;
+      const monitorToken = monitorTokenRef.current;
 
-    if (!cleanPrompt) {
-      setSteeringError("Enter live guidance before sending.");
-      return;
-    }
-    if (status !== "in_call" || !sessionId || !monitorToken) {
-      setSteeringError("Live guidance is available once the call is connected.");
-      return;
-    }
+      if (!cleanPrompt) {
+        setSteeringError("Enter live guidance before sending.");
+        return;
+      }
+      if (status !== "in_call" || !sessionId || !monitorToken) {
+        setSteeringError(
+          "Live guidance is available once the call is connected.",
+        );
+        return;
+      }
 
-    setIsSendingSteeringPrompt(true);
-    setSteeringError(null);
-    try {
-      await steerVoiceServerCall({
-        sessionId,
-        monitorToken,
-        prompt: cleanPrompt,
-      });
-      toast.success("Live guidance sent");
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Unable to send live guidance.";
-      setSteeringError(message);
-      toast.error(message);
-      throw err;
-    } finally {
-      setIsSendingSteeringPrompt(false);
-    }
-  }, [status]);
+      setIsSendingSteeringPrompt(true);
+      setSteeringError(null);
+      try {
+        await steerVoiceServerCall({
+          sessionId,
+          monitorToken,
+          prompt: cleanPrompt,
+        });
+        toast.success("Live guidance sent");
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Unable to send live guidance.";
+        setSteeringError(message);
+        toast.error(message);
+        throw err;
+      } finally {
+        setIsSendingSteeringPrompt(false);
+      }
+    },
+    [status],
+  );
 
   useEffect(() => {
     return () => {

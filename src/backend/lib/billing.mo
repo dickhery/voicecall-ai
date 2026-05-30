@@ -145,7 +145,7 @@ module {
     switch (getPackage(packageId)) {
       case null { #err("Unknown phone time package") };
       case (?pkg) {
-        let id = "pi_" # Nat.toText(state.nextPurchaseIntentId.value);
+        let id = "pi_" # state.nextPurchaseIntentId.value.toText();
         state.nextPurchaseIntentId.value += 1;
         let intent : Types.PurchaseIntent = {
           id;
@@ -242,7 +242,7 @@ module {
     user : Principal,
     minutes : Nat,
   ) : Types.BillingMutationResult {
-    if (Principal.isAnonymous(user)) {
+    if (user.isAnonymous()) {
       return #err("Cannot credit the anonymous user");
     };
     if (minutes == 0) {
@@ -270,8 +270,8 @@ module {
     let idNumber = state.nextReservationId.value;
     state.nextReservationId.value += 1;
     let now = Time.now();
-    let id = "res_" # Nat.toText(idNumber);
-    let token = "ct_" # Nat.toText(idNumber) # "_" # Int.toText(now) # "_" # Principal.toText(user);
+    let id = "res_" # idNumber.toText();
+    let token = "ct_" # idNumber.toText() # "_" # now.toText() # "_" # user.toText();
     let reservation : Types.CallReservation = {
       id;
       callId;

@@ -32,8 +32,24 @@ const BRIDGE_RECORDING_TTL_MS = Number(
 const LINE_CONFIG_REFRESH_MS = Number(process.env.LINE_CONFIG_REFRESH_MS || 30_000);
 const CALL_QUEUE_MAX_WAIT_MS = Number(process.env.CALL_QUEUE_MAX_WAIT_MS || 30 * 60 * 1000);
 const MAX_STEERING_PROMPT_CHARS = 800;
-const SERVER_VERSION = "2026-05-14-incoming-answering";
+const MAX_VOICE_PREVIEW_TEXT_CHARS = 220;
+const VOICE_PREVIEW_TIMEOUT_MS = Number(
+  process.env.VOICE_PREVIEW_TIMEOUT_MS || 12_000,
+);
+const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
+  process.env.VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS || 60_000,
+);
+const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
+  process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
+);
+const SERVER_VERSION = "2026-05-29-natural-call-flow";
 const SERVER_STARTED_AT = new Date().toISOString();
+const CALL_DIRECTIONS = {
+  INBOUND: "inbound",
+  OUTBOUND: "outbound",
+};
+const DEFAULT_VOICE_PREVIEW_TEXT =
+  "Hello, this is a quick sample of my voice. I can sound natural, clear, and conversational on a phone call.";
 const DEFAULT_XAI_VOICES = [
   {
     voiceId: "eve",
@@ -256,6 +272,7 @@ const callSessions = new Map();
 const callsBySid = new Map();
 const activeLineSessions = new Map();
 const bridgeRecordings = new Map();
+const voicePreviewRateLimits = new Map();
 const callQueue = [];
 let queueProcessing = false;
 let lineConfigCache = {
@@ -373,9 +390,12 @@ function assertSafeInstructionText(text, label) {
   throw error;
 }
 
-function buildSafeInstructions(systemPrompt) {
+function buildSafeInstructions(systemPrompt, ...extraInstructions) {
   const prompt = String(systemPrompt || "").trim();
-  return [prompt, APP_SAFETY_INSTRUCTIONS].filter(Boolean).join("\n\n");
+  return [prompt, ...extraInstructions, APP_SAFETY_INSTRUCTIONS]
+    .map((text) => String(text || "").trim())
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function normalizeSteeringPrompt(input) {
@@ -592,6 +612,28 @@ function resolveVoiceId(input = {}) {
   );
 }
 
+function normalizeCallDirection(value) {
+  return value === CALL_DIRECTIONS.INBOUND
+    ? CALL_DIRECTIONS.INBOUND
+    : CALL_DIRECTIONS.OUTBOUND;
+}
+
+function buildCallDirectionInstructions(direction) {
+  if (direction === CALL_DIRECTIONS.INBOUND) {
+    return [
+      "You are answering an incoming phone call on behalf of the user.",
+      "When the realtime session starts, greet the caller first with one short natural opening such as 'Hello?' or a warm brief hello.",
+      "After that opening, pause and listen. Keep the first turn concise and do not launch into a long script.",
+    ].join(" ");
+  }
+
+  return [
+    "You are making an outbound phone call.",
+    "When the call connects, stay silent at first and let the called person answer or acknowledge the call.",
+    "Only begin speaking after the called person has finished their opening. Do not speak over the called person.",
+  ].join(" ");
+}
+
 function normalizeXaiVoice(rawVoice = {}) {
   const voiceId = normalizeVoiceIdForXai(
     rawVoice.voice_id || rawVoice.voiceId || rawVoice.id,
@@ -685,16 +727,23 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
-function buildXaiSessionUpdate(preset) {
+function buildXaiSessionUpdate(
+  preset,
+  { direction = CALL_DIRECTIONS.OUTBOUND } = {},
+) {
   const tools = [];
   if (preset.toolsEnabled.webSearch) tools.push({ type: "web_search" });
   if (preset.toolsEnabled.xSearch) tools.push({ type: "x_search" });
+  const callDirection = normalizeCallDirection(direction);
 
   return {
     type: "session.update",
     session: {
       voice: preset.voice,
-      instructions: buildSafeInstructions(preset.systemPrompt),
+      instructions: buildSafeInstructions(
+        preset.systemPrompt,
+        buildCallDirectionInstructions(callDirection),
+      ),
       turn_detection: {
         type: "server_vad",
         threshold: clamp(preset.turnDetection.threshold, 0.1, 0.9),
@@ -852,6 +901,188 @@ function buildPcmWavFromMuLaw(chunks) {
     }
   }
   return buffer;
+}
+
+function requireXaiConfig() {
+  if (!process.env.XAI_API_KEY) {
+    throw new Error("xAI API key is not configured.");
+  }
+}
+
+function normalizeVoicePreviewVoiceId(value) {
+  const voiceId = normalizeVoiceIdForXai(value);
+  if (!voiceId) {
+    throw new Error("voiceId is required.");
+  }
+  if (voiceId.length > 80 || !/^[A-Za-z0-9_-]+$/.test(voiceId)) {
+    throw new Error(
+      "Voice ID can only contain letters, numbers, dashes, and underscores.",
+    );
+  }
+  return voiceId;
+}
+
+function normalizeVoicePreviewText(value) {
+  const text = String(value || DEFAULT_VOICE_PREVIEW_TEXT)
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_VOICE_PREVIEW_TEXT_CHARS);
+  assertSafeInstructionText(text, "Voice preview text");
+  return text || DEFAULT_VOICE_PREVIEW_TEXT;
+}
+
+function assertVoicePreviewRateLimit(req) {
+  const key =
+    String(req.get("x-forwarded-for") || "")
+      .split(",")[0]
+      .trim() ||
+    req.ip ||
+    "unknown";
+  const now = Date.now();
+  const existing = voicePreviewRateLimits.get(key);
+  if (!existing || existing.resetAt <= now) {
+    voicePreviewRateLimits.set(key, {
+      count: 1,
+      resetAt: now + VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS,
+    });
+    return;
+  }
+  if (existing.count >= VOICE_PREVIEW_RATE_LIMIT_MAX) {
+    const error = new Error("Too many voice previews. Please wait a moment and try again.");
+    error.statusCode = 429;
+    throw error;
+  }
+  existing.count += 1;
+}
+
+function buildVoicePreviewSessionUpdate(voiceId) {
+  return {
+    type: "session.update",
+    session: {
+      voice: voiceId,
+      instructions: buildSafeInstructions(
+        [
+          "You are generating a short voice sample for a user choosing an AI phone voice.",
+          "Read the sample text naturally, clearly, and conversationally.",
+          "Do not add extra words before or after the sample.",
+        ].join(" "),
+      ),
+      turn_detection: {
+        type: "server_vad",
+        threshold: 0.5,
+        silence_duration_ms: 500,
+        prefix_padding_ms: 200,
+      },
+      audio: {
+        input: { format: { type: "audio/pcmu" } },
+        output: { format: { type: "audio/pcmu" } },
+      },
+      tools: [],
+    },
+  };
+}
+
+function generateVoicePreviewAudio({ voiceId, text }) {
+  requireXaiConfig();
+  return new Promise((resolve, reject) => {
+    const audioChunks = [];
+    let settled = false;
+    let previewRequested = false;
+    const ws = new WebSocket(
+      `wss://api.x.ai/v1/realtime?model=${encodeURIComponent(XAI_MODEL)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.XAI_API_KEY}`,
+        },
+      },
+    );
+
+    let timeout = null;
+    const settle = (error, wavBuffer) => {
+      if (settled) return;
+      settled = true;
+      if (timeout) clearTimeout(timeout);
+      if (
+        ws.readyState === WebSocket.OPEN ||
+        ws.readyState === WebSocket.CONNECTING
+      ) {
+        ws.close();
+      }
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve(wavBuffer);
+    };
+
+    timeout = setTimeout(() => {
+      settle(new Error("Voice preview timed out."));
+    }, clamp(VOICE_PREVIEW_TIMEOUT_MS, 3_000, 20_000));
+    timeout.unref?.();
+
+    const requestPreviewAudio = () => {
+      if (previewRequested || !isWebSocketOpen(ws)) return;
+      previewRequested = true;
+      ws.send(
+        JSON.stringify({
+          type: "conversation.item.create",
+          item: {
+            type: "message",
+            role: "user",
+            content: [{ type: "input_text", text }],
+          },
+        }),
+      );
+      ws.send(JSON.stringify({ type: "response.create" }));
+    };
+
+    ws.on("open", () => {
+      ws.send(JSON.stringify(buildVoicePreviewSessionUpdate(voiceId)));
+      const fallbackTimer = setTimeout(requestPreviewAudio, 350);
+      fallbackTimer.unref?.();
+    });
+
+    ws.on("message", (raw) => {
+      let event;
+      try {
+        event = JSON.parse(raw.toString());
+      } catch {
+        return;
+      }
+
+      if (event.type === "session.updated") {
+        requestPreviewAudio();
+        return;
+      }
+
+      if (event.type === "response.output_audio.delta" && event.delta) {
+        audioChunks.push(Buffer.from(event.delta, "base64"));
+        return;
+      }
+
+      if (event.type === "response.done") {
+        if (audioChunks.length === 0) {
+          settle(new Error("Voice preview returned no audio."));
+          return;
+        }
+        settle(null, buildPcmWavFromMuLaw(audioChunks));
+        return;
+      }
+
+      if (event.type === "error") {
+        settle(
+          new Error(
+            event.error?.message || event.message || "Voice preview failed.",
+          ),
+        );
+      }
+    });
+
+    ws.on("error", (error) => settle(error));
+    ws.on("close", () => {
+      if (!settled) settle(new Error("Voice preview connection closed."));
+    });
+  });
 }
 
 function getBridgeRecordingAccessSecret() {
@@ -1632,6 +1863,30 @@ app.get("/xai/voices", async (_req, res) => {
   }
 });
 
+app.post("/xai/voice-preview", async (req, res) => {
+  try {
+    assertVoicePreviewRateLimit(req);
+    const voiceId = normalizeVoicePreviewVoiceId(req.body?.voiceId);
+    const text = normalizeVoicePreviewText(req.body?.text);
+    const wavBuffer = await generateVoicePreviewAudio({ voiceId, text });
+    res.json({
+      ok: true,
+      voiceId,
+      contentType: "audio/wav",
+      audioBase64: wavBuffer.toString("base64"),
+    });
+  } catch (error) {
+    const status =
+      error.statusCode || (error.code === "SAFETY_BLOCKED" ? 400 : 500);
+    log(status >= 500 ? "error" : "warn", "Voice preview failed", {
+      voiceId: req.body?.voiceId,
+      error: error.message,
+      category: error.category,
+    });
+    res.status(status).json({ ok: false, error: error.message });
+  }
+});
+
 app.get("/recordings/:recordingSid/access", async (req, res) => {
   try {
     requireTwilioConfig();
@@ -1842,6 +2097,7 @@ app.post("/initiate-call", async (req, res) => {
       reservationId,
       allowedSeconds: reservation.allowedSeconds,
       recipientPhone,
+      direction: CALL_DIRECTIONS.OUTBOUND,
       preset,
       saveTranscript: captureOptions.saveTranscript,
       recordAudio: captureOptions.recordAudio,
@@ -2006,6 +2262,8 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
       answeringPresetName: answeringPreset.name,
       allowedSeconds: reservation.allowedSeconds,
       recipientPhone: callerPhone,
+      direction: CALL_DIRECTIONS.INBOUND,
+      shouldGreet: true,
       preset,
       saveTranscript: preset.captureOptions.saveTranscript,
       recordAudio: preset.captureOptions.recordAudio,
@@ -2061,7 +2319,7 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
     stream.parameter({ name: "sessionId", value: sessionId });
     stream.parameter({ name: "callId", value: String(reservation.callId || "") });
     stream.parameter({ name: "presetName", value: answeringPreset.name });
-    stream.parameter({ name: "direction", value: "incoming" });
+    stream.parameter({ name: "direction", value: session.direction });
     res.status(200).send(response.toString());
   } catch (error) {
     log("warn", "Incoming answering call rejected", {
@@ -2212,6 +2470,7 @@ app.post("/twiml", (req, res) => {
     stream.parameter({ name: "sessionId", value: sessionId });
     stream.parameter({ name: "callId", value: session.callId || "" });
     stream.parameter({ name: "presetName", value: session.preset.name });
+    stream.parameter({ name: "direction", value: session.direction || "" });
 
     res.status(200).send(response.toString());
   } catch (error) {
@@ -2363,18 +2622,66 @@ mediaWss.on("connection", (twilioWs, request) => {
     }
   }
 
-  function sendInitialGreeting() {
-    const greeting = process.env.CALL_GREETING;
-    if (!greeting || !session) return;
-    try {
-      assertSafeInstructionText(greeting, "Call greeting");
-      sendXaiUserText(session, greeting);
-    } catch (error) {
-      log(error.code === "SAFETY_BLOCKED" ? "warn" : "error", "Skipped call greeting", {
+  function buildInboundOpeningTurnInstruction() {
+    const greeting = String(
+      process.env.INBOUND_CALL_GREETING || process.env.CALL_GREETING || "",
+    )
+      .replace(/\s+/g, " ")
+      .trim();
+    if (greeting) {
+      assertSafeInstructionText(greeting, "Inbound call greeting");
+      return [
+        "The inbound phone call has just connected.",
+        `Greet the caller now using this short greeting naturally: ${JSON.stringify(greeting)}.`,
+        "Then pause and listen for the caller's response.",
+      ].join(" ");
+    }
+    return [
+      "The inbound phone call has just connected.",
+      "Greet the caller now with one short, natural opening like 'Hello?' or 'Hi, thanks for calling.'",
+      "Then pause and listen for the caller's response.",
+    ].join(" ");
+  }
+
+  function sendOpeningTurnIfNeeded(trigger) {
+    if (!session || session.openingTurnSent) return;
+    const direction = normalizeCallDirection(session.direction);
+    if (direction !== CALL_DIRECTIONS.INBOUND && !session.outboundWaitLogged) {
+      session.outboundWaitLogged = true;
+      log("info", "Outbound call connected; waiting for callee to speak first", {
         sessionId: session.id,
-        error: error.message,
-        category: error.category,
+        callSid: session.callSid,
+        trigger,
       });
+      return;
+    }
+    if (
+      direction !== CALL_DIRECTIONS.INBOUND ||
+      !isWebSocketOpen(session.xaiWs)
+    ) {
+      return;
+    }
+    try {
+      const instruction = buildInboundOpeningTurnInstruction();
+      session.openingTurnSent = true;
+      sendXaiUserText(session, instruction);
+      log("info", "Sent inbound opening greeting prompt to xAI", {
+        sessionId: session.id,
+        callSid: session.callSid,
+        trigger,
+      });
+    } catch (error) {
+      if (error.code === "SAFETY_BLOCKED") session.openingTurnSent = true;
+      log(
+        error.code === "SAFETY_BLOCKED" ? "warn" : "error",
+        "Skipped inbound opening greeting",
+        {
+          sessionId: session.id,
+          error: error.message,
+          category: error.category,
+          trigger,
+        },
+      );
     }
   }
 
@@ -2507,12 +2814,23 @@ mediaWss.on("connection", (twilioWs, request) => {
     session.xaiWs = xaiWs;
 
     xaiWs.on("open", () => {
-      xaiWs.send(JSON.stringify(buildXaiSessionUpdate(session.preset)));
-      sendInitialGreeting();
+      xaiWs.send(
+        JSON.stringify(
+          buildXaiSessionUpdate(session.preset, {
+            direction: session.direction,
+          }),
+        ),
+      );
+      const openingTimer = setTimeout(
+        () => sendOpeningTurnIfNeeded("session_update_timer"),
+        350,
+      );
+      openingTimer.unref?.();
       log("info", "Connected Twilio stream to xAI", {
         streamSid,
         sessionId: session.id,
         callSid: session.callSid,
+        direction: session.direction,
       });
     });
 
@@ -2521,6 +2839,11 @@ mediaWss.on("connection", (twilioWs, request) => {
       try {
         event = JSON.parse(raw.toString());
       } catch {
+        return;
+      }
+
+      if (event.type === "session.updated") {
+        sendOpeningTurnIfNeeded("session.updated");
         return;
       }
 
@@ -2552,6 +2875,10 @@ mediaWss.on("connection", (twilioWs, request) => {
       }
 
       if (event.type === "input_audio_buffer.speech_started" && streamSid) {
+        if (session.xaiResponseInProgress && isWebSocketOpen(xaiWs)) {
+          xaiWs.send(JSON.stringify({ type: "response.cancel" }));
+          session.xaiResponseInProgress = false;
+        }
         sendToTwilio({ event: "clear", streamSid });
         return;
       }
