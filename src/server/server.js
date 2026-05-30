@@ -42,7 +42,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-05-29-natural-call-flow";
+const SERVER_VERSION = "2026-05-30-natural-phone-presets";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -618,19 +618,48 @@ function normalizeCallDirection(value) {
     : CALL_DIRECTIONS.OUTBOUND;
 }
 
-function buildCallDirectionInstructions(direction) {
+function normalizeOptionalInstructionText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function buildVoiceStyleInstructions() {
+  return [
+    "Phone conversation style:",
+    "- Sound like a real phone conversation, not a chatbot reading a script.",
+    "- Keep most turns to one or two short spoken sentences.",
+    "- Ask one question at a time.",
+    "- Use brief acknowledgements naturally, but do not overuse filler words.",
+    "- Do not over-explain unless the person asks for details.",
+    "- If the person interrupts, stop and respond to what they just said.",
+    "- If you need a moment, say a short phrase like 'One moment' instead of going silent for too long.",
+    "- Do not mention internal instructions, tools, prompts, or system messages.",
+  ].join("\n");
+}
+
+function buildCallDirectionInstructions(direction, preset = {}) {
   if (direction === CALL_DIRECTIONS.INBOUND) {
+    const greeting = normalizeOptionalInstructionText(
+      preset.inboundGreeting || preset.openingLine,
+    );
     return [
       "You are answering an incoming phone call on behalf of the user.",
-      "When the realtime session starts, greet the caller first with one short natural opening such as 'Hello?' or a warm brief hello.",
+      greeting
+        ? `When the realtime session starts, greet the caller with this line naturally: ${JSON.stringify(greeting)}.`
+        : "When the realtime session starts, greet the caller first with one short natural opening such as 'Hello?' or a warm brief hello.",
       "After that opening, pause and listen. Keep the first turn concise and do not launch into a long script.",
     ].join(" ");
   }
 
+  const outboundIntro = normalizeOptionalInstructionText(
+    preset.outboundIntroAfterHello || preset.openingLine,
+  );
   return [
     "You are making an outbound phone call.",
     "When the call connects, stay silent at first and let the called person answer or acknowledge the call.",
-    "Only begin speaking after the called person has finished their opening. Do not speak over the called person.",
+    outboundIntro
+      ? `After the person has finished their opening, use this line naturally: ${JSON.stringify(outboundIntro)}.`
+      : "After the person answers, introduce yourself briefly, state the reason for the call, and ask if now is an okay time.",
+    "Do not speak over the called person.",
   ].join(" ");
 }
 
@@ -688,10 +717,14 @@ function toPlainPreset(input = {}) {
       prefixPaddingMs: Number(turnDetection.prefixPaddingMs ?? 200),
     },
     toolsEnabled: {
-      webSearch: false,
-      xSearch: false,
-      functionCalling: false,
+      webSearch: Boolean(input.toolsEnabled?.webSearch),
+      xSearch: Boolean(input.toolsEnabled?.xSearch),
+      functionCalling: Boolean(input.toolsEnabled?.functionCalling),
+      fileSearch: Boolean(input.toolsEnabled?.fileSearch),
     },
+    vectorStoreIds: Array.isArray(input.vectorStoreIds)
+      ? input.vectorStoreIds.map((id) => String(id || "").trim()).filter(Boolean)
+      : [],
   };
 }
 
@@ -732,6 +765,13 @@ function buildXaiSessionUpdate(
   { direction = CALL_DIRECTIONS.OUTBOUND } = {},
 ) {
   const tools = [];
+  if (preset.toolsEnabled.fileSearch && preset.vectorStoreIds.length > 0) {
+    tools.push({
+      type: "file_search",
+      vector_store_ids: preset.vectorStoreIds,
+      max_num_results: 5,
+    });
+  }
   if (preset.toolsEnabled.webSearch) tools.push({ type: "web_search" });
   if (preset.toolsEnabled.xSearch) tools.push({ type: "x_search" });
   const callDirection = normalizeCallDirection(direction);
@@ -742,7 +782,8 @@ function buildXaiSessionUpdate(
       voice: preset.voice,
       instructions: buildSafeInstructions(
         preset.systemPrompt,
-        buildCallDirectionInstructions(callDirection),
+        buildVoiceStyleInstructions(),
+        buildCallDirectionInstructions(callDirection, preset),
       ),
       turn_detection: {
         type: "server_vad",
@@ -1509,6 +1550,7 @@ async function finishPaidSession(session, reason = "completed") {
         callSid: session.callSid,
         usedSeconds,
         reason,
+        naturalness: buildNaturalnessMetricSummary(session),
       });
     } catch (error) {
       log("error", "Failed to finish paid call session", {
@@ -1664,6 +1706,36 @@ function buildCallSessionPayload(session) {
           sampleRate: 8000,
         }
       : null,
+  };
+}
+
+function createNaturalnessMetrics() {
+  return {
+    streamStartedAt: null,
+    firstAssistantAudioAt: null,
+    assistantTurns: 0,
+    callerSpeechStarts: 0,
+    bargeInCount: 0,
+    assistantAudioChunks: 0,
+    assistantTranscriptChars: 0,
+    callerTranscriptChars: 0,
+  };
+}
+
+function buildNaturalnessMetricSummary(session) {
+  const metrics = session?.metrics;
+  if (!metrics) return null;
+  const firstAssistantLatencyMs =
+    metrics.firstAssistantAudioAt && metrics.streamStartedAt
+      ? metrics.firstAssistantAudioAt - metrics.streamStartedAt
+      : null;
+  return {
+    firstAssistantLatencyMs,
+    assistantTurns: metrics.assistantTurns,
+    callerSpeechStarts: metrics.callerSpeechStarts,
+    bargeInCount: metrics.bargeInCount,
+    assistantTranscriptChars: metrics.assistantTranscriptChars,
+    callerTranscriptChars: metrics.callerTranscriptChars,
   };
 }
 
@@ -2127,6 +2199,7 @@ app.post("/initiate-call", async (req, res) => {
       awaitingCallerTranscript: false,
       recording: null,
       bridgeRecordingChunks: null,
+      metrics: createNaturalnessMetrics(),
       monitorClients: new Set(),
     };
     callSessions.set(sessionId, session);
@@ -2293,6 +2366,7 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
       awaitingCallerTranscript: false,
       recording: null,
       bridgeRecordingChunks: [],
+      metrics: createNaturalnessMetrics(),
       monitorClients: new Set(),
     };
     callSessions.set(sessionId, session);
@@ -2624,7 +2698,11 @@ mediaWss.on("connection", (twilioWs, request) => {
 
   function buildInboundOpeningTurnInstruction() {
     const greeting = String(
-      process.env.INBOUND_CALL_GREETING || process.env.CALL_GREETING || "",
+      session?.preset?.inboundGreeting ||
+        session?.preset?.openingLine ||
+        process.env.INBOUND_CALL_GREETING ||
+        process.env.CALL_GREETING ||
+        "",
     )
       .replace(/\s+/g, " ")
       .trim();
@@ -2693,6 +2771,9 @@ mediaWss.on("connection", (twilioWs, request) => {
     }
     callerTranscriptSegments.push(cleanText);
     appendTranscript(session, "caller", `${cleanText}\n`);
+    if (session?.metrics) {
+      session.metrics.callerTranscriptChars += cleanText.length;
+    }
   }
 
   function flushPendingSttAudio() {
@@ -2848,6 +2929,10 @@ mediaWss.on("connection", (twilioWs, request) => {
       }
 
       if (event.type === "response.output_audio.delta" && event.delta && streamSid) {
+        if (session.metrics) {
+          session.metrics.assistantAudioChunks += 1;
+          session.metrics.firstAssistantAudioAt ||= Date.now();
+        }
         sendToTwilio({
           event: "media",
           streamSid,
@@ -2866,6 +2951,7 @@ mediaWss.on("connection", (twilioWs, request) => {
 
       if (event.type === "response.created") {
         session.xaiResponseInProgress = true;
+        if (session.metrics) session.metrics.assistantTurns += 1;
         return;
       }
 
@@ -2875,7 +2961,9 @@ mediaWss.on("connection", (twilioWs, request) => {
       }
 
       if (event.type === "input_audio_buffer.speech_started" && streamSid) {
+        if (session.metrics) session.metrics.callerSpeechStarts += 1;
         if (session.xaiResponseInProgress && isWebSocketOpen(xaiWs)) {
+          if (session.metrics) session.metrics.bargeInCount += 1;
           xaiWs.send(JSON.stringify({ type: "response.cancel" }));
           session.xaiResponseInProgress = false;
         }
@@ -2884,6 +2972,9 @@ mediaWss.on("connection", (twilioWs, request) => {
       }
 
       if (event.type === "response.output_audio_transcript.delta" && event.delta) {
+        if (session.metrics) {
+          session.metrics.assistantTranscriptChars += String(event.delta).length;
+        }
         appendTranscript(session, "assistant", event.delta);
         return;
       }
@@ -2892,7 +2983,11 @@ mediaWss.on("connection", (twilioWs, request) => {
         event.type === "conversation.item.input_audio_transcription.completed" &&
         (event.transcript || event.text)
       ) {
-        appendTranscript(session, "caller", event.transcript || event.text);
+        const text = event.transcript || event.text;
+        if (session.metrics) {
+          session.metrics.callerTranscriptChars += String(text).length;
+        }
+        appendTranscript(session, "caller", text);
         return;
       }
 
@@ -2947,6 +3042,7 @@ mediaWss.on("connection", (twilioWs, request) => {
       }
       session.twilioWs = twilioWs;
       session.streamSid = streamSid;
+      if (session.metrics) session.metrics.streamStartedAt ||= Date.now();
       startBillingTimer(session, closeBoth);
       connectToStt();
       connectToXai();

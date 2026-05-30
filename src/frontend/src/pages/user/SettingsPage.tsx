@@ -1,5 +1,6 @@
 import { AudioFormat, SampleRate, Voice } from "@/backend";
 import { AppLayout } from "@/components/AppLayout";
+import { NaturalPromptBuilder } from "@/components/NaturalPromptBuilder";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import {
   VoiceIdSelector,
@@ -16,6 +17,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -29,6 +37,12 @@ import {
   useUpdatePreset,
 } from "@/hooks/use-backend";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import {
+  TURN_TIMING_PROFILES,
+  cloneTurnDetection,
+  getTurnTimingProfile,
+  getTurnTimingProfileId,
+} from "@/lib/natural-phone";
 import type { CallPreset, CallPresetInput } from "@/types";
 import {
   ChevronDown,
@@ -50,6 +64,10 @@ import { toast } from "sonner";
 const DEFAULT_AUDIO_FORMAT = AudioFormat.pcmu;
 const DEFAULT_SAMPLE_RATE = SampleRate.hz8000;
 const MAX_AI_INSTRUCTIONS_CHARS = 8000;
+const DEFAULT_TURN_DETECTION = cloneTurnDetection(
+  TURN_TIMING_PROFILES.find((profile) => profile.id === "balanced")
+    ?.turnDetection ?? TURN_TIMING_PROFILES[0].turnDetection,
+);
 const DEFAULT_TOOLS_ENABLED: CallPresetInput["toolsEnabled"] = {
   xSearch: false,
   webSearch: false,
@@ -64,12 +82,7 @@ function createDefaultPreset(): CallPresetInput {
     systemPrompt: "",
     audioFormat: DEFAULT_AUDIO_FORMAT,
     sampleRate: DEFAULT_SAMPLE_RATE,
-    turnDetection: {
-      serverVad: true,
-      threshold: 0.5,
-      prefixPaddingMs: 200n,
-      silenceDurationMs: 500n,
-    },
+    turnDetection: cloneTurnDetection(DEFAULT_TURN_DETECTION),
     toolsEnabled: { ...DEFAULT_TOOLS_ENABLED },
   };
 }
@@ -79,6 +92,10 @@ function applyHiddenPresetDefaults(input: CallPresetInput): CallPresetInput {
     ...input,
     audioFormat: DEFAULT_AUDIO_FORMAT,
     sampleRate: DEFAULT_SAMPLE_RATE,
+    turnDetection: {
+      ...input.turnDetection,
+      serverVad: true,
+    },
     toolsEnabled: { ...DEFAULT_TOOLS_ENABLED },
   };
 }
@@ -92,7 +109,7 @@ const defaultTimingText = {
 };
 
 const TURN_DETECTION_HELP =
-  "These settings control when the AI decides the caller has finished speaking and can respond. The defaults work well for most calls; adjust them if the AI interrupts too quickly or waits too long.";
+  "Choose how quickly the AI responds after the caller pauses. Use Patient listener if callers often pause mid-sentence.";
 
 // ── Preset Form ────────────────────────────────────────────────────────────────
 interface PresetFormProps {
@@ -131,6 +148,19 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
 
   const silenceMs = values.turnDetection?.silenceDurationMs ?? 500n;
   const prefixMs = values.turnDetection?.prefixPaddingMs ?? 200n;
+  const timingProfileId = getTurnTimingProfileId({
+    ...values.turnDetection,
+    serverVad: true,
+  });
+
+  function applyTimingProfile(profileId: string) {
+    const profile = getTurnTimingProfile(profileId);
+    if (!profile) return;
+    setValue("turnDetection", cloneTurnDetection(profile.turnDetection), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }
 
   return (
     <form onSubmit={submitPreset} className="space-y-6">
@@ -154,6 +184,17 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
           </p>
         )}
       </div>
+
+      <NaturalPromptBuilder
+        direction="outbound"
+        onPromptChange={(prompt) =>
+          setValue("systemPrompt", prompt, {
+            shouldDirty: true,
+            shouldValidate: true,
+          })
+        }
+        dataOcidPrefix="settings.preset.natural_prompt"
+      />
 
       {/* System Prompt */}
       <div className="space-y-1.5">
@@ -208,25 +249,47 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
         <div className="space-y-3">
           <div className="space-y-1">
             <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
-              Turn Detection
+              Conversation Timing
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {TURN_DETECTION_HELP}
             </p>
           </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">
+              Timing Profile
+            </Label>
+            <Select value={timingProfileId} onValueChange={applyTimingProfile}>
+              <SelectTrigger
+                className="w-full"
+                data-ocid="settings.preset.turn_profile.select"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TURN_TIMING_PROFILES.map((profile) => (
+                  <SelectItem key={profile.id} value={profile.id}>
+                    {profile.label}
+                  </SelectItem>
+                ))}
+                <SelectItem value="custom" disabled>
+                  Custom
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-background/60 p-3">
             <div className="space-y-0.5">
               <Label className="text-xs text-foreground">
-                Auto-detect end of speech
+                Automatic phone turn detection
               </Label>
               <p className="text-[10px] text-muted-foreground leading-tight">
-                Leave this on for normal calls so the AI answers after the
-                caller pauses.
+                Required for live phone calls through the xAI realtime bridge.
               </p>
             </div>
             <Switch
-              checked={values.turnDetection?.serverVad ?? true}
-              onCheckedChange={(v) => setValue("turnDetection.serverVad", v)}
+              checked
+              disabled
               data-ocid="settings.preset.server_vad.switch"
               className="shrink-0"
             />

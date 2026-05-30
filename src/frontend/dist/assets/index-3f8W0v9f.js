@@ -17,7 +17,7 @@ var __privateWrapper = (obj, member, setter, getter) => ({
     return __privateGet(obj, member, getter);
   }
 });
-var _disableTimeVerification, _agent, _inner, _expirationTime, _rawKey, _derKey, _a2, _currentInterval, _randomizationFactor, _multiplier, _maxInterval, _startTime, _maxElapsedTime, _maxIterations, _date, _count, _rootKeyPromise, _shouldFetchRootKey, _timeDiffMsecs, _hasSyncedTime, _syncTimePromise, _shouldSyncTime, _identity, _fetch, _fetchOptions, _callOptions, _credentials, _retryTimes, _backoffStrategy, _maxIngressExpiryInMinutes, _HttpAgent_instances, maxIngressExpiryInMs_get, _queryPipeline, _updatePipeline, _subnetKeys, _verifyQuerySignatures, requestAndRetryQuery_fn, requestAndRetry_fn, _verifyQueryResponse, asyncGuard_fn, rootKeyGuard_fn, syncTimeGuard_fn, _focused, _cleanup, _setup, _b2, _provider, _providerCalled, _c, _online, _cleanup2, _setup2, _d, _gcTimeout, _e, _initialState, _revertState, _cache, _client, _retryer, _defaultOptions, _abortSignalConsumed, _Query_instances, isInitialPausedFetch_fn, dispatch_fn, _f, _client2, _currentQuery, _currentQueryInitialState, _currentResult, _currentResultState, _currentResultOptions, _currentThenable, _selectError, _selectFn, _selectResult, _lastQueryWithDefinedData, _staleTimeoutId, _refetchIntervalId, _currentRefetchInterval, _trackedProps, _QueryObserver_instances, executeFetch_fn, updateStaleTimeout_fn, computeRefetchInterval_fn, updateRefetchInterval_fn, updateTimers_fn, clearStaleTimeout_fn, clearRefetchInterval_fn, updateQuery_fn, notify_fn, _g, _client3, _observers, _mutationCache, _retryer2, _Mutation_instances, dispatch_fn2, _h, _mutations, _scopes, _mutationId, _i, _client4, _currentResult2, _currentMutation, _mutateOptions, _MutationObserver_instances, updateResult_fn, notify_fn2, _j, _queries, _k, _queryCache, _mutationCache2, _defaultOptions2, _queryDefaults, _mutationDefaults, _mountCount, _unsubscribeFocus, _unsubscribeOnline, _l, _rawKey2, _derKey2, _publicKey, _privateKey, _inner2, _delegation, _options;
+var _disableTimeVerification, _agent, _inner, _expirationTime, _rawKey, _derKey, _a2, _currentInterval, _randomizationFactor, _multiplier, _maxInterval, _startTime, _maxElapsedTime, _maxIterations, _date, _count, _rootKeyPromise, _shouldFetchRootKey, _timeDiffMsecs, _hasSyncedTime, _syncTimePromise, _shouldSyncTime, _identity, _fetch, _fetchOptions, _callOptions, _credentials, _retryTimes, _backoffStrategy, _maxIngressExpiryInMinutes, _HttpAgent_instances, maxIngressExpiryInMs_get, _queryPipeline, _updatePipeline, _subnetKeys, _verifyQuerySignatures, requestAndRetryQuery_fn, requestAndRetry_fn, _verifyQueryResponse, asyncGuard_fn, rootKeyGuard_fn, syncTimeGuard_fn, _focused, _cleanup, _setup, _b2, _provider, _providerCalled, _c, _online, _cleanup2, _setup2, _d, _gcTimeout, _e, _initialState, _revertState, _cache, _client, _retryer, _defaultOptions, _abortSignalConsumed, _Query_instances, isInitialPausedFetch_fn, dispatch_fn, _f, _client2, _currentQuery, _currentQueryInitialState, _currentResult, _currentResultState, _currentResultOptions, _currentThenable, _selectError, _selectFn, _selectResult, _lastQueryWithDefinedData, _staleTimeoutId, _refetchIntervalId, _currentRefetchInterval, _trackedProps, _QueryObserver_instances, executeFetch_fn, updateStaleTimeout_fn, computeRefetchInterval_fn, updateRefetchInterval_fn, updateTimers_fn, clearStaleTimeout_fn, clearRefetchInterval_fn, updateQuery_fn, notify_fn, _g, _client3, _observers, _mutationCache, _retryer2, _Mutation_instances, dispatch_fn2, _h, _mutations, _scopes, _mutationId, _i, _client4, _currentResult2, _currentMutation, _mutateOptions, _MutationObserver_instances, updateResult_fn, notify_fn2, _j, _queries, _k, _queryCache, _mutationCache2, _defaultOptions2, _queryDefaults, _mutationDefaults, _mountCount, _unsubscribeFocus, _unsubscribeOnline, _l, _rawKey2, _derKey2, _publicKey, _privateKey, _inner2, _delegation, _options, _m, _n;
 function _mergeNamespaces(n, m2) {
   for (var i = 0; i < m2.length; i++) {
     const e = m2[i];
@@ -12956,7 +12956,7 @@ var Mutation = (_h = class extends Removable {
     this.execute(this.state.variables);
   }
   async execute(variables) {
-    var _a3, _b3, _c2, _d2, _e2, _f2, _g2, _h2, _i2, _j2, _k2, _l2, _m, _n, _o, _p, _q, _r;
+    var _a3, _b3, _c2, _d2, _e2, _f2, _g2, _h2, _i2, _j2, _k2, _l2, _m2, _n2, _o, _p, _q, _r;
     const onContinue = () => {
       __privateMethod(this, _Mutation_instances, dispatch_fn2).call(this, { type: "continue" });
     };
@@ -13061,8 +13061,8 @@ var Mutation = (_h = class extends Removable {
         void Promise.reject(e);
       }
       try {
-        await ((_n = (_m = this.options).onError) == null ? void 0 : _n.call(
-          _m,
+        await ((_n2 = (_m2 = this.options).onError) == null ? void 0 : _n2.call(
+          _m2,
           error,
           variables,
           this.state.context,
@@ -37913,51 +37913,62 @@ const createLucideIcon = (iconName, iconNode) => {
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$P = [
+const __iconNode$Q = [
   ["path", { d: "m12 19-7-7 7-7", key: "1l729n" }],
   ["path", { d: "M19 12H5", key: "x3x0zl" }]
 ];
-const ArrowLeft = createLucideIcon("arrow-left", __iconNode$P);
+const ArrowLeft = createLucideIcon("arrow-left", __iconNode$Q);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$O = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
-const Check = createLucideIcon("check", __iconNode$O);
+const __iconNode$P = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
+const Check = createLucideIcon("check", __iconNode$P);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$N = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
-const ChevronDown = createLucideIcon("chevron-down", __iconNode$N);
+const __iconNode$O = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
+const ChevronDown = createLucideIcon("chevron-down", __iconNode$O);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$M = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
-const ChevronLeft = createLucideIcon("chevron-left", __iconNode$M);
+const __iconNode$N = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
+const ChevronLeft = createLucideIcon("chevron-left", __iconNode$N);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$L = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
-const ChevronRight = createLucideIcon("chevron-right", __iconNode$L);
+const __iconNode$M = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
+const ChevronRight = createLucideIcon("chevron-right", __iconNode$M);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$K = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
-const ChevronUp = createLucideIcon("chevron-up", __iconNode$K);
+const __iconNode$L = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
+const ChevronUp = createLucideIcon("chevron-up", __iconNode$L);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$K = [
+  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
+  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+];
+const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$K);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37965,10 +37976,10 @@ const ChevronUp = createLucideIcon("chevron-up", __iconNode$K);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$J = [
-  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
-  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
 ];
-const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$J);
+const CircleCheck = createLucideIcon("circle-check", __iconNode$J);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37977,9 +37988,10 @@ const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$J);
  */
 const __iconNode$I = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
+  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
+  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
 ];
-const CircleCheck = createLucideIcon("circle-check", __iconNode$I);
+const CircleX = createLucideIcon("circle-x", __iconNode$I);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37988,10 +38000,9 @@ const CircleCheck = createLucideIcon("circle-check", __iconNode$I);
  */
 const __iconNode$H = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
-  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
+  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
 ];
-const CircleX = createLucideIcon("circle-x", __iconNode$H);
+const Clock = createLucideIcon("clock", __iconNode$H);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37999,10 +38010,10 @@ const CircleX = createLucideIcon("circle-x", __iconNode$H);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$G = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["polyline", { points: "12 6 12 12 16 14", key: "68esgv" }]
+  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
+  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
 ];
-const Clock = createLucideIcon("clock", __iconNode$G);
+const Copy = createLucideIcon("copy", __iconNode$G);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38010,10 +38021,10 @@ const Clock = createLucideIcon("clock", __iconNode$G);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$F = [
-  ["rect", { width: "14", height: "14", x: "8", y: "8", rx: "2", ry: "2", key: "17jyea" }],
-  ["path", { d: "M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2", key: "zix9uf" }]
+  ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2", key: "ynyp8z" }],
+  ["line", { x1: "2", x2: "22", y1: "10", y2: "10", key: "1b3vmo" }]
 ];
-const Copy = createLucideIcon("copy", __iconNode$F);
+const CreditCard = createLucideIcon("credit-card", __iconNode$F);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38021,10 +38032,11 @@ const Copy = createLucideIcon("copy", __iconNode$F);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$E = [
-  ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2", key: "ynyp8z" }],
-  ["line", { x1: "2", x2: "22", y1: "10", y2: "10", key: "1b3vmo" }]
+  ["path", { d: "M12 15V3", key: "m9g1x1" }],
+  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
+  ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
 ];
-const CreditCard = createLucideIcon("credit-card", __iconNode$E);
+const Download = createLucideIcon("download", __iconNode$E);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38032,18 +38044,6 @@ const CreditCard = createLucideIcon("credit-card", __iconNode$E);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$D = [
-  ["path", { d: "M12 15V3", key: "m9g1x1" }],
-  ["path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", key: "ih7n3h" }],
-  ["path", { d: "m7 10 5 5 5-5", key: "brsn70" }]
-];
-const Download = createLucideIcon("download", __iconNode$D);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$C = [
   [
     "path",
     {
@@ -38061,14 +38061,14 @@ const __iconNode$C = [
   ],
   ["path", { d: "m2 2 20 20", key: "1ooewy" }]
 ];
-const EyeOff = createLucideIcon("eye-off", __iconNode$C);
+const EyeOff = createLucideIcon("eye-off", __iconNode$D);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$B = [
+const __iconNode$C = [
   [
     "path",
     {
@@ -38078,7 +38078,21 @@ const __iconNode$B = [
   ],
   ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
 ];
-const Eye = createLucideIcon("eye", __iconNode$B);
+const Eye = createLucideIcon("eye", __iconNode$C);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$B = [
+  ["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", key: "1rqfz7" }],
+  ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4", key: "tnqrlb" }],
+  ["path", { d: "M10 9H8", key: "b1mrlr" }],
+  ["path", { d: "M16 13H8", key: "t4e002" }],
+  ["path", { d: "M16 17H8", key: "z1uh3a" }]
+];
+const FileText = createLucideIcon("file-text", __iconNode$B);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38086,20 +38100,6 @@ const Eye = createLucideIcon("eye", __iconNode$B);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$A = [
-  ["path", { d: "M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z", key: "1rqfz7" }],
-  ["path", { d: "M14 2v4a2 2 0 0 0 2 2h4", key: "tnqrlb" }],
-  ["path", { d: "M10 9H8", key: "b1mrlr" }],
-  ["path", { d: "M16 13H8", key: "t4e002" }],
-  ["path", { d: "M16 17H8", key: "z1uh3a" }]
-];
-const FileText = createLucideIcon("file-text", __iconNode$A);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$z = [
   ["rect", { x: "3", y: "8", width: "18", height: "4", rx: "1", key: "bkv52" }],
   ["path", { d: "M12 8v13", key: "1c76mn" }],
   ["path", { d: "M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7", key: "6wjy6b" }],
@@ -38111,14 +38111,14 @@ const __iconNode$z = [
     }
   ]
 ];
-const Gift = createLucideIcon("gift", __iconNode$z);
+const Gift = createLucideIcon("gift", __iconNode$A);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$y = [
+const __iconNode$z = [
   [
     "path",
     {
@@ -38127,7 +38127,19 @@ const __iconNode$y = [
     }
   ]
 ];
-const Headphones = createLucideIcon("headphones", __iconNode$y);
+const Headphones = createLucideIcon("headphones", __iconNode$z);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$y = [
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "M12 16v-4", key: "1dtifu" }],
+  ["path", { d: "M12 8h.01", key: "e9boi3" }]
+];
+const Info = createLucideIcon("info", __iconNode$y);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38135,18 +38147,6 @@ const Headphones = createLucideIcon("headphones", __iconNode$y);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$x = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "M12 16v-4", key: "1dtifu" }],
-  ["path", { d: "M12 8h.01", key: "e9boi3" }]
-];
-const Info = createLucideIcon("info", __iconNode$x);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$w = [
   [
     "path",
     {
@@ -38156,7 +38156,20 @@ const __iconNode$w = [
   ],
   ["circle", { cx: "16.5", cy: "7.5", r: ".5", fill: "currentColor", key: "w0ekpg" }]
 ];
-const KeyRound = createLucideIcon("key-round", __iconNode$w);
+const KeyRound = createLucideIcon("key-round", __iconNode$x);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$w = [
+  ["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1", key: "10lvy0" }],
+  ["rect", { width: "7", height: "5", x: "14", y: "3", rx: "1", key: "16une8" }],
+  ["rect", { width: "7", height: "9", x: "14", y: "12", rx: "1", key: "1hutg5" }],
+  ["rect", { width: "7", height: "5", x: "3", y: "16", rx: "1", key: "ldoo1y" }]
+];
+const LayoutDashboard = createLucideIcon("layout-dashboard", __iconNode$w);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38164,32 +38177,31 @@ const KeyRound = createLucideIcon("key-round", __iconNode$w);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$v = [
-  ["rect", { width: "7", height: "9", x: "3", y: "3", rx: "1", key: "10lvy0" }],
-  ["rect", { width: "7", height: "5", x: "14", y: "3", rx: "1", key: "16une8" }],
-  ["rect", { width: "7", height: "9", x: "14", y: "12", rx: "1", key: "1hutg5" }],
-  ["rect", { width: "7", height: "5", x: "3", y: "16", rx: "1", key: "ldoo1y" }]
-];
-const LayoutDashboard = createLucideIcon("layout-dashboard", __iconNode$v);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$u = [
   ["path", { d: "M3 6h18", key: "d0wm0j" }],
   ["path", { d: "M7 12h10", key: "b7w52i" }],
   ["path", { d: "M10 18h4", key: "1ulq68" }]
 ];
-const ListFilter = createLucideIcon("list-filter", __iconNode$u);
+const ListFilter = createLucideIcon("list-filter", __iconNode$v);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$t = [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]];
-const LoaderCircle = createLucideIcon("loader-circle", __iconNode$t);
+const __iconNode$u = [["path", { d: "M21 12a9 9 0 1 1-6.219-8.56", key: "13zald" }]];
+const LoaderCircle = createLucideIcon("loader-circle", __iconNode$u);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$t = [
+  ["path", { d: "m16 17 5-5-5-5", key: "1bji2h" }],
+  ["path", { d: "M21 12H9", key: "dn1m92" }],
+  ["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", key: "1uf3rs" }]
+];
+const LogOut = createLucideIcon("log-out", __iconNode$t);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38197,11 +38209,11 @@ const LoaderCircle = createLucideIcon("loader-circle", __iconNode$t);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$s = [
-  ["path", { d: "m16 17 5-5-5-5", key: "1bji2h" }],
-  ["path", { d: "M21 12H9", key: "dn1m92" }],
-  ["path", { d: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", key: "1uf3rs" }]
+  ["path", { d: "M4 12h16", key: "1lakjw" }],
+  ["path", { d: "M4 18h16", key: "19g7jn" }],
+  ["path", { d: "M4 6h16", key: "1o0s65" }]
 ];
-const LogOut = createLucideIcon("log-out", __iconNode$s);
+const Menu = createLucideIcon("menu", __iconNode$s);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38209,11 +38221,12 @@ const LogOut = createLucideIcon("log-out", __iconNode$s);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$r = [
-  ["path", { d: "M4 12h16", key: "1lakjw" }],
-  ["path", { d: "M4 18h16", key: "19g7jn" }],
-  ["path", { d: "M4 6h16", key: "1o0s65" }]
+  ["path", { d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", key: "1lielz" }],
+  ["path", { d: "M8 10h.01", key: "19clt8" }],
+  ["path", { d: "M12 10h.01", key: "1nrarc" }],
+  ["path", { d: "M16 10h.01", key: "1m94wz" }]
 ];
-const Menu = createLucideIcon("menu", __iconNode$r);
+const MessageSquareMore = createLucideIcon("message-square-more", __iconNode$r);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38221,12 +38234,11 @@ const Menu = createLucideIcon("menu", __iconNode$r);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$q = [
-  ["path", { d: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z", key: "1lielz" }],
-  ["path", { d: "M8 10h.01", key: "19clt8" }],
-  ["path", { d: "M12 10h.01", key: "1nrarc" }],
-  ["path", { d: "M16 10h.01", key: "1m94wz" }]
+  ["path", { d: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z", key: "131961" }],
+  ["path", { d: "M19 10v2a7 7 0 0 1-14 0v-2", key: "1vc78b" }],
+  ["line", { x1: "12", x2: "12", y1: "19", y2: "22", key: "x3vr5v" }]
 ];
-const MessageSquareMore = createLucideIcon("message-square-more", __iconNode$q);
+const Mic = createLucideIcon("mic", __iconNode$q);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38234,18 +38246,6 @@ const MessageSquareMore = createLucideIcon("message-square-more", __iconNode$q);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$p = [
-  ["path", { d: "M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z", key: "131961" }],
-  ["path", { d: "M19 10v2a7 7 0 0 1-14 0v-2", key: "1vc78b" }],
-  ["line", { x1: "12", x2: "12", y1: "19", y2: "22", key: "x3vr5v" }]
-];
-const Mic = createLucideIcon("mic", __iconNode$p);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$o = [
   [
     "path",
     {
@@ -38255,14 +38255,14 @@ const __iconNode$o = [
   ],
   ["path", { d: "m15 5 4 4", key: "1mk7zo" }]
 ];
-const Pencil = createLucideIcon("pencil", __iconNode$o);
+const Pencil = createLucideIcon("pencil", __iconNode$p);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$n = [
+const __iconNode$o = [
   ["path", { d: "M13 2a9 9 0 0 1 9 9", key: "1itnx2" }],
   ["path", { d: "M13 6a5 5 0 0 1 5 5", key: "11nki7" }],
   [
@@ -38273,14 +38273,14 @@ const __iconNode$n = [
     }
   ]
 ];
-const PhoneCall = createLucideIcon("phone-call", __iconNode$n);
+const PhoneCall = createLucideIcon("phone-call", __iconNode$o);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$m = [
+const __iconNode$n = [
   [
     "path",
     {
@@ -38297,14 +38297,14 @@ const __iconNode$m = [
     }
   ]
 ];
-const PhoneOff = createLucideIcon("phone-off", __iconNode$m);
+const PhoneOff = createLucideIcon("phone-off", __iconNode$n);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$l = [
+const __iconNode$m = [
   [
     "path",
     {
@@ -38313,7 +38313,18 @@ const __iconNode$l = [
     }
   ]
 ];
-const Phone = createLucideIcon("phone", __iconNode$l);
+const Phone = createLucideIcon("phone", __iconNode$m);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$l = [
+  ["path", { d: "M5 12h14", key: "1ays0h" }],
+  ["path", { d: "M12 5v14", key: "s699le" }]
+];
+const Plus = createLucideIcon("plus", __iconNode$l);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38321,10 +38332,13 @@ const Phone = createLucideIcon("phone", __iconNode$l);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$k = [
-  ["path", { d: "M5 12h14", key: "1ays0h" }],
-  ["path", { d: "M12 5v14", key: "s699le" }]
+  ["path", { d: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9", key: "1vaf9d" }],
+  ["path", { d: "M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5", key: "u1ii0m" }],
+  ["circle", { cx: "12", cy: "12", r: "2", key: "1c9p78" }],
+  ["path", { d: "M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5", key: "1j5fej" }],
+  ["path", { d: "M19.1 4.9C23 8.8 23 15.1 19.1 19", key: "10b0cb" }]
 ];
-const Plus = createLucideIcon("plus", __iconNode$k);
+const Radio = createLucideIcon("radio", __iconNode$k);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38332,13 +38346,12 @@ const Plus = createLucideIcon("plus", __iconNode$k);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$j = [
-  ["path", { d: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9", key: "1vaf9d" }],
-  ["path", { d: "M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5", key: "u1ii0m" }],
-  ["circle", { cx: "12", cy: "12", r: "2", key: "1c9p78" }],
-  ["path", { d: "M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5", key: "1j5fej" }],
-  ["path", { d: "M19.1 4.9C23 8.8 23 15.1 19.1 19", key: "10b0cb" }]
+  ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
+  ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
+  ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
+  ["path", { d: "M8 16H3v5", key: "1cv678" }]
 ];
-const Radio = createLucideIcon("radio", __iconNode$j);
+const RefreshCw = createLucideIcon("refresh-cw", __iconNode$j);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38346,19 +38359,6 @@ const Radio = createLucideIcon("radio", __iconNode$j);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$i = [
-  ["path", { d: "M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8", key: "v9h5vc" }],
-  ["path", { d: "M21 3v5h-5", key: "1q7to0" }],
-  ["path", { d: "M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16", key: "3uifl3" }],
-  ["path", { d: "M8 16H3v5", key: "1cv678" }]
-];
-const RefreshCw = createLucideIcon("refresh-cw", __iconNode$i);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$h = [
   [
     "path",
     {
@@ -38369,14 +38369,14 @@ const __iconNode$h = [
   ["path", { d: "M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7", key: "1ydtos" }],
   ["path", { d: "M7 3v4a1 1 0 0 0 1 1h7", key: "t51u73" }]
 ];
-const Save = createLucideIcon("save", __iconNode$h);
+const Save = createLucideIcon("save", __iconNode$i);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$g = [
+const __iconNode$h = [
   ["path", { d: "M15 12h-5", key: "r7krc0" }],
   ["path", { d: "M15 8h-5", key: "1khuty" }],
   ["path", { d: "M19 17V5a2 2 0 0 0-2-2H4", key: "zz82l3" }],
@@ -38388,7 +38388,18 @@ const __iconNode$g = [
     }
   ]
 ];
-const ScrollText = createLucideIcon("scroll-text", __iconNode$g);
+const ScrollText = createLucideIcon("scroll-text", __iconNode$h);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$g = [
+  ["path", { d: "m21 21-4.34-4.34", key: "14j7rj" }],
+  ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }]
+];
+const Search = createLucideIcon("search", __iconNode$g);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38396,17 +38407,6 @@ const ScrollText = createLucideIcon("scroll-text", __iconNode$g);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$f = [
-  ["path", { d: "m21 21-4.34-4.34", key: "14j7rj" }],
-  ["circle", { cx: "11", cy: "11", r: "8", key: "4ej97u" }]
-];
-const Search = createLucideIcon("search", __iconNode$f);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$e = [
   [
     "path",
     {
@@ -38416,7 +38416,20 @@ const __iconNode$e = [
   ],
   ["path", { d: "m21.854 2.147-10.94 10.939", key: "12cjpa" }]
 ];
-const Send = createLucideIcon("send", __iconNode$e);
+const Send = createLucideIcon("send", __iconNode$f);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$e = [
+  ["path", { d: "M20 7h-9", key: "3s1dr2" }],
+  ["path", { d: "M14 17H5", key: "gfn3mx" }],
+  ["circle", { cx: "17", cy: "17", r: "3", key: "18b49y" }],
+  ["circle", { cx: "7", cy: "7", r: "3", key: "dfmy0x" }]
+];
+const Settings2 = createLucideIcon("settings-2", __iconNode$e);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38424,12 +38437,16 @@ const Send = createLucideIcon("send", __iconNode$e);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$d = [
-  ["path", { d: "M20 7h-9", key: "3s1dr2" }],
-  ["path", { d: "M14 17H5", key: "gfn3mx" }],
-  ["circle", { cx: "17", cy: "17", r: "3", key: "18b49y" }],
-  ["circle", { cx: "7", cy: "7", r: "3", key: "dfmy0x" }]
+  [
+    "path",
+    {
+      d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z",
+      key: "1qme2f"
+    }
+  ],
+  ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
 ];
-const Settings2 = createLucideIcon("settings-2", __iconNode$d);
+const Settings = createLucideIcon("settings", __iconNode$d);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38440,13 +38457,13 @@ const __iconNode$c = [
   [
     "path",
     {
-      d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z",
-      key: "1qme2f"
+      d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
+      key: "oel41y"
     }
   ],
-  ["circle", { cx: "12", cy: "12", r: "3", key: "1v7zrd" }]
+  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
 ];
-const Settings = createLucideIcon("settings", __iconNode$c);
+const ShieldCheck = createLucideIcon("shield-check", __iconNode$c);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38460,10 +38477,9 @@ const __iconNode$b = [
       d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
       key: "oel41y"
     }
-  ],
-  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
+  ]
 ];
-const ShieldCheck = createLucideIcon("shield-check", __iconNode$b);
+const Shield = createLucideIcon("shield", __iconNode$b);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38471,15 +38487,13 @@ const ShieldCheck = createLucideIcon("shield-check", __iconNode$b);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$a = [
-  [
-    "path",
-    {
-      d: "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z",
-      key: "oel41y"
-    }
-  ]
+  ["path", { d: "M3 6h18", key: "d0wm0j" }],
+  ["path", { d: "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6", key: "4alrt4" }],
+  ["path", { d: "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2", key: "v07s0e" }],
+  ["line", { x1: "10", x2: "10", y1: "11", y2: "17", key: "1uufr5" }],
+  ["line", { x1: "14", x2: "14", y1: "11", y2: "17", key: "xtxkd" }]
 ];
-const Shield = createLucideIcon("shield", __iconNode$a);
+const Trash2 = createLucideIcon("trash-2", __iconNode$a);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38487,20 +38501,6 @@ const Shield = createLucideIcon("shield", __iconNode$a);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$9 = [
-  ["path", { d: "M3 6h18", key: "d0wm0j" }],
-  ["path", { d: "M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6", key: "4alrt4" }],
-  ["path", { d: "M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2", key: "v07s0e" }],
-  ["line", { x1: "10", x2: "10", y1: "11", y2: "17", key: "1uufr5" }],
-  ["line", { x1: "14", x2: "14", y1: "11", y2: "17", key: "xtxkd" }]
-];
-const Trash2 = createLucideIcon("trash-2", __iconNode$9);
-/**
- * @license lucide-react v0.511.0 - ISC
- *
- * This source code is licensed under the ISC license.
- * See the LICENSE file in the root directory of this source tree.
- */
-const __iconNode$8 = [
   [
     "path",
     {
@@ -38511,7 +38511,18 @@ const __iconNode$8 = [
   ["path", { d: "M12 9v4", key: "juzpu7" }],
   ["path", { d: "M12 17h.01", key: "p32p05" }]
 ];
-const TriangleAlert = createLucideIcon("triangle-alert", __iconNode$8);
+const TriangleAlert = createLucideIcon("triangle-alert", __iconNode$9);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$8 = [
+  ["path", { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2", key: "975kel" }],
+  ["circle", { cx: "12", cy: "7", r: "4", key: "17ys0d" }]
+];
+const User = createLucideIcon("user", __iconNode$8);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38519,10 +38530,12 @@ const TriangleAlert = createLucideIcon("triangle-alert", __iconNode$8);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$7 = [
-  ["path", { d: "M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2", key: "975kel" }],
-  ["circle", { cx: "12", cy: "7", r: "4", key: "17ys0d" }]
+  ["path", { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", key: "1yyitq" }],
+  ["path", { d: "M16 3.128a4 4 0 0 1 0 7.744", key: "16gr8j" }],
+  ["path", { d: "M22 21v-2a4 4 0 0 0-3-3.87", key: "kshegd" }],
+  ["circle", { cx: "9", cy: "7", r: "4", key: "nufk8" }]
 ];
-const User = createLucideIcon("user", __iconNode$7);
+const Users = createLucideIcon("users", __iconNode$7);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38530,12 +38543,17 @@ const User = createLucideIcon("user", __iconNode$7);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$6 = [
-  ["path", { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2", key: "1yyitq" }],
-  ["path", { d: "M16 3.128a4 4 0 0 1 0 7.744", key: "16gr8j" }],
-  ["path", { d: "M22 21v-2a4 4 0 0 0-3-3.87", key: "kshegd" }],
-  ["circle", { cx: "9", cy: "7", r: "4", key: "nufk8" }]
+  [
+    "path",
+    {
+      d: "M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z",
+      key: "uqj9uw"
+    }
+  ],
+  ["path", { d: "M16 9a5 5 0 0 1 0 6", key: "1q6k2b" }],
+  ["path", { d: "M19.364 18.364a9 9 0 0 0 0-12.728", key: "ijwkga" }]
 ];
-const Users = createLucideIcon("users", __iconNode$6);
+const Volume2 = createLucideIcon("volume-2", __iconNode$6);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38550,10 +38568,10 @@ const __iconNode$5 = [
       key: "uqj9uw"
     }
   ],
-  ["path", { d: "M16 9a5 5 0 0 1 0 6", key: "1q6k2b" }],
-  ["path", { d: "M19.364 18.364a9 9 0 0 0 0-12.728", key: "ijwkga" }]
+  ["line", { x1: "22", x2: "16", y1: "9", y2: "15", key: "1ewh16" }],
+  ["line", { x1: "16", x2: "22", y1: "9", y2: "15", key: "5ykzw1" }]
 ];
-const Volume2 = createLucideIcon("volume-2", __iconNode$5);
+const VolumeX = createLucideIcon("volume-x", __iconNode$5);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38564,14 +38582,19 @@ const __iconNode$4 = [
   [
     "path",
     {
-      d: "M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z",
-      key: "uqj9uw"
+      d: "m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72",
+      key: "ul74o6"
     }
   ],
-  ["line", { x1: "22", x2: "16", y1: "9", y2: "15", key: "1ewh16" }],
-  ["line", { x1: "16", x2: "22", y1: "9", y2: "15", key: "5ykzw1" }]
+  ["path", { d: "m14 7 3 3", key: "1r5n42" }],
+  ["path", { d: "M5 6v4", key: "ilb8ba" }],
+  ["path", { d: "M19 14v4", key: "blhpug" }],
+  ["path", { d: "M10 2v2", key: "7u0qdc" }],
+  ["path", { d: "M7 8H3", key: "zfb6yr" }],
+  ["path", { d: "M21 16h-4", key: "1cnmox" }],
+  ["path", { d: "M11 3H9", key: "1obp7u" }]
 ];
-const VolumeX = createLucideIcon("volume-x", __iconNode$4);
+const WandSparkles = createLucideIcon("wand-sparkles", __iconNode$4);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -46444,6 +46467,519 @@ function IndexRoute$1() {
     }
   );
 }
+function Textarea({ className, ...props }) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    "textarea",
+    {
+      "data-slot": "textarea",
+      className: cn(
+        "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+        className
+      ),
+      ...props
+    }
+  );
+}
+const DEFAULT_NATURAL_PRESET_CONFIG = {
+  agentRole: "",
+  organization: "",
+  relationshipToCaller: "",
+  callPurpose: "",
+  openingLine: "",
+  tone: "warm",
+  pacing: "balanced",
+  formality: "neutral",
+  expectedSituation: "",
+  mustAsk: "",
+  mustMention: "",
+  mustAvoid: "",
+  fallbackBehavior: "If you are unsure, ask one short clarifying question instead of guessing.",
+  handoffInstructions: "",
+  endingGoal: "",
+  extraInstructions: ""
+};
+const NATURAL_PRESET_TEMPLATES = [
+  {
+    id: "appointment-confirmation",
+    label: "Appointment Confirmation",
+    direction: "outbound",
+    config: {
+      agentRole: "Friendly appointment confirmation assistant",
+      callPurpose: "Confirm whether the appointment time still works.",
+      openingLine: "Hi, this is the AI assistant calling about your appointment. Is now still an okay time?",
+      tone: "warm",
+      pacing: "balanced",
+      mustAsk: "Confirm the date and time\nAsk whether they need to reschedule\nConfirm the best callback number if needed",
+      mustMention: "Why you are calling",
+      mustAvoid: "Do not sound pushy\nDo not ask for payment details\nDo not continue if they say they are busy; offer to call later",
+      fallbackBehavior: "If they ask something you do not know, say you can pass the message along.",
+      endingGoal: "End with the appointment confirmed, rescheduled, or flagged for follow-up."
+    }
+  },
+  {
+    id: "customer-support",
+    label: "Customer Support",
+    config: {
+      agentRole: "Helpful customer support phone agent",
+      callPurpose: "Understand the issue, collect the key details, and help with the next step.",
+      openingLine: "Hi, this is the AI support assistant. How can I help today?",
+      tone: "empathetic",
+      pacing: "patient",
+      mustAsk: "Ask for the caller's name\nAsk what they need help with\nAsk one follow-up question before suggesting a next step",
+      mustMention: "You can take a message or pass details to the team when needed",
+      mustAvoid: "Do not blame the caller\nDo not overpromise a resolution\nDo not ask multiple questions at once",
+      fallbackBehavior: "If the answer depends on private account details, offer to take a message for a human follow-up."
+    }
+  },
+  {
+    id: "lead-qualification",
+    label: "Lead Qualification",
+    direction: "outbound",
+    config: {
+      agentRole: "Professional lead qualification assistant",
+      callPurpose: "Learn whether the person is a good fit and whether they want a follow-up.",
+      openingLine: "Hi, this is the AI assistant following up on your interest. Is now a quick okay time?",
+      tone: "professional",
+      pacing: "quick",
+      mustAsk: "Ask what they are looking for\nAsk their timeline\nAsk the best way for the team to follow up",
+      mustMention: "Keep the call brief unless they ask for details",
+      mustAvoid: "Do not pressure the person\nDo not make pricing promises\nDo not keep talking if they are not interested",
+      endingGoal: "Capture fit, timeline, and follow-up preference."
+    }
+  },
+  {
+    id: "basic-receptionist",
+    label: "Basic Receptionist",
+    direction: "inbound",
+    config: {
+      agentRole: "Calm front desk answering assistant",
+      callPurpose: "Greet callers, understand why they called, and take a useful message.",
+      openingLine: "Hi, thanks for calling. This is the AI assistant. How can I help?",
+      tone: "warm",
+      pacing: "balanced",
+      mustAsk: "Ask for the caller's name\nAsk the reason for the call\nAsk the best callback number if a follow-up is needed",
+      mustMention: "You can pass the message along",
+      mustAvoid: "Do not pretend to be a human\nDo not invent policies or availability\nDo not ask for sensitive payment information",
+      endingGoal: "Finish with a clear message or answer and a polite sign-off."
+    }
+  },
+  {
+    id: "missed-call-callback",
+    label: "Missed Call Callback",
+    direction: "outbound",
+    config: {
+      agentRole: "Brief callback assistant",
+      callPurpose: "Return a missed call, find out what the person needed, and capture next steps.",
+      openingLine: "Hi, this is the AI assistant returning your call. Is now still a good time?",
+      tone: "casual",
+      pacing: "balanced",
+      mustAsk: "Ask what they were calling about\nAsk whether they still need help\nAsk for the best next step",
+      mustAvoid: "Do not talk over them\nDo not continue if they say they are busy"
+    }
+  }
+];
+const TURN_TIMING_PROFILES = [
+  {
+    id: "fast",
+    label: "Fast and responsive",
+    turnDetection: {
+      serverVad: true,
+      threshold: 0.45,
+      silenceDurationMs: 350n,
+      prefixPaddingMs: 250n
+    }
+  },
+  {
+    id: "balanced",
+    label: "Balanced",
+    turnDetection: {
+      serverVad: true,
+      threshold: 0.55,
+      silenceDurationMs: 500n,
+      prefixPaddingMs: 333n
+    }
+  },
+  {
+    id: "patient",
+    label: "Patient listener",
+    turnDetection: {
+      serverVad: true,
+      threshold: 0.6,
+      silenceDurationMs: 800n,
+      prefixPaddingMs: 333n
+    }
+  },
+  {
+    id: "noisy",
+    label: "Noisy environment",
+    turnDetection: {
+      serverVad: true,
+      threshold: 0.75,
+      silenceDurationMs: 650n,
+      prefixPaddingMs: 333n
+    }
+  }
+];
+function createNaturalPresetConfig(overrides = {}) {
+  return { ...DEFAULT_NATURAL_PRESET_CONFIG, ...overrides };
+}
+function getNaturalPresetTemplate(id2) {
+  return NATURAL_PRESET_TEMPLATES.find((template) => template.id === id2);
+}
+function cloneTurnDetection$1(turnDetection) {
+  return {
+    serverVad: true,
+    threshold: turnDetection.threshold,
+    silenceDurationMs: turnDetection.silenceDurationMs,
+    prefixPaddingMs: turnDetection.prefixPaddingMs
+  };
+}
+function getTurnTimingProfile(id2) {
+  return TURN_TIMING_PROFILES.find((profile) => profile.id === id2);
+}
+function getTurnTimingProfileId(turnDetection) {
+  const match = TURN_TIMING_PROFILES.find(
+    (profile) => isSameTurnDetection(profile.turnDetection, turnDetection)
+  );
+  return (match == null ? void 0 : match.id) ?? "custom";
+}
+function linesToBullets(value) {
+  const clean2 = value.split(/\r?\n/).map((line) => line.trim().replace(/^[-*]\s*/, "")).filter(Boolean);
+  if (clean2.length === 0) return "- None";
+  return clean2.map((line) => `- ${line}`).join("\n");
+}
+function buildNaturalPhonePrompt(config, direction) {
+  const callPurpose = config.callPurpose.trim();
+  const openingLine = config.openingLine.trim();
+  const openingInstruction = direction === "inbound" ? openingLine ? `- Use this as the natural first sentence when the call connects: "${openingLine}"` : "- Start with one short, natural greeting, then listen." : openingLine ? `- After the person answers or acknowledges the call, say this naturally: "${openingLine}"` : "- Stay silent until the person answers, then introduce yourself briefly and ask if now is an okay time.";
+  return [
+    "You are a real-time AI phone agent. Sound natural, calm, and conversational.",
+    "",
+    "Identity:",
+    `- Role: ${config.agentRole.trim() || "AI phone assistant"}`,
+    config.organization.trim() ? `- Organization/project: ${config.organization.trim()}` : "",
+    config.relationshipToCaller.trim() ? `- Relationship to the person on the phone: ${config.relationshipToCaller.trim()}` : "",
+    "",
+    "Call goal:",
+    `- ${callPurpose || "Help the person on the phone with a clear, useful next step."}`,
+    config.endingGoal.trim() ? `- Desired ending: ${config.endingGoal.trim()}` : "",
+    "",
+    "Opening:",
+    openingInstruction,
+    "",
+    "Speaking style:",
+    `- Tone: ${config.tone}`,
+    `- Pacing: ${config.pacing}`,
+    `- Formality: ${config.formality}`,
+    "- Keep most turns to one or two short spoken sentences.",
+    "- Ask one question at a time.",
+    "- Acknowledge briefly before moving forward.",
+    "- Do not monologue.",
+    "- If interrupted, stop and respond to the person's new point.",
+    "",
+    config.expectedSituation.trim() ? `Expected situation:
+- ${config.expectedSituation.trim()}` : "",
+    "",
+    "Must ask:",
+    linesToBullets(config.mustAsk),
+    "",
+    "Must mention:",
+    linesToBullets(config.mustMention),
+    "",
+    "Avoid:",
+    linesToBullets(config.mustAvoid),
+    "",
+    "Fallback behavior:",
+    `- ${config.fallbackBehavior.trim() || DEFAULT_NATURAL_PRESET_CONFIG.fallbackBehavior}`,
+    "",
+    config.handoffInstructions.trim() ? `Handoff instructions:
+- ${config.handoffInstructions.trim()}` : "",
+    "",
+    config.extraInstructions.trim() ? `Extra instructions:
+${config.extraInstructions.trim()}` : ""
+  ].filter(Boolean).join("\n");
+}
+function isSameTurnDetection(a2, b2) {
+  return a2.serverVad === true && b2.serverVad === true && Math.abs(a2.threshold - b2.threshold) < 1e-3 && a2.silenceDurationMs === b2.silenceDurationMs && a2.prefixPaddingMs === b2.prefixPaddingMs;
+}
+const TONE_OPTIONS = [
+  { value: "warm", label: "Warm" },
+  { value: "professional", label: "Professional" },
+  { value: "casual", label: "Casual" },
+  { value: "direct", label: "Direct" },
+  { value: "empathetic", label: "Empathetic" }
+];
+const PACING_OPTIONS = [
+  { value: "quick", label: "Quick" },
+  { value: "balanced", label: "Balanced" },
+  { value: "patient", label: "Patient" }
+];
+const FORMALITY_OPTIONS = [
+  { value: "casual", label: "Casual" },
+  { value: "neutral", label: "Neutral" },
+  { value: "formal", label: "Formal" }
+];
+function NaturalPromptBuilder({
+  direction,
+  onPromptChange,
+  dataOcidPrefix = "natural_prompt"
+}) {
+  const [templateId, setTemplateId] = reactExports.useState("none");
+  const [config, setConfig] = reactExports.useState(
+    () => createNaturalPresetConfig()
+  );
+  const templates = reactExports.useMemo(
+    () => NATURAL_PRESET_TEMPLATES.filter(
+      (template) => !template.direction || template.direction === direction
+    ),
+    [direction]
+  );
+  function updateConfig(key, value) {
+    setConfig((current) => ({ ...current, [key]: value }));
+  }
+  function applyTemplate(nextTemplateId) {
+    setTemplateId(nextTemplateId);
+    const template = getNaturalPresetTemplate(nextTemplateId);
+    if (!template) return;
+    setConfig(
+      (current) => createNaturalPresetConfig({
+        ...current,
+        ...template.config
+      })
+    );
+  }
+  function generatePrompt() {
+    onPromptChange(buildNaturalPhonePrompt(config, direction));
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    "div",
+    {
+      className: "space-y-4 rounded-md border border-border bg-muted/20 p-4",
+      "data-ocid": `${dataOcidPrefix}.builder`,
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5 sm:max-w-xs", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase tracking-wide text-muted-foreground", children: "Natural Prompt Builder" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(Select, { value: templateId, onValueChange: applyTemplate, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                SelectTrigger,
+                {
+                  className: "w-full",
+                  "data-ocid": `${dataOcidPrefix}.template.select`,
+                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectValue, { placeholder: "Choose a template" })
+                }
+              ),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(SelectContent, { children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: "none", children: "Blank" }),
+                templates.map((template) => /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: template.id, children: template.label }, template.id))
+              ] })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(
+            Button,
+            {
+              type: "button",
+              variant: "secondary",
+              className: "gap-2",
+              onClick: generatePrompt,
+              "data-ocid": `${dataOcidPrefix}.generate_button`,
+              children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(WandSparkles, { className: "h-4 w-4" }),
+                "Generate Prompt"
+              ]
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Agent Role" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Input,
+              {
+                value: config.agentRole,
+                onChange: (event) => updateConfig("agentRole", event.target.value),
+                placeholder: "Friendly support assistant",
+                "data-ocid": `${dataOcidPrefix}.agent_role.input`
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Organization" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Input,
+              {
+                value: config.organization,
+                onChange: (event) => updateConfig("organization", event.target.value),
+                placeholder: "Company or project name",
+                "data-ocid": `${dataOcidPrefix}.organization.input`
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Call Goal" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Textarea,
+              {
+                value: config.callPurpose,
+                onChange: (event) => updateConfig("callPurpose", event.target.value),
+                rows: 3,
+                placeholder: "Confirm the appointment and collect any changes",
+                "data-ocid": `${dataOcidPrefix}.call_goal.textarea`,
+                className: "resize-none text-sm"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Opening Line" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Textarea,
+              {
+                value: config.openingLine,
+                onChange: (event) => updateConfig("openingLine", event.target.value),
+                rows: 3,
+                placeholder: direction === "inbound" ? "Hi, thanks for calling. How can I help?" : "Hi, this is the AI assistant calling about your appointment. Is now okay?",
+                "data-ocid": `${dataOcidPrefix}.opening_line.textarea`,
+                className: "resize-none text-sm"
+              }
+            )
+          ] })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            PromptSelect,
+            {
+              label: "Tone",
+              value: config.tone,
+              options: TONE_OPTIONS,
+              onChange: (value) => updateConfig("tone", value),
+              dataOcid: `${dataOcidPrefix}.tone.select`
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            PromptSelect,
+            {
+              label: "Pacing",
+              value: config.pacing,
+              options: PACING_OPTIONS,
+              onChange: (value) => updateConfig("pacing", value),
+              dataOcid: `${dataOcidPrefix}.pacing.select`
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            PromptSelect,
+            {
+              label: "Formality",
+              value: config.formality,
+              options: FORMALITY_OPTIONS,
+              onChange: (value) => updateConfig("formality", value),
+              dataOcid: `${dataOcidPrefix}.formality.select`
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            PromptListField,
+            {
+              label: "Must Ask",
+              value: config.mustAsk,
+              onChange: (value) => updateConfig("mustAsk", value),
+              placeholder: "One item per line",
+              dataOcid: `${dataOcidPrefix}.must_ask.textarea`
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            PromptListField,
+            {
+              label: "Must Mention",
+              value: config.mustMention,
+              onChange: (value) => updateConfig("mustMention", value),
+              placeholder: "One item per line",
+              dataOcid: `${dataOcidPrefix}.must_mention.textarea`
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            PromptListField,
+            {
+              label: "Avoid",
+              value: config.mustAvoid,
+              onChange: (value) => updateConfig("mustAvoid", value),
+              placeholder: "One item per line",
+              dataOcid: `${dataOcidPrefix}.avoid.textarea`
+            }
+          )
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Fallback Behavior" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Textarea,
+              {
+                value: config.fallbackBehavior,
+                onChange: (event) => updateConfig("fallbackBehavior", event.target.value),
+                rows: 3,
+                "data-ocid": `${dataOcidPrefix}.fallback.textarea`,
+                className: "resize-none text-sm"
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Desired Ending" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Textarea,
+              {
+                value: config.endingGoal,
+                onChange: (event) => updateConfig("endingGoal", event.target.value),
+                rows: 3,
+                placeholder: "Confirmed, rescheduled, or ready for follow-up",
+                "data-ocid": `${dataOcidPrefix}.ending_goal.textarea`,
+                className: "resize-none text-sm"
+              }
+            )
+          ] })
+        ] })
+      ]
+    }
+  );
+}
+function PromptSelect({
+  label,
+  value,
+  options,
+  onChange,
+  dataOcid
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs(Select, { value, onValueChange: (next) => onChange(next), children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx(SelectTrigger, { className: "w-full", "data-ocid": dataOcid, children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectValue, {}) }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(SelectContent, { children: options.map((option) => /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: option.value, children: option.label }, option.value)) })
+    ] })
+  ] });
+}
+function PromptListField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  dataOcid
+}) {
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: label }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      Textarea,
+      {
+        value,
+        onChange: (event) => onChange(event.target.value),
+        rows: 4,
+        placeholder,
+        "data-ocid": dataOcid,
+        className: "resize-none text-sm"
+      }
+    )
+  ] });
+}
 function useStateMachine(initialState, machine) {
   return reactExports.useReducer((state, event) => {
     const nextState = machine[state][event];
@@ -48937,19 +49473,6 @@ function Slider({
     }
   );
 }
-function Textarea({ className, ...props }) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx(
-    "textarea",
-    {
-      "data-slot": "textarea",
-      className: cn(
-        "border-input placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex field-sizing-content min-h-16 w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-        className
-      ),
-      ...props
-    }
-  );
-}
 async function copyTextToClipboard(text) {
   var _a3;
   if (!text) return false;
@@ -48985,12 +49508,7 @@ async function copyTextToClipboard(text) {
     }
   }
 }
-const DEFAULT_TURN_DETECTION = {
-  serverVad: true,
-  threshold: 0.5,
-  prefixPaddingMs: 200n,
-  silenceDurationMs: 500n
-};
+const DEFAULT_TURN_DETECTION$1 = ((_m = TURN_TIMING_PROFILES.find((profile) => profile.id === "balanced")) == null ? void 0 : _m.turnDetection) ?? TURN_TIMING_PROFILES[0].turnDetection;
 const DEFAULT_TOOLS = {
   webSearch: false,
   xSearch: false,
@@ -48998,11 +49516,11 @@ const DEFAULT_TOOLS = {
 };
 const MAX_AI_INSTRUCTIONS_CHARS$2 = 8e3;
 const defaultTimingText$1 = {
-  threshold: `Default: ${DEFAULT_TURN_DETECTION.threshold.toFixed(2)}`,
-  silenceDuration: `Default: ${Number(DEFAULT_TURN_DETECTION.silenceDurationMs)}ms`,
-  prefixPadding: `Default: ${Number(DEFAULT_TURN_DETECTION.prefixPaddingMs)}ms`
+  threshold: `Default: ${DEFAULT_TURN_DETECTION$1.threshold.toFixed(2)}`,
+  silenceDuration: `Default: ${Number(DEFAULT_TURN_DETECTION$1.silenceDurationMs)}ms`,
+  prefixPadding: `Default: ${Number(DEFAULT_TURN_DETECTION$1.prefixPaddingMs)}ms`
 };
-const TURN_DETECTION_HELP$1 = "These settings control when the AI decides the caller has finished speaking and can respond. The defaults work well for most calls; adjust them if the AI interrupts too quickly or waits too long.";
+const TURN_DETECTION_HELP$1 = "Choose how quickly the AI responds after the caller pauses. Use Patient listener if callers often pause mid-sentence.";
 const MONITOR_SAMPLE_RATE$1 = 8e3;
 const MONITOR_JITTER_SECONDS$1 = 0.12;
 function validateE164$1(phone) {
@@ -49015,9 +49533,9 @@ function generateWebhookSecret() {
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return window.btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
-function cloneTurnDetection(turnDetection = DEFAULT_TURN_DETECTION) {
+function cloneTurnDetection(turnDetection = DEFAULT_TURN_DETECTION$1) {
   return {
-    serverVad: turnDetection.serverVad,
+    serverVad: true,
     threshold: turnDetection.threshold,
     prefixPaddingMs: turnDetection.prefixPaddingMs,
     silenceDurationMs: turnDetection.silenceDurationMs
@@ -49114,22 +49632,48 @@ function TurnDetectionFields({
 }) {
   const silenceMs = value.silenceDurationMs ?? 500n;
   const prefixMs = value.prefixPaddingMs ?? 200n;
+  const timingProfileId = getTurnTimingProfileId({
+    ...value,
+    serverVad: true
+  });
+  function applyTimingProfile(profileId) {
+    const profile = getTurnTimingProfile(profileId);
+    if (!profile) return;
+    onChange(cloneTurnDetection(profile.turnDetection));
+  }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 rounded-md border border-border bg-muted/20 p-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-wide text-foreground", children: "Turn Detection" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-wide text-foreground", children: "Conversation Timing" }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: TURN_DETECTION_HELP$1 })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Timing Profile" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs(Select, { value: timingProfileId, onValueChange: applyTimingProfile, children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            SelectTrigger,
+            {
+              className: "w-full",
+              "data-ocid": `${dataOcidPrefix}.profile.select`,
+              children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectValue, {})
+            }
+          ),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(SelectContent, { children: [
+            TURN_TIMING_PROFILES.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: profile.id, children: profile.label }, profile.id)),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: "custom", disabled: true, children: "Custom" })
+          ] })
+        ] })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 rounded-md border border-border bg-background/60 p-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-0.5", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-foreground", children: "Auto-detect end of speech" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] leading-tight text-muted-foreground", children: "Leave this on for normal calls so the AI answers after the caller pauses." })
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-foreground", children: "Automatic phone turn detection" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] leading-tight text-muted-foreground", children: "Required for live phone calls through the xAI realtime bridge." })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           Switch,
           {
-            checked: value.serverVad,
-            onCheckedChange: (serverVad) => onChange({ ...value, serverVad }),
+            checked: true,
+            disabled: true,
             "data-ocid": `${dataOcidPrefix}.server_vad.switch`,
             className: "shrink-0"
           }
@@ -49569,6 +50113,17 @@ function AnsweringPresetCard({
                     draftPreset.phoneNumber !== preset.phoneNumber && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] leading-relaxed text-muted-foreground", children: "Changing the number will pause this preset until the new Twilio webhook is verified." })
                   ] })
                 ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  NaturalPromptBuilder,
+                  {
+                    direction: "inbound",
+                    onPromptChange: (systemPrompt) => setDraftPreset({
+                      ...draftPreset,
+                      systemPrompt
+                    }),
+                    dataOcidPrefix: `answering.preset.${preset.id.toString()}.natural_prompt`
+                  }
+                ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { htmlFor: `answering-preset-instructions-${preset.id}`, children: "Instructions" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -49859,6 +50414,17 @@ function AnsweringServicePage() {
               )
             ] })
           ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx(
+            NaturalPromptBuilder,
+            {
+              direction: "inbound",
+              onPromptChange: (systemPrompt) => setInput({
+                ...input,
+                systemPrompt
+              }),
+              dataOcidPrefix: "answering.natural_prompt"
+            }
+          ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { children: "Instructions" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -62045,6 +62611,9 @@ function useForm(props = {}) {
 const DEFAULT_AUDIO_FORMAT = AudioFormat.pcmu;
 const DEFAULT_SAMPLE_RATE = SampleRate.hz8000;
 const MAX_AI_INSTRUCTIONS_CHARS = 8e3;
+const DEFAULT_TURN_DETECTION = cloneTurnDetection$1(
+  ((_n = TURN_TIMING_PROFILES.find((profile) => profile.id === "balanced")) == null ? void 0 : _n.turnDetection) ?? TURN_TIMING_PROFILES[0].turnDetection
+);
 const DEFAULT_TOOLS_ENABLED = {
   xSearch: false,
   webSearch: false,
@@ -62058,12 +62627,7 @@ function createDefaultPreset() {
     systemPrompt: "",
     audioFormat: DEFAULT_AUDIO_FORMAT,
     sampleRate: DEFAULT_SAMPLE_RATE,
-    turnDetection: {
-      serverVad: true,
-      threshold: 0.5,
-      prefixPaddingMs: 200n,
-      silenceDurationMs: 500n
-    },
+    turnDetection: cloneTurnDetection$1(DEFAULT_TURN_DETECTION),
     toolsEnabled: { ...DEFAULT_TOOLS_ENABLED }
   };
 }
@@ -62072,6 +62636,10 @@ function applyHiddenPresetDefaults(input) {
     ...input,
     audioFormat: DEFAULT_AUDIO_FORMAT,
     sampleRate: DEFAULT_SAMPLE_RATE,
+    turnDetection: {
+      ...input.turnDetection,
+      serverVad: true
+    },
     toolsEnabled: { ...DEFAULT_TOOLS_ENABLED }
   };
 }
@@ -62082,9 +62650,9 @@ const defaultTimingText = {
   silenceDuration: `Default: ${Number(defaultTurnDetection.silenceDurationMs)}ms`,
   prefixPadding: `Default: ${Number(defaultTurnDetection.prefixPaddingMs)}ms`
 };
-const TURN_DETECTION_HELP = "These settings control when the AI decides the caller has finished speaking and can respond. The defaults work well for most calls; adjust them if the AI interrupts too quickly or waits too long.";
+const TURN_DETECTION_HELP = "Choose how quickly the AI responds after the caller pauses. Use Patient listener if callers often pause mid-sentence.";
 function PresetForm({ initial, onSave, onCancel, isLoading }) {
-  var _a3, _b3, _c2, _d2, _e2;
+  var _a3, _b3, _c2, _d2;
   const {
     register,
     handleSubmit,
@@ -62109,6 +62677,18 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
   );
   const silenceMs = ((_a3 = values.turnDetection) == null ? void 0 : _a3.silenceDurationMs) ?? 500n;
   const prefixMs = ((_b3 = values.turnDetection) == null ? void 0 : _b3.prefixPaddingMs) ?? 200n;
+  const timingProfileId = getTurnTimingProfileId({
+    ...values.turnDetection,
+    serverVad: true
+  });
+  function applyTimingProfile(profileId) {
+    const profile = getTurnTimingProfile(profileId);
+    if (!profile) return;
+    setValue("turnDetection", cloneTurnDetection$1(profile.turnDetection), {
+      shouldDirty: true,
+      shouldValidate: true
+    });
+  }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: submitPreset, className: "space-y-6", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold text-muted-foreground uppercase tracking-wide", children: "Preset Name" }),
@@ -62130,6 +62710,17 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
         }
       )
     ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(
+      NaturalPromptBuilder,
+      {
+        direction: "outbound",
+        onPromptChange: (prompt) => setValue("systemPrompt", prompt, {
+          shouldDirty: true,
+          shouldValidate: true
+        }),
+        dataOcidPrefix: "settings.preset.natural_prompt"
+      }
+    ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold text-muted-foreground uppercase tracking-wide", children: "AI Instructions / System Prompt" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -62176,19 +62767,36 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4 rounded-lg bg-muted/20 border border-border", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-foreground uppercase tracking-wide", children: "Turn Detection" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-foreground uppercase tracking-wide", children: "Conversation Timing" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground leading-relaxed", children: TURN_DETECTION_HELP })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Timing Profile" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs(Select, { value: timingProfileId, onValueChange: applyTimingProfile, children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              SelectTrigger,
+              {
+                className: "w-full",
+                "data-ocid": "settings.preset.turn_profile.select",
+                children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectValue, {})
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(SelectContent, { children: [
+              TURN_TIMING_PROFILES.map((profile) => /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: profile.id, children: profile.label }, profile.id)),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: "custom", disabled: true, children: "Custom" })
+            ] })
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-4 rounded-md border border-border bg-background/60 p-3", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-0.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-foreground", children: "Auto-detect end of speech" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground leading-tight", children: "Leave this on for normal calls so the AI answers after the caller pauses." })
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-foreground", children: "Automatic phone turn detection" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground leading-tight", children: "Required for live phone calls through the xAI realtime bridge." })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Switch,
             {
-              checked: ((_c2 = values.turnDetection) == null ? void 0 : _c2.serverVad) ?? true,
-              onCheckedChange: (v2) => setValue("turnDetection.serverVad", v2),
+              checked: true,
+              disabled: true,
               "data-ocid": "settings.preset.server_vad.switch",
               className: "shrink-0"
             }
@@ -62198,7 +62806,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Speech Sensitivity" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono text-primary tabular-nums", children: (((_d2 = values.turnDetection) == null ? void 0 : _d2.threshold) ?? 0.5).toFixed(2) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono text-primary tabular-nums", children: (((_c2 = values.turnDetection) == null ? void 0 : _c2.threshold) ?? 0.5).toFixed(2) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           Slider,
@@ -62206,7 +62814,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
             min: 0,
             max: 1,
             step: 0.01,
-            value: [((_e2 = values.turnDetection) == null ? void 0 : _e2.threshold) ?? 0.5],
+            value: [((_d2 = values.turnDetection) == null ? void 0 : _d2.threshold) ?? 0.5],
             onValueChange: ([v2]) => setValue("turnDetection.threshold", v2),
             "data-ocid": "settings.preset.threshold.slider",
             className: "py-1"

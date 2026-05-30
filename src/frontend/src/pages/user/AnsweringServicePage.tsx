@@ -5,6 +5,7 @@ import {
   Voice,
 } from "@/backend";
 import { AppLayout } from "@/components/AppLayout";
+import { NaturalPromptBuilder } from "@/components/NaturalPromptBuilder";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { VoiceIdSelector, getVoiceLabel } from "@/components/VoiceIdSelector";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -40,6 +48,11 @@ import {
   useUpdateAnsweringPreset,
 } from "@/hooks/use-backend";
 import { copyTextToClipboard } from "@/lib/clipboard";
+import {
+  TURN_TIMING_PROFILES,
+  getTurnTimingProfile,
+  getTurnTimingProfileId,
+} from "@/lib/natural-phone";
 import { getLiveAudioMonitorUrl, getVoiceServerUrl } from "@/lib/voice-server";
 import type { AnsweringPreset, AnsweringPresetInput } from "@/types";
 import {
@@ -59,12 +72,9 @@ import {
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-const DEFAULT_TURN_DETECTION = {
-  serverVad: true,
-  threshold: 0.5,
-  prefixPaddingMs: 200n,
-  silenceDurationMs: 500n,
-};
+const DEFAULT_TURN_DETECTION =
+  TURN_TIMING_PROFILES.find((profile) => profile.id === "balanced")
+    ?.turnDetection ?? TURN_TIMING_PROFILES[0].turnDetection;
 
 const DEFAULT_TOOLS = {
   webSearch: false,
@@ -79,7 +89,7 @@ const defaultTimingText = {
 };
 
 const TURN_DETECTION_HELP =
-  "These settings control when the AI decides the caller has finished speaking and can respond. The defaults work well for most calls; adjust them if the AI interrupts too quickly or waits too long.";
+  "Choose how quickly the AI responds after the caller pauses. Use Patient listener if callers often pause mid-sentence.";
 
 const MONITOR_SAMPLE_RATE = 8000;
 const MONITOR_JITTER_SECONDS = 0.12;
@@ -104,7 +114,7 @@ function cloneTurnDetection(
   turnDetection: AnsweringPresetInput["turnDetection"] = DEFAULT_TURN_DETECTION,
 ): AnsweringPresetInput["turnDetection"] {
   return {
-    serverVad: turnDetection.serverVad,
+    serverVad: true,
     threshold: turnDetection.threshold,
     prefixPaddingMs: turnDetection.prefixPaddingMs,
     silenceDurationMs: turnDetection.silenceDurationMs,
@@ -219,31 +229,63 @@ function TurnDetectionFields({
 }) {
   const silenceMs = value.silenceDurationMs ?? 500n;
   const prefixMs = value.prefixPaddingMs ?? 200n;
+  const timingProfileId = getTurnTimingProfileId({
+    ...value,
+    serverVad: true,
+  });
+
+  function applyTimingProfile(profileId: string) {
+    const profile = getTurnTimingProfile(profileId);
+    if (!profile) return;
+    onChange(cloneTurnDetection(profile.turnDetection));
+  }
 
   return (
     <div className="space-y-4 rounded-md border border-border bg-muted/20 p-4">
       <div className="space-y-3">
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-foreground">
-            Turn Detection
+            Conversation Timing
           </p>
           <p className="text-xs leading-relaxed text-muted-foreground">
             {TURN_DETECTION_HELP}
           </p>
         </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">
+            Timing Profile
+          </Label>
+          <Select value={timingProfileId} onValueChange={applyTimingProfile}>
+            <SelectTrigger
+              className="w-full"
+              data-ocid={`${dataOcidPrefix}.profile.select`}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TURN_TIMING_PROFILES.map((profile) => (
+                <SelectItem key={profile.id} value={profile.id}>
+                  {profile.label}
+                </SelectItem>
+              ))}
+              <SelectItem value="custom" disabled>
+                Custom
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-background/60 p-3">
           <div className="space-y-0.5">
             <Label className="text-xs text-foreground">
-              Auto-detect end of speech
+              Automatic phone turn detection
             </Label>
             <p className="text-[10px] leading-tight text-muted-foreground">
-              Leave this on for normal calls so the AI answers after the caller
-              pauses.
+              Required for live phone calls through the xAI realtime bridge.
             </p>
           </div>
           <Switch
-            checked={value.serverVad}
-            onCheckedChange={(serverVad) => onChange({ ...value, serverVad })}
+            checked
+            disabled
             data-ocid={`${dataOcidPrefix}.server_vad.switch`}
             className="shrink-0"
           />
@@ -748,6 +790,17 @@ function AnsweringPresetCard({
               </div>
             </div>
 
+            <NaturalPromptBuilder
+              direction="inbound"
+              onPromptChange={(systemPrompt) =>
+                setDraftPreset({
+                  ...draftPreset,
+                  systemPrompt,
+                })
+              }
+              dataOcidPrefix={`answering.preset.${preset.id.toString()}.natural_prompt`}
+            />
+
             <div className="space-y-2">
               <Label htmlFor={`answering-preset-instructions-${preset.id}`}>
                 Instructions
@@ -1052,6 +1105,16 @@ export default function AnsweringServicePage() {
                         />
                       </div>
                     </div>
+                    <NaturalPromptBuilder
+                      direction="inbound"
+                      onPromptChange={(systemPrompt) =>
+                        setInput({
+                          ...input,
+                          systemPrompt,
+                        })
+                      }
+                      dataOcidPrefix="answering.natural_prompt"
+                    />
                     <div className="space-y-2">
                       <Label>Instructions</Label>
                       <Textarea
