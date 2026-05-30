@@ -257,12 +257,12 @@ export default function LoginPage({
         <p className="text-center text-xs text-muted-foreground/40 mt-6">
           © {new Date().getFullYear()}.{" "}
           <a
-            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== "undefined" ? window.location.hostname : "")}`}
+            href="https://richardhery.com"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-primary transition-colors"
           >
-            Built with caffeine.ai
+            Built with richardhery.com
           </a>
         </p>
       </div>

@@ -38751,11 +38751,11 @@ function AppSidebar({ onClose }) {
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "a",
         {
-          href: `https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== "undefined" ? window.location.hostname : "")}`,
+          href: "https://richardhery.com",
           target: "_blank",
           rel: "noopener noreferrer",
           className: "hover:text-primary transition-colors",
-          children: "caffeine.ai"
+          children: "richardhery.com"
         }
       )
     ] }) })
@@ -46409,11 +46409,11 @@ function LoginPage({
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           "a",
           {
-            href: `https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== "undefined" ? window.location.hostname : "")}`,
+            href: "https://richardhery.com",
             target: "_blank",
             rel: "noopener noreferrer",
             className: "hover:text-primary transition-colors",
-            children: "Built with caffeine.ai"
+            children: "Built with richardhery.com"
           }
         )
       ] })

@@ -155,12 +155,12 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
         <p className="text-xs text-muted-foreground/50">
           © {new Date().getFullYear()}.{" "}
           <a
-            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(typeof window !== "undefined" ? window.location.hostname : "")}`}
+            href="https://richardhery.com"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-primary transition-colors"
           >
-            caffeine.ai
+            richardhery.com
           </a>
         </p>
       </div>
