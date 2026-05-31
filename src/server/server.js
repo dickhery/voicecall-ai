@@ -43,7 +43,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-05-31-natural-preset-interpretation";
+const SERVER_VERSION = "2026-05-31-two-phase-opening";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -468,6 +468,10 @@ function isWebSocketOpen(ws) {
   return ws && ws.readyState === WebSocket.OPEN;
 }
 
+function getXaiResponseId(event = {}) {
+  return String(event.response?.id || event.response_id || "");
+}
+
 function isBackendAuthorizationError(error) {
   const message = String(error?.message || error || "");
   return (
@@ -760,6 +764,27 @@ function buildCallDirectionInstructions(direction, preset = {}) {
   ].join(" ");
 }
 
+function buildOpeningOnlySessionInstructions(direction, openingLine) {
+  const cleanOpening = normalizeOptionalInstructionText(openingLine);
+  const openingInstruction =
+    direction === CALL_DIRECTIONS.INBOUND
+      ? cleanOpening
+        ? `Opening seed: ${JSON.stringify(cleanOpening)}. Create a short natural greeting from this seed. Preserve fixed facts, but do not quote it mechanically.`
+        : "Create one short, natural greeting for an incoming phone call."
+      : cleanOpening
+        ? `Opening seed after the person answers: ${JSON.stringify(cleanOpening)}. Create a short natural opening from this seed. Preserve fixed facts, but do not quote it mechanically.`
+        : "Now that the person has answered, introduce yourself briefly and ask if now is an okay time.";
+
+  return [
+    "You are a real-time AI phone agent, and this session is currently in the opening turn only.",
+    openingInstruction,
+    "Your entire next spoken response must be only that greeting or opening.",
+    "Use your own words. Keep it to one brief spoken turn, with at most two short sentences if the opening seed naturally includes a greeting plus a simple invitation to respond.",
+    "Do not ask must-ask questions, collect details, mention agenda items, use tools, explain the call goal, or continue the script yet.",
+    "After the opening, stop speaking and wait for the person on the phone to respond.",
+  ].join("\n");
+}
+
 function buildOpeningOnlyTurnInstruction(direction, openingLine) {
   const cleanOpening = normalizeOptionalInstructionText(openingLine);
   const openingInstruction =
@@ -772,12 +797,10 @@ function buildOpeningOnlyTurnInstruction(direction, openingLine) {
         : "Now that the person has answered, briefly introduce yourself and ask if now is an okay time.";
 
   return [
-    "Internal opening-turn instruction for the AI phone agent.",
-    "Do not read, quote, or mention this instruction.",
+    "Internal opening-turn trigger for the AI phone agent.",
+    "The call is connected.",
     openingInstruction,
-    "Your entire next assistant response must be only that greeting or opening line.",
-    "Do not ask must-ask questions, collect details, mention agenda items, discuss the full call goal, or continue the script yet.",
-    "After the opening, stop speaking and wait for the person on the phone to respond.",
+    "Say only the brief opening now, then stop.",
   ].join(" ");
 }
 
@@ -885,7 +908,7 @@ function clamp(value, min, max) {
 
 function buildXaiSessionUpdate(
   preset,
-  { direction = CALL_DIRECTIONS.OUTBOUND } = {},
+  { direction = CALL_DIRECTIONS.OUTBOUND, openingOnly = false } = {},
 ) {
   const tools = [];
   if (preset.toolsEnabled.fileSearch && preset.vectorStoreIds.length > 0) {
@@ -907,12 +930,12 @@ function buildXaiSessionUpdate(
       : normalizeOptionalInstructionText(
           preset.outboundIntroAfterHello || preset.openingLine,
         );
-
-  return {
-    type: "session.update",
-    session: {
-      voice: preset.voice,
-      instructions: buildSafeInstructions(
+  const instructions = openingOnly
+    ? buildSafeInstructions(
+        buildOpeningOnlySessionInstructions(callDirection, openingLine),
+        buildVoiceStyleInstructions(),
+      )
+    : buildSafeInstructions(
         buildNaturalVoiceInstructions(preset.systemPrompt, {
           direction: callDirection,
           presetName: preset.name,
@@ -921,7 +944,13 @@ function buildXaiSessionUpdate(
         }),
         buildVoiceStyleInstructions(),
         buildCallDirectionInstructions(callDirection, preset),
-      ),
+      );
+
+  return {
+    type: "session.update",
+    session: {
+      voice: preset.voice,
+      instructions,
       turn_detection: {
         type: "server_vad",
         threshold: clamp(preset.turnDetection.threshold, 0.1, 0.9),
@@ -932,7 +961,7 @@ function buildXaiSessionUpdate(
         input: { format: { type: "audio/pcmu" } },
         output: { format: { type: "audio/pcmu" } },
       },
-      tools,
+      tools: openingOnly ? [] : tools,
     },
   };
 }
@@ -2334,6 +2363,12 @@ app.post("/initiate-call", async (req, res) => {
       twilioWs: null,
       xaiWs: null,
       xaiResponseInProgress: false,
+      openingTurnSent: false,
+      openingTurnRequested: false,
+      openingTurnActive: false,
+      openingResponseId: "",
+      openingCanceledByCaller: false,
+      fullInstructionsApplied: false,
       steeringCount: 0,
       lastSteeringAt: null,
       twimlUrl: twimlUrl.toString(),
@@ -2501,6 +2536,12 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
       twilioWs: null,
       xaiWs: null,
       xaiResponseInProgress: false,
+      openingTurnSent: false,
+      openingTurnRequested: false,
+      openingTurnActive: false,
+      openingResponseId: "",
+      openingCanceledByCaller: false,
+      fullInstructionsApplied: false,
       steeringCount: 0,
       lastSteeringAt: null,
       twimlUrl: "",
@@ -2855,6 +2896,34 @@ mediaWss.on("connection", (twilioWs, request) => {
     );
   }
 
+  function applyFullSessionInstructions(trigger) {
+    if (
+      !session ||
+      session.fullInstructionsApplied ||
+      !isWebSocketOpen(session.xaiWs)
+    ) {
+      return;
+    }
+    session.xaiWs.send(
+      JSON.stringify(
+        buildXaiSessionUpdate(session.preset, {
+          direction: session.direction,
+          openingOnly: false,
+        }),
+      ),
+    );
+    session.fullInstructionsApplied = true;
+    session.openingTurnRequested = false;
+    session.openingTurnActive = false;
+    session.openingResponseId = "";
+    log("info", "Applied full xAI session instructions after opening phase", {
+      sessionId: session.id,
+      callSid: session.callSid,
+      trigger,
+      direction: session.direction,
+    });
+  }
+
   function sendOpeningOnlyTurn(trigger) {
     if (!session || session.openingTurnSent) return;
     const direction = normalizeCallDirection(session.direction);
@@ -2875,6 +2944,10 @@ mediaWss.on("connection", (twilioWs, request) => {
       buildOpeningOnlyTurnInstruction(direction, openingLine),
     );
     session.openingTurnSent = true;
+    session.openingTurnRequested = true;
+    session.openingTurnActive = false;
+    session.openingResponseId = "";
+    session.openingCanceledByCaller = false;
     log("info", "Triggered greeting-only opening turn", {
       sessionId: session.id,
       callSid: session.callSid,
@@ -2905,7 +2978,10 @@ mediaWss.on("connection", (twilioWs, request) => {
     try {
       sendOpeningOnlyTurn(trigger);
     } catch (error) {
-      if (error.code === "SAFETY_BLOCKED") session.openingTurnSent = true;
+      if (error.code === "SAFETY_BLOCKED") {
+        session.openingTurnSent = true;
+        applyFullSessionInstructions("opening_safety_blocked");
+      }
       log(
         error.code === "SAFETY_BLOCKED" ? "warn" : "error",
         "Skipped inbound opening greeting",
@@ -3051,10 +3127,12 @@ mediaWss.on("connection", (twilioWs, request) => {
     session.xaiWs = xaiWs;
 
     xaiWs.on("open", () => {
+      session.fullInstructionsApplied = false;
       xaiWs.send(
         JSON.stringify(
           buildXaiSessionUpdate(session.preset, {
             direction: session.direction,
+            openingOnly: true,
           }),
         ),
       );
@@ -3107,6 +3185,20 @@ mediaWss.on("connection", (twilioWs, request) => {
 
       if (event.type === "response.created") {
         const direction = normalizeCallDirection(session.direction);
+        if (session.openingCanceledByCaller && isWebSocketOpen(xaiWs)) {
+          xaiWs.send(JSON.stringify({ type: "response.cancel" }));
+          sendTwilioClear(session);
+          session.xaiResponseInProgress = false;
+          session.openingTurnActive = false;
+          session.openingResponseId = "";
+          session.openingCanceledByCaller = false;
+          log("info", "Canceled stale opening response after caller interruption", {
+            sessionId: session.id,
+            callSid: session.callSid,
+            direction,
+          });
+          return;
+        }
         if (
           direction === CALL_DIRECTIONS.OUTBOUND &&
           !session.openingTurnSent &&
@@ -3120,6 +3212,7 @@ mediaWss.on("connection", (twilioWs, request) => {
           } catch (error) {
             if (error.code === "SAFETY_BLOCKED") {
               session.openingTurnSent = true;
+              applyFullSessionInstructions("outbound_opening_safety_blocked");
             }
             log(
               error.code === "SAFETY_BLOCKED" ? "warn" : "error",
@@ -3133,22 +3226,45 @@ mediaWss.on("connection", (twilioWs, request) => {
           }
           return;
         }
+        if (session.openingTurnSent && !session.fullInstructionsApplied) {
+          session.openingTurnActive = true;
+          session.openingTurnRequested = false;
+          session.openingResponseId = getXaiResponseId(event);
+        }
         session.xaiResponseInProgress = true;
         if (session.metrics) session.metrics.assistantTurns += 1;
         return;
       }
 
       if (event.type === "response.done") {
+        const responseId = getXaiResponseId(event);
+        const completedOpening =
+          session.openingTurnActive &&
+          !session.fullInstructionsApplied &&
+          (!session.openingResponseId ||
+            !responseId ||
+            session.openingResponseId === responseId);
         session.xaiResponseInProgress = false;
+        if (completedOpening) {
+          applyFullSessionInstructions("opening_response_done");
+        }
         return;
       }
 
       if (event.type === "input_audio_buffer.speech_started" && streamSid) {
+        const openingWasPending =
+          session.openingTurnSent && !session.fullInstructionsApplied;
+        const openingResponseAlreadyStarted =
+          session.openingTurnActive || session.xaiResponseInProgress;
         if (session.metrics) session.metrics.callerSpeechStarts += 1;
         if (session.xaiResponseInProgress && isWebSocketOpen(xaiWs)) {
           if (session.metrics) session.metrics.bargeInCount += 1;
           xaiWs.send(JSON.stringify({ type: "response.cancel" }));
           session.xaiResponseInProgress = false;
+        }
+        if (openingWasPending) {
+          session.openingCanceledByCaller = !openingResponseAlreadyStarted;
+          applyFullSessionInstructions("caller_interrupted_opening");
         }
         sendToTwilio({ event: "clear", streamSid });
         return;

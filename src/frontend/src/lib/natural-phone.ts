@@ -338,12 +338,6 @@ export function buildNaturalPhonePrompt(
       ? `- Relationship to the person on the phone: ${config.relationshipToCaller.trim()}`
       : "",
     "",
-    "Call goal:",
-    `- ${callPurpose || "Help the person on the phone with a clear, useful next step."}`,
-    config.endingGoal.trim()
-      ? `- Desired ending: ${config.endingGoal.trim()}`
-      : "",
-    "",
     "Opening:",
     openingInstruction,
     "",
@@ -351,6 +345,13 @@ export function buildNaturalPhonePrompt(
     firstTurnInstruction,
     "- Do not combine the opening line with must-ask questions, must-mention items, or the full call goal.",
     "- After the person responds, work through the must-ask and must-mention items naturally, one question at a time, without reading the list.",
+    "- Treat the opening as its own phase; the first real response from the person unlocks the rest of the call plan.",
+    "",
+    "Call goal:",
+    `- ${callPurpose || "Help the person on the phone with a clear, useful next step."}`,
+    config.endingGoal.trim()
+      ? `- Desired ending: ${config.endingGoal.trim()}`
+      : "",
     "",
     "Speaking style:",
     `- Tone: ${config.tone}`,
