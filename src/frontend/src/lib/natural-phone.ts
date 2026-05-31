@@ -42,6 +42,10 @@ export interface TurnTimingProfile {
   turnDetection: TurnDetection;
 }
 
+export const TURN_DETECTION_MS_STEP = 50;
+export const SILENCE_DURATION_MS_RANGE = { min: 0, max: 5000 } as const;
+export const PREFIX_PADDING_MS_RANGE = { min: 0, max: 2000 } as const;
+
 export const DEFAULT_NATURAL_PRESET_CONFIG: NaturalPresetConfig = {
   agentRole: "",
   organization: "",
@@ -185,7 +189,7 @@ export const TURN_TIMING_PROFILES: TurnTimingProfile[] = [
       serverVad: true,
       threshold: 0.55,
       silenceDurationMs: 500n,
-      prefixPaddingMs: 333n,
+      prefixPaddingMs: 350n,
     },
   },
   {
@@ -195,7 +199,7 @@ export const TURN_TIMING_PROFILES: TurnTimingProfile[] = [
       serverVad: true,
       threshold: 0.6,
       silenceDurationMs: 800n,
-      prefixPaddingMs: 333n,
+      prefixPaddingMs: 350n,
     },
   },
   {
@@ -205,10 +209,49 @@ export const TURN_TIMING_PROFILES: TurnTimingProfile[] = [
       serverVad: true,
       threshold: 0.75,
       silenceDurationMs: 650n,
-      prefixPaddingMs: 333n,
+      prefixPaddingMs: 350n,
     },
   },
 ];
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function snapMsToStep(
+  value: bigint | number,
+  min: number,
+  max: number,
+): bigint {
+  const numeric = typeof value === "bigint" ? Number(value) : value;
+  const finite = Number.isFinite(numeric) ? numeric : min;
+  const snapped =
+    Math.round(clampNumber(finite, min, max) / TURN_DETECTION_MS_STEP) *
+    TURN_DETECTION_MS_STEP;
+  return BigInt(clampNumber(snapped, min, max));
+}
+
+export function normalizeTurnDetection(
+  turnDetection: TurnDetection,
+): TurnDetection {
+  const threshold = Number.isFinite(turnDetection.threshold)
+    ? turnDetection.threshold
+    : 0.5;
+  return {
+    serverVad: true,
+    threshold: clampNumber(threshold, 0, 1),
+    silenceDurationMs: snapMsToStep(
+      turnDetection.silenceDurationMs,
+      SILENCE_DURATION_MS_RANGE.min,
+      SILENCE_DURATION_MS_RANGE.max,
+    ),
+    prefixPaddingMs: snapMsToStep(
+      turnDetection.prefixPaddingMs,
+      PREFIX_PADDING_MS_RANGE.min,
+      PREFIX_PADDING_MS_RANGE.max,
+    ),
+  };
+}
 
 export function createNaturalPresetConfig(
   overrides: Partial<NaturalPresetConfig> = {},
@@ -225,12 +268,7 @@ export function getNaturalPresetTemplate(
 export function cloneTurnDetection(
   turnDetection: TurnDetection,
 ): TurnDetection {
-  return {
-    serverVad: true,
-    threshold: turnDetection.threshold,
-    silenceDurationMs: turnDetection.silenceDurationMs,
-    prefixPaddingMs: turnDetection.prefixPaddingMs,
-  };
+  return normalizeTurnDetection(turnDetection);
 }
 
 export function getTurnTimingProfile(

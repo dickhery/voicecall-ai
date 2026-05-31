@@ -21,6 +21,7 @@ import {
 import type { CallCaptureOptions } from "@/lib/voice-server";
 import { useCallStore } from "@/stores/call-store";
 import type { CallPreset } from "@/types";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -65,6 +66,14 @@ const WAVEFORM_BARS = 20;
 const MONITOR_SAMPLE_RATE = 8000;
 const MONITOR_JITTER_SECONDS = 0.12;
 const MONITOR_FADE_SAMPLES = 8;
+const CALL_SESSION_POLL_MS = 2500;
+const TERMINAL_SERVER_STATUSES = new Set([
+  "completed",
+  "failed",
+  "busy",
+  "no-answer",
+  "canceled",
+]);
 
 type MonitorChannel = "caller" | "assistant";
 
@@ -72,6 +81,16 @@ interface MonitorAudioMessage {
   type: "audio";
   channel?: MonitorChannel;
   payload?: string;
+}
+
+function isTerminalVoiceServerStatus(status?: string): boolean {
+  return TERMINAL_SERVER_STATUSES.has(String(status || "").toLowerCase());
+}
+
+function isMissingSessionError(error: unknown): boolean {
+  return (
+    error instanceof Error && /call session not found/i.test(error.message)
+  );
 }
 
 function decodeBase64Payload(payload: string): Uint8Array {
@@ -124,6 +143,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const queuePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sessionPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
   const activeCallIdRef = useRef<bigint | null>(null);
   const activeCallSidRef = useRef<string | null>(null);
@@ -140,6 +160,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
 
   const reserveCall = useReserveCall();
   const updateCallStatus = useUpdateCallStatus();
+  const queryClient = useQueryClient();
   const { setActiveCall, clearCall } = useCallStore();
 
   const cleanupTimer = useCallback(() => {
@@ -157,6 +178,13 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     }
   }, []);
 
+  const cleanupSessionPolling = useCallback(() => {
+    if (sessionPollRef.current) {
+      clearInterval(sessionPollRef.current);
+      sessionPollRef.current = null;
+    }
+  }, []);
+
   const stopLiveAudio = useCallback(() => {
     if (monitorWsRef.current) {
       monitorWsRef.current.close();
@@ -171,6 +199,11 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     nextPlaybackTimeRef.current = { caller: 0, assistant: 0 };
     setIsListeningLive(false);
   }, []);
+
+  const invalidateCallData = useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: ["myCalls"] });
+    void queryClient.invalidateQueries({ queryKey: ["myBillingStatus"] });
+  }, [queryClient]);
 
   const playMonitorAudio = useCallback(
     (payload: string, channel: MonitorChannel = "assistant") => {
@@ -313,12 +346,65 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   }, []);
 
   const startDurationTimer = useCallback(() => {
+    cleanupTimer();
     startTimeRef.current = Date.now();
     setDurationSecs(0);
     timerRef.current = setInterval(() => {
       setDurationSecs(Math.floor((Date.now() - startTimeRef.current) / 1000));
     }, 1000);
-  }, []);
+  }, [cleanupTimer]);
+
+  const completeLocalCall = useCallback(() => {
+    setStatus("completed");
+    cleanupTimer();
+    cleanupQueuePolling();
+    cleanupSessionPolling();
+    stopLiveAudio();
+    setLiveAudioAvailable(false);
+    setIsSendingSteeringPrompt(false);
+    setSteeringError(null);
+    activeCallIdRef.current = null;
+    activeCallSidRef.current = null;
+    activeSessionIdRef.current = null;
+    monitorTokenRef.current = null;
+    clearCall();
+    invalidateCallData();
+    resetAfterDelay();
+  }, [
+    cleanupTimer,
+    cleanupQueuePolling,
+    cleanupSessionPolling,
+    stopLiveAudio,
+    clearCall,
+    invalidateCallData,
+    resetAfterDelay,
+  ]);
+
+  const startConnectedSessionPolling = useCallback(
+    (sessionId: string) => {
+      cleanupSessionPolling();
+
+      const poll = async () => {
+        try {
+          const serverCall = await getVoiceServerCallSession(sessionId);
+          if (isTerminalVoiceServerStatus(serverCall.status)) {
+            completeLocalCall();
+          }
+        } catch (err) {
+          if (isMissingSessionError(err)) {
+            completeLocalCall();
+          }
+        }
+      };
+
+      sessionPollRef.current = setInterval(
+        () => void poll(),
+        CALL_SESSION_POLL_MS,
+      );
+      void poll();
+    },
+    [cleanupSessionPolling, completeLocalCall],
+  );
 
   const markServerCallConnected = useCallback(
     (serverCall: {
@@ -333,8 +419,9 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       setLiveAudioAvailable(Boolean(serverCall.monitorToken));
       setStatus("in_call");
       startDurationTimer();
+      startConnectedSessionPolling(serverCall.sessionId);
     },
-    [startDurationTimer],
+    [startDurationTimer, startConnectedSessionPolling],
   );
 
   const startQueuePolling = useCallback(
@@ -392,6 +479,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       captureOptions?: CallCaptureOptions,
     ) => {
       stopLiveAudio();
+      cleanupSessionPolling();
       setStatus("initiating");
       setRecipient(recipientPhone);
       setPresetName(preset.name);
@@ -487,42 +575,24 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       updateCallStatus,
       cleanupTimer,
       cleanupQueuePolling,
+      cleanupSessionPolling,
       stopLiveAudio,
       clearCall,
     ],
   );
 
   const endCall = useCallback(() => {
-    setStatus("completed");
-    cleanupTimer();
-    cleanupQueuePolling();
-    stopLiveAudio();
-    setLiveAudioAvailable(false);
-    setIsSendingSteeringPrompt(false);
-    setSteeringError(null);
-
     const callSid = activeCallSidRef.current;
     const sessionId = activeSessionIdRef.current;
+    completeLocalCall();
+
     if (callSid || sessionId) {
       endVoiceServerCall({ callSid, sessionId }).catch((err) => {
         const message = err instanceof Error ? err.message : "Unknown error";
         toast.error(`Unable to end Twilio call: ${message}`);
       });
     }
-
-    activeCallIdRef.current = null;
-    activeCallSidRef.current = null;
-    activeSessionIdRef.current = null;
-    monitorTokenRef.current = null;
-    clearCall();
-    resetAfterDelay();
-  }, [
-    cleanupTimer,
-    cleanupQueuePolling,
-    stopLiveAudio,
-    clearCall,
-    resetAfterDelay,
-  ]);
+  }, [completeLocalCall]);
 
   const toggleMute = useCallback(() => {
     setIsMuted((value) => !value);
@@ -581,9 +651,10 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     return () => {
       cleanupTimer();
       cleanupQueuePolling();
+      cleanupSessionPolling();
       stopLiveAudio();
     };
-  }, [cleanupTimer, cleanupQueuePolling, stopLiveAudio]);
+  }, [cleanupTimer, cleanupQueuePolling, cleanupSessionPolling, stopLiveAudio]);
 
   return {
     status,

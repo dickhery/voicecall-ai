@@ -1762,13 +1762,20 @@ function releaseSessionLine(session) {
   }, 0).unref?.();
 }
 
+function getSessionStatus(session) {
+  if (session?.finished) return "completed";
+  const lastStatus = String(session?.lastStatus || "").toLowerCase();
+  if (isTerminalTwilioStatus(lastStatus)) return lastStatus;
+  return session?.state || (session?.callSid ? "active" : "queued");
+}
+
 function buildCallSessionPayload(session) {
   return {
     ok: true,
     sessionId: session.id,
     callSid: session.callSid || "",
     monitorToken: session.monitorToken || "",
-    status: session.state || (session.callSid ? "active" : "queued"),
+    status: getSessionStatus(session),
     queued: session.state === "queued",
     queuePosition: getQueuePosition(session.id),
     allowedSeconds: session.allowedSeconds,

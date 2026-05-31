@@ -42,6 +42,7 @@ import {
   cloneTurnDetection,
   getTurnTimingProfile,
   getTurnTimingProfileId,
+  normalizeTurnDetection,
 } from "@/lib/natural-phone";
 import type { CallPreset, CallPresetInput } from "@/types";
 import {
@@ -92,12 +93,15 @@ function applyHiddenPresetDefaults(input: CallPresetInput): CallPresetInput {
     ...input,
     audioFormat: DEFAULT_AUDIO_FORMAT,
     sampleRate: DEFAULT_SAMPLE_RATE,
-    turnDetection: {
-      ...input.turnDetection,
-      serverVad: true,
-    },
+    turnDetection: normalizeTurnDetection(input.turnDetection),
     toolsEnabled: { ...DEFAULT_TOOLS_ENABLED },
   };
+}
+
+function parseNumberInputMs(value: string, fallback: bigint): bigint {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return BigInt(Math.max(0, Math.trunc(parsed)));
 }
 
 const defaultPreset = createDefaultPreset();
@@ -135,7 +139,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
           systemPrompt: initial.systemPrompt,
           audioFormat: DEFAULT_AUDIO_FORMAT,
           sampleRate: DEFAULT_SAMPLE_RATE,
-          turnDetection: initial.turnDetection,
+          turnDetection: normalizeTurnDetection(initial.turnDetection),
           toolsEnabled: { ...DEFAULT_TOOLS_ENABLED },
         }
       : createDefaultPreset(),
@@ -162,8 +166,22 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
     });
   }
 
+  function normalizeTimingValues() {
+    setValue(
+      "turnDetection",
+      normalizeTurnDetection({
+        ...values.turnDetection,
+        serverVad: true,
+      }),
+      {
+        shouldDirty: true,
+        shouldValidate: true,
+      },
+    );
+  }
+
   return (
-    <form onSubmit={submitPreset} className="space-y-6">
+    <form onSubmit={submitPreset} className="space-y-6" noValidate>
       {/* Preset Name */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -341,9 +359,10 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
               onChange={(e) =>
                 setValue(
                   "turnDetection.silenceDurationMs",
-                  BigInt(e.target.value || "0"),
+                  parseNumberInputMs(e.target.value, silenceMs),
                 )
               }
+              onBlur={normalizeTimingValues}
               data-ocid="settings.preset.silence_duration.input"
               className="font-mono text-sm"
             />
@@ -366,9 +385,10 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
               onChange={(e) =>
                 setValue(
                   "turnDetection.prefixPaddingMs",
-                  BigInt(e.target.value || "0"),
+                  parseNumberInputMs(e.target.value, prefixMs),
                 )
               }
+              onBlur={normalizeTimingValues}
               data-ocid="settings.preset.prefix_padding.input"
               className="font-mono text-sm"
             />

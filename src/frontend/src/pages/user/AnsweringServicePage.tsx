@@ -52,6 +52,7 @@ import {
   TURN_TIMING_PROFILES,
   getTurnTimingProfile,
   getTurnTimingProfileId,
+  normalizeTurnDetection,
 } from "@/lib/natural-phone";
 import { getLiveAudioMonitorUrl, getVoiceServerUrl } from "@/lib/voice-server";
 import type { AnsweringPreset, AnsweringPresetInput } from "@/types";
@@ -110,15 +111,16 @@ function generateWebhookSecret(): string {
     .replace(/=+$/g, "");
 }
 
+function parseNumberInputMs(value: string, fallback: bigint): bigint {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return BigInt(Math.max(0, Math.trunc(parsed)));
+}
+
 function cloneTurnDetection(
   turnDetection: AnsweringPresetInput["turnDetection"] = DEFAULT_TURN_DETECTION,
 ): AnsweringPresetInput["turnDetection"] {
-  return {
-    serverVad: true,
-    threshold: turnDetection.threshold,
-    prefixPaddingMs: turnDetection.prefixPaddingMs,
-    silenceDurationMs: turnDetection.silenceDurationMs,
-  };
+  return normalizeTurnDetection(turnDetection);
 }
 
 function answeringPresetToInput(preset: AnsweringPreset): AnsweringPresetInput {
@@ -240,6 +242,10 @@ function TurnDetectionFields({
     onChange(cloneTurnDetection(profile.turnDetection));
   }
 
+  function normalizeTimingValues() {
+    onChange(normalizeTurnDetection({ ...value, serverVad: true }));
+  }
+
   return (
     <div className="space-y-4 rounded-md border border-border bg-muted/20 p-4">
       <div className="space-y-3">
@@ -331,9 +337,13 @@ function TurnDetectionFields({
             onChange={(event) =>
               onChange({
                 ...value,
-                silenceDurationMs: BigInt(event.target.value || "0"),
+                silenceDurationMs: parseNumberInputMs(
+                  event.target.value,
+                  silenceMs,
+                ),
               })
             }
+            onBlur={normalizeTimingValues}
             data-ocid={`${dataOcidPrefix}.silence_duration.input`}
             className="font-mono text-sm"
           />
@@ -356,9 +366,13 @@ function TurnDetectionFields({
             onChange={(event) =>
               onChange({
                 ...value,
-                prefixPaddingMs: BigInt(event.target.value || "0"),
+                prefixPaddingMs: parseNumberInputMs(
+                  event.target.value,
+                  prefixMs,
+                ),
               })
             }
+            onBlur={normalizeTimingValues}
             data-ocid={`${dataOcidPrefix}.prefix_padding.input`}
             className="font-mono text-sm"
           />
@@ -745,7 +759,7 @@ function AnsweringPresetCard({
             </DialogDescription>
           </DialogHeader>
 
-          <form className="space-y-4" onSubmit={savePreset}>
+          <form className="space-y-4" onSubmit={savePreset} noValidate>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor={`answering-preset-name-${preset.id}`}>
@@ -1078,7 +1092,7 @@ export default function AnsweringServicePage() {
                     answering preset.
                   </div>
                 ) : (
-                  <form className="space-y-4" onSubmit={submit}>
+                  <form className="space-y-4" onSubmit={submit} noValidate>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Preset Name</Label>

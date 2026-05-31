@@ -46480,6 +46480,9 @@ function Textarea({ className, ...props }) {
     }
   );
 }
+const TURN_DETECTION_MS_STEP = 50;
+const SILENCE_DURATION_MS_RANGE = { min: 0, max: 5e3 };
+const PREFIX_PADDING_MS_RANGE = { min: 0, max: 2e3 };
 const DEFAULT_NATURAL_PRESET_CONFIG = {
   agentRole: "",
   organization: "",
@@ -46596,7 +46599,7 @@ const TURN_TIMING_PROFILES = [
       serverVad: true,
       threshold: 0.55,
       silenceDurationMs: 500n,
-      prefixPaddingMs: 333n
+      prefixPaddingMs: 350n
     }
   },
   {
@@ -46606,7 +46609,7 @@ const TURN_TIMING_PROFILES = [
       serverVad: true,
       threshold: 0.6,
       silenceDurationMs: 800n,
-      prefixPaddingMs: 333n
+      prefixPaddingMs: 350n
     }
   },
   {
@@ -46616,10 +46619,36 @@ const TURN_TIMING_PROFILES = [
       serverVad: true,
       threshold: 0.75,
       silenceDurationMs: 650n,
-      prefixPaddingMs: 333n
+      prefixPaddingMs: 350n
     }
   }
 ];
+function clampNumber(value, min2, max2) {
+  return Math.min(max2, Math.max(min2, value));
+}
+function snapMsToStep(value, min2, max2) {
+  const numeric = typeof value === "bigint" ? Number(value) : value;
+  const finite = Number.isFinite(numeric) ? numeric : min2;
+  const snapped = Math.round(clampNumber(finite, min2, max2) / TURN_DETECTION_MS_STEP) * TURN_DETECTION_MS_STEP;
+  return BigInt(clampNumber(snapped, min2, max2));
+}
+function normalizeTurnDetection(turnDetection) {
+  const threshold = Number.isFinite(turnDetection.threshold) ? turnDetection.threshold : 0.5;
+  return {
+    serverVad: true,
+    threshold: clampNumber(threshold, 0, 1),
+    silenceDurationMs: snapMsToStep(
+      turnDetection.silenceDurationMs,
+      SILENCE_DURATION_MS_RANGE.min,
+      SILENCE_DURATION_MS_RANGE.max
+    ),
+    prefixPaddingMs: snapMsToStep(
+      turnDetection.prefixPaddingMs,
+      PREFIX_PADDING_MS_RANGE.min,
+      PREFIX_PADDING_MS_RANGE.max
+    )
+  };
+}
 function createNaturalPresetConfig(overrides = {}) {
   return { ...DEFAULT_NATURAL_PRESET_CONFIG, ...overrides };
 }
@@ -46627,12 +46656,7 @@ function getNaturalPresetTemplate(id2) {
   return NATURAL_PRESET_TEMPLATES.find((template) => template.id === id2);
 }
 function cloneTurnDetection$1(turnDetection) {
-  return {
-    serverVad: true,
-    threshold: turnDetection.threshold,
-    silenceDurationMs: turnDetection.silenceDurationMs,
-    prefixPaddingMs: turnDetection.prefixPaddingMs
-  };
+  return normalizeTurnDetection(turnDetection);
 }
 function getTurnTimingProfile(id2) {
   return TURN_TIMING_PROFILES.find((profile) => profile.id === id2);
@@ -49561,13 +49585,13 @@ function generateWebhookSecret() {
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return window.btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
+function parseNumberInputMs$1(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return BigInt(Math.max(0, Math.trunc(parsed)));
+}
 function cloneTurnDetection(turnDetection = DEFAULT_TURN_DETECTION$1) {
-  return {
-    serverVad: true,
-    threshold: turnDetection.threshold,
-    prefixPaddingMs: turnDetection.prefixPaddingMs,
-    silenceDurationMs: turnDetection.silenceDurationMs
-  };
+  return normalizeTurnDetection(turnDetection);
 }
 function answeringPresetToInput(preset) {
   return {
@@ -49669,6 +49693,9 @@ function TurnDetectionFields({
     if (!profile) return;
     onChange(cloneTurnDetection(profile.turnDetection));
   }
+  function normalizeTimingValues() {
+    onChange(normalizeTurnDetection({ ...value }));
+  }
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 rounded-md border border-border bg-muted/20 p-4", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
@@ -49744,8 +49771,12 @@ function TurnDetectionFields({
             value: Number(silenceMs),
             onChange: (event) => onChange({
               ...value,
-              silenceDurationMs: BigInt(event.target.value || "0")
+              silenceDurationMs: parseNumberInputMs$1(
+                event.target.value,
+                silenceMs
+              )
             }),
+            onBlur: normalizeTimingValues,
             "data-ocid": `${dataOcidPrefix}.silence_duration.input`,
             className: "font-mono text-sm"
           }
@@ -49768,8 +49799,12 @@ function TurnDetectionFields({
             value: Number(prefixMs),
             onChange: (event) => onChange({
               ...value,
-              prefixPaddingMs: BigInt(event.target.value || "0")
+              prefixPaddingMs: parseNumberInputMs$1(
+                event.target.value,
+                prefixMs
+              )
             }),
+            onBlur: normalizeTimingValues,
             "data-ocid": `${dataOcidPrefix}.prefix_padding.input`,
             className: "font-mono text-sm"
           }
@@ -50104,7 +50139,7 @@ function AnsweringPresetCard({
                   "."
                 ] })
               ] }),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { className: "space-y-4", onSubmit: savePreset, children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { className: "space-y-4", onSubmit: savePreset, noValidate: true, children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
                     /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { htmlFor: `answering-preset-name-${preset.id}`, children: "Preset Name" }),
@@ -50410,7 +50445,7 @@ function AnsweringServicePage() {
           "Verify ",
           pendingPreset.phoneNumber,
           " before adding another answering preset."
-        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { className: "space-y-4", onSubmit: submit, children: [
+        ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { className: "space-y-4", onSubmit: submit, noValidate: true, children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-4 md:grid-cols-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { children: "Preset Name" }),
@@ -50959,6 +50994,20 @@ const WAVEFORM_BARS = 20;
 const MONITOR_SAMPLE_RATE = 8e3;
 const MONITOR_JITTER_SECONDS = 0.12;
 const MONITOR_FADE_SAMPLES = 8;
+const CALL_SESSION_POLL_MS = 2500;
+const TERMINAL_SERVER_STATUSES = /* @__PURE__ */ new Set([
+  "completed",
+  "failed",
+  "busy",
+  "no-answer",
+  "canceled"
+]);
+function isTerminalVoiceServerStatus(status) {
+  return TERMINAL_SERVER_STATUSES.has(String(status || "").toLowerCase());
+}
+function isMissingSessionError(error) {
+  return error instanceof Error && /call session not found/i.test(error.message);
+}
 function decodeBase64Payload(payload) {
   const binary = window.atob(payload);
   const bytes = new Uint8Array(binary.length);
@@ -51005,6 +51054,7 @@ function useXaiVoice() {
   const [steeringError, setSteeringError] = reactExports.useState(null);
   const timerRef = reactExports.useRef(null);
   const queuePollRef = reactExports.useRef(null);
+  const sessionPollRef = reactExports.useRef(null);
   const startTimeRef = reactExports.useRef(0);
   const activeCallIdRef = reactExports.useRef(null);
   const activeCallSidRef = reactExports.useRef(null);
@@ -51020,6 +51070,7 @@ function useXaiVoice() {
   });
   const reserveCall = useReserveCall();
   const updateCallStatus = useUpdateCallStatus();
+  const queryClient2 = useQueryClient();
   const { setActiveCall, clearCall } = useCallStore();
   const cleanupTimer = reactExports.useCallback(() => {
     if (timerRef.current) {
@@ -51032,6 +51083,12 @@ function useXaiVoice() {
     if (queuePollRef.current) {
       clearInterval(queuePollRef.current);
       queuePollRef.current = null;
+    }
+  }, []);
+  const cleanupSessionPolling = reactExports.useCallback(() => {
+    if (sessionPollRef.current) {
+      clearInterval(sessionPollRef.current);
+      sessionPollRef.current = null;
     }
   }, []);
   const stopLiveAudio = reactExports.useCallback(() => {
@@ -51048,6 +51105,10 @@ function useXaiVoice() {
     nextPlaybackTimeRef.current = { caller: 0, assistant: 0 };
     setIsListeningLive(false);
   }, []);
+  const invalidateCallData = reactExports.useCallback(() => {
+    void queryClient2.invalidateQueries({ queryKey: ["myCalls"] });
+    void queryClient2.invalidateQueries({ queryKey: ["myBillingStatus"] });
+  }, [queryClient2]);
   const playMonitorAudio = reactExports.useCallback(
     (payload, channel = "assistant") => {
       const audioContext = audioContextRef.current;
@@ -51169,12 +51230,61 @@ function useXaiVoice() {
     }, 3e3);
   }, []);
   const startDurationTimer = reactExports.useCallback(() => {
+    cleanupTimer();
     startTimeRef.current = Date.now();
     setDurationSecs(0);
     timerRef.current = setInterval(() => {
       setDurationSecs(Math.floor((Date.now() - startTimeRef.current) / 1e3));
     }, 1e3);
-  }, []);
+  }, [cleanupTimer]);
+  const completeLocalCall = reactExports.useCallback(() => {
+    setStatus("completed");
+    cleanupTimer();
+    cleanupQueuePolling();
+    cleanupSessionPolling();
+    stopLiveAudio();
+    setLiveAudioAvailable(false);
+    setIsSendingSteeringPrompt(false);
+    setSteeringError(null);
+    activeCallIdRef.current = null;
+    activeCallSidRef.current = null;
+    activeSessionIdRef.current = null;
+    monitorTokenRef.current = null;
+    clearCall();
+    invalidateCallData();
+    resetAfterDelay();
+  }, [
+    cleanupTimer,
+    cleanupQueuePolling,
+    cleanupSessionPolling,
+    stopLiveAudio,
+    clearCall,
+    invalidateCallData,
+    resetAfterDelay
+  ]);
+  const startConnectedSessionPolling = reactExports.useCallback(
+    (sessionId) => {
+      cleanupSessionPolling();
+      const poll = async () => {
+        try {
+          const serverCall = await getVoiceServerCallSession(sessionId);
+          if (isTerminalVoiceServerStatus(serverCall.status)) {
+            completeLocalCall();
+          }
+        } catch (err) {
+          if (isMissingSessionError(err)) {
+            completeLocalCall();
+          }
+        }
+      };
+      sessionPollRef.current = setInterval(
+        () => void poll(),
+        CALL_SESSION_POLL_MS
+      );
+      void poll();
+    },
+    [cleanupSessionPolling, completeLocalCall]
+  );
   const markServerCallConnected = reactExports.useCallback(
     (serverCall) => {
       activeCallSidRef.current = serverCall.callSid;
@@ -51183,8 +51293,9 @@ function useXaiVoice() {
       setLiveAudioAvailable(Boolean(serverCall.monitorToken));
       setStatus("in_call");
       startDurationTimer();
+      startConnectedSessionPolling(serverCall.sessionId);
     },
-    [startDurationTimer]
+    [startDurationTimer, startConnectedSessionPolling]
   );
   const startQueuePolling = reactExports.useCallback(
     (sessionId) => {
@@ -51233,6 +51344,7 @@ function useXaiVoice() {
   const startCall = reactExports.useCallback(
     async (preset, recipientPhone, captureOptions) => {
       stopLiveAudio();
+      cleanupSessionPolling();
       setStatus("initiating");
       setRecipient(recipientPhone);
       setPresetName(preset.name);
@@ -51317,39 +51429,22 @@ function useXaiVoice() {
       updateCallStatus,
       cleanupTimer,
       cleanupQueuePolling,
+      cleanupSessionPolling,
       stopLiveAudio,
       clearCall
     ]
   );
   const endCall = reactExports.useCallback(() => {
-    setStatus("completed");
-    cleanupTimer();
-    cleanupQueuePolling();
-    stopLiveAudio();
-    setLiveAudioAvailable(false);
-    setIsSendingSteeringPrompt(false);
-    setSteeringError(null);
     const callSid = activeCallSidRef.current;
     const sessionId = activeSessionIdRef.current;
+    completeLocalCall();
     if (callSid || sessionId) {
       endVoiceServerCall({ callSid, sessionId }).catch((err) => {
         const message = err instanceof Error ? err.message : "Unknown error";
         ue.error(`Unable to end Twilio call: ${message}`);
       });
     }
-    activeCallIdRef.current = null;
-    activeCallSidRef.current = null;
-    activeSessionIdRef.current = null;
-    monitorTokenRef.current = null;
-    clearCall();
-    resetAfterDelay();
-  }, [
-    cleanupTimer,
-    cleanupQueuePolling,
-    stopLiveAudio,
-    clearCall,
-    resetAfterDelay
-  ]);
+  }, [completeLocalCall]);
   const toggleMute = reactExports.useCallback(() => {
     setIsMuted((value) => !value);
     ue.info("Use the phone keypad or handset mute for live call audio.");
@@ -51401,9 +51496,10 @@ function useXaiVoice() {
     return () => {
       cleanupTimer();
       cleanupQueuePolling();
+      cleanupSessionPolling();
       stopLiveAudio();
     };
-  }, [cleanupTimer, cleanupQueuePolling, stopLiveAudio]);
+  }, [cleanupTimer, cleanupQueuePolling, cleanupSessionPolling, stopLiveAudio]);
   return {
     status,
     recipient,
@@ -62666,12 +62762,14 @@ function applyHiddenPresetDefaults(input) {
     ...input,
     audioFormat: DEFAULT_AUDIO_FORMAT,
     sampleRate: DEFAULT_SAMPLE_RATE,
-    turnDetection: {
-      ...input.turnDetection,
-      serverVad: true
-    },
+    turnDetection: normalizeTurnDetection(input.turnDetection),
     toolsEnabled: { ...DEFAULT_TOOLS_ENABLED }
   };
+}
+function parseNumberInputMs(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return BigInt(Math.max(0, Math.trunc(parsed)));
 }
 const defaultPreset = createDefaultPreset();
 const defaultTurnDetection = defaultPreset.turnDetection;
@@ -62697,7 +62795,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
       systemPrompt: initial.systemPrompt,
       audioFormat: DEFAULT_AUDIO_FORMAT,
       sampleRate: DEFAULT_SAMPLE_RATE,
-      turnDetection: initial.turnDetection,
+      turnDetection: normalizeTurnDetection(initial.turnDetection),
       toolsEnabled: { ...DEFAULT_TOOLS_ENABLED }
     } : createDefaultPreset()
   });
@@ -62719,7 +62817,19 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
       shouldValidate: true
     });
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: submitPreset, className: "space-y-6", children: [
+  function normalizeTimingValues() {
+    setValue(
+      "turnDetection",
+      normalizeTurnDetection({
+        ...values.turnDetection
+      }),
+      {
+        shouldDirty: true,
+        shouldValidate: true
+      }
+    );
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("form", { onSubmit: submitPreset, className: "space-y-6", noValidate: true, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold text-muted-foreground uppercase tracking-wide", children: "Preset Name" }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -62870,8 +62980,9 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
               value: Number(silenceMs),
               onChange: (e) => setValue(
                 "turnDetection.silenceDurationMs",
-                BigInt(e.target.value || "0")
+                parseNumberInputMs(e.target.value, silenceMs)
               ),
+              onBlur: normalizeTimingValues,
               "data-ocid": "settings.preset.silence_duration.input",
               className: "font-mono text-sm"
             }
@@ -62893,8 +63004,9 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
               value: Number(prefixMs),
               onChange: (e) => setValue(
                 "turnDetection.prefixPaddingMs",
-                BigInt(e.target.value || "0")
+                parseNumberInputMs(e.target.value, prefixMs)
               ),
+              onBlur: normalizeTimingValues,
               "data-ocid": "settings.preset.prefix_padding.input",
               className: "font-mono text-sm"
             }
