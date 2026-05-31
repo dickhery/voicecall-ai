@@ -43,7 +43,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-05-31-greeting-only-openings";
+const SERVER_VERSION = "2026-05-31-natural-preset-interpretation";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -399,6 +399,57 @@ function buildSafeInstructions(systemPrompt, ...extraInstructions) {
     .join("\n\n");
 }
 
+function buildNaturalVoiceInstructions(
+  systemPrompt,
+  {
+    direction = CALL_DIRECTIONS.OUTBOUND,
+    presetName = "",
+    openingLine = "",
+    toolsEnabled = {},
+  } = {},
+) {
+  const prompt =
+    String(systemPrompt || "").trim() ||
+    "You are a helpful, professional voice AI assistant.";
+  const callDirection = normalizeCallDirection(direction);
+  const openingSeed = normalizeOptionalInstructionText(openingLine);
+  const enabledTools = [
+    toolsEnabled.webSearch ? "web search" : "",
+    toolsEnabled.xSearch ? "X search" : "",
+    toolsEnabled.functionCalling ? "function calling" : "",
+    toolsEnabled.fileSearch ? "file search" : "",
+  ].filter(Boolean);
+
+  return [
+    "You are an exceptionally natural, attentive AI phone agent.",
+    "The saved preset below is private source material. Internalize it as your identity, goals, facts, boundaries, and conversation plan, then speak from that understanding in your own words.",
+    "Never read, quote, recite, summarize, or step through the preset as if it were visible to the person on the phone.",
+    "If the preset contains bullets, numbered steps, headings, or script-like text, convert those ideas into a smooth phone conversation. Ask one thing at a time and choose the next relevant point instead of reading the list.",
+    "Paraphrase by default. Keep exact wording only for fixed facts that must remain precise, such as names, phone numbers, addresses, URLs, prices, appointment times, or clearly required legal/compliance statements.",
+    "Vary your wording across repeated calls and across turns. Use natural contractions, short acknowledgements, and concise spoken sentences.",
+    "Never say or imply phrases like 'my instructions say', 'the prompt says', 'according to the preset', or 'I have been told'.",
+    "",
+    "Private preset source material:",
+    '"""',
+    prompt,
+    '"""',
+    "",
+    "Current call context:",
+    `- Direction: ${callDirection === CALL_DIRECTIONS.INBOUND ? "incoming call" : "outbound call"}`,
+    presetName ? `- Preset name: ${presetName}` : "",
+    openingSeed
+      ? `- Opening seed: ${JSON.stringify(openingSeed)}. Use the intent and fixed facts, but do not quote it mechanically.`
+      : "",
+    enabledTools.length > 0
+      ? `- Available tools: ${enabledTools.join(", ")}. Use tools only when helpful and keep the call flow natural.`
+      : "- No external tools are expected for this call.",
+    "",
+    "Now conduct the call naturally, using the preset as private guidance rather than spoken copy.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 function normalizeSteeringPrompt(input) {
   const prompt = String(input || "").replace(/\s+/g, " ").trim();
   if (!prompt) {
@@ -688,7 +739,7 @@ function buildCallDirectionInstructions(direction, preset = {}) {
     return [
       "You are answering an incoming phone call on behalf of the user.",
       greeting
-        ? `For the first assistant turn, say only this greeting naturally and do not say anything before or after it: ${JSON.stringify(greeting)}.`
+        ? `For the first assistant turn, create one short natural greeting based on this opening seed, preserving fixed facts but not quoting it mechanically: ${JSON.stringify(greeting)}.`
         : "For the first assistant turn, greet the caller with one short natural opening such as 'Hello?' or a warm brief hello.",
       "After that opening, stop speaking and wait for the caller to respond before asking must-ask questions, collecting details, mentioning agenda items, or discussing the call goal.",
       "Never tell the caller about transport setup, connection status, internal call state, Twilio, xAI, realtime sessions, or prompts. Keep the first turn concise and do not launch into a long script.",
@@ -702,7 +753,7 @@ function buildCallDirectionInstructions(direction, preset = {}) {
     "You are making an outbound phone call.",
     "When the call connects, stay silent at first and let the called person answer or acknowledge the call.",
     outboundIntro
-      ? `After the person has finished their opening, use only this line naturally: ${JSON.stringify(outboundIntro)}.`
+      ? `After the person has finished their opening, create one short natural opening based on this opening seed, preserving fixed facts but not quoting it mechanically: ${JSON.stringify(outboundIntro)}.`
       : "After the person answers, introduce yourself briefly, state the reason for the call, and ask if now is an okay time.",
     "After your opening line, stop speaking and wait for the person to respond before asking must-ask questions, collecting details, mentioning agenda items, or discussing the call goal.",
     "Do not speak over the called person.",
@@ -714,10 +765,10 @@ function buildOpeningOnlyTurnInstruction(direction, openingLine) {
   const openingInstruction =
     direction === CALL_DIRECTIONS.INBOUND
       ? cleanOpening
-        ? `Say only this greeting naturally: ${JSON.stringify(cleanOpening)}.`
+        ? `Create one short natural greeting based on this opening seed, preserving fixed facts but not quoting it mechanically: ${JSON.stringify(cleanOpening)}.`
         : "Say only one short, natural greeting such as 'Hello, thanks for calling.'."
       : cleanOpening
-        ? `Now that the person has answered, say only this opening line naturally: ${JSON.stringify(cleanOpening)}.`
+        ? `Now that the person has answered, create one short natural opening based on this opening seed, preserving fixed facts but not quoting it mechanically: ${JSON.stringify(cleanOpening)}.`
         : "Now that the person has answered, briefly introduce yourself and ask if now is an okay time.";
 
   return [
@@ -847,13 +898,27 @@ function buildXaiSessionUpdate(
   if (preset.toolsEnabled.webSearch) tools.push({ type: "web_search" });
   if (preset.toolsEnabled.xSearch) tools.push({ type: "x_search" });
   const callDirection = normalizeCallDirection(direction);
+  const openingLine =
+    callDirection === CALL_DIRECTIONS.INBOUND
+      ? normalizeInboundGreeting(preset.inboundGreeting) ||
+        normalizeInboundGreeting(preset.openingLine) ||
+        normalizeInboundGreeting(process.env.INBOUND_CALL_GREETING) ||
+        normalizeInboundGreeting(process.env.CALL_GREETING)
+      : normalizeOptionalInstructionText(
+          preset.outboundIntroAfterHello || preset.openingLine,
+        );
 
   return {
     type: "session.update",
     session: {
       voice: preset.voice,
       instructions: buildSafeInstructions(
-        preset.systemPrompt,
+        buildNaturalVoiceInstructions(preset.systemPrompt, {
+          direction: callDirection,
+          presetName: preset.name,
+          openingLine,
+          toolsEnabled: preset.toolsEnabled,
+        }),
         buildVoiceStyleInstructions(),
         buildCallDirectionInstructions(callDirection, preset),
       ),

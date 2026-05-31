@@ -112,13 +112,13 @@ export function NaturalPromptBuilder({
             Build or write your AI instructions
           </p>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Fill out the fields here and generate a prompt to populate the AI
-            Instructions box, or skip the builder and write custom instructions
-            directly before saving.
+            Fill out the fields here to describe the agent's role, goals, and
+            boundaries. The agent treats the result as private guidance and
+            speaks from it in its own words.
           </p>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            The opening line is treated as the first spoken turn only; the agent
-            waits for a response before using the must-ask items.
+            The opening line is an example for the first turn only; the agent
+            keeps the intent, varies the wording, then waits for a response.
           </p>
         </div>
       </div>

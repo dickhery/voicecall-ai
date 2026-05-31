@@ -58,6 +58,12 @@ src/server       Windows-friendly Node.js Twilio/xAI/Stripe bridge
 icp.yaml         icp-cli deployment config
 ```
 
+## Natural Voice Presets
+
+Saved presets are treated by the Node voice bridge as private source material, not as a script to read. `src/server/server.js` wraps each preset before sending it to xAI Realtime Voice so the agent internalizes the role, facts, goals, and boundaries, then paraphrases them naturally during the call.
+
+Good presets describe the agent's role, goal, must-cover facts, and boundaries. Avoid long numbered scripts or "say exactly this" wording unless a fixed phrase, name, date, phone number, URL, price, or compliance statement must stay exact.
+
 ## Prepaid Phone Time
 
 The app now sells prepaid phone time and enforces it before and during calls.

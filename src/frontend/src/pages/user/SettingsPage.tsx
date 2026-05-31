@@ -220,8 +220,8 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
           AI Instructions
         </Label>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Generate these from the builder above, then edit them here, or write
-          your own custom instructions from scratch.
+          Describe the role, goal, facts, and boundaries. Avoid "say exactly"
+          wording unless a specific phrase must stay fixed.
         </p>
         <Textarea
           {...register("systemPrompt", {

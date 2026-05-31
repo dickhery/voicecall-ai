@@ -1157,6 +1157,10 @@ export default function DashboardPage() {
           </DialogHeader>
           <div className="space-y-2">
             <Label htmlFor="dashboard-preset-instructions">Instructions</Label>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Describe the role, goal, facts, and boundaries. Avoid "say
+              exactly" wording unless a specific phrase must stay fixed.
+            </p>
             <Textarea
               id="dashboard-preset-instructions"
               value={instructionDraft}
