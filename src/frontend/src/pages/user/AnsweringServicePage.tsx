@@ -803,8 +803,12 @@ function AnsweringPresetCard({
 
             <div className="space-y-2">
               <Label htmlFor={`answering-preset-instructions-${preset.id}`}>
-                Instructions
+                AI Instructions
               </Label>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Generate these from the builder above, then edit them here, or
+                write your own custom answering instructions from scratch.
+              </p>
               <Textarea
                 id={`answering-preset-instructions-${preset.id}`}
                 value={draftPreset.systemPrompt}
@@ -1116,7 +1120,12 @@ export default function AnsweringServicePage() {
                       dataOcidPrefix="answering.natural_prompt"
                     />
                     <div className="space-y-2">
-                      <Label>Instructions</Label>
+                      <Label>AI Instructions</Label>
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Generate these from the builder above, then edit them
+                        here, or write your own custom answering instructions
+                        from scratch.
+                      </p>
                       <Textarea
                         value={input.systemPrompt}
                         onChange={(event) =>

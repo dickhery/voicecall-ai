@@ -268,12 +268,20 @@ export function buildNaturalPhonePrompt(
         ? [
             `- Greeting line: "${openingLine}"`,
             "- Say the greeting line as the first assistant turn, with nothing before it.",
+            "- Stop after the greeting line and wait for the caller to respond before asking must-ask questions or discussing the call goal.",
             "- Do not mention connection status or internal call setup.",
           ].join("\n")
         : "- Start with one short, natural greeting, then listen."
       : openingLine
-        ? `- After the person answers or acknowledges the call, say this naturally: "${openingLine}"`
+        ? [
+            `- After the person answers or acknowledges the call, say this naturally: "${openingLine}"`,
+            "- Stop after the opening line and wait for the person to respond before asking must-ask questions or discussing the call goal.",
+          ].join("\n")
         : "- Stay silent until the person answers, then introduce yourself briefly and ask if now is an okay time.";
+  const firstTurnInstruction =
+    direction === "inbound"
+      ? "- First assistant turn: greeting only. The caller's response starts the rest of the conversation."
+      : "- First assistant turn after the person answers: opening line only. Their response starts the rest of the conversation.";
 
   return [
     "You are a real-time AI phone agent. Sound natural, calm, and conversational.",
@@ -295,6 +303,11 @@ export function buildNaturalPhonePrompt(
     "",
     "Opening:",
     openingInstruction,
+    "",
+    "Conversation sequence:",
+    firstTurnInstruction,
+    "- Do not combine the opening line with must-ask questions, must-mention items, or the full call goal.",
+    "- After the person responds, work through the must-ask and must-mention items naturally, one question at a time.",
     "",
     "Speaking style:",
     `- Tone: ${config.tone}`,

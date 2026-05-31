@@ -20,7 +20,7 @@ import {
   createNaturalPresetConfig,
   getNaturalPresetTemplate,
 } from "@/lib/natural-phone";
-import { Wand2 } from "lucide-react";
+import { Info, Wand2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 interface NaturalPromptBuilderProps {
@@ -66,6 +66,14 @@ export function NaturalPromptBuilder({
       ),
     [direction],
   );
+  const openingLineHelp =
+    direction === "inbound"
+      ? "The AI says this first, then waits for the caller before asking follow-up questions."
+      : "The AI uses this after the person answers, then waits before moving into the call details.";
+  const mustAskHelp =
+    direction === "inbound"
+      ? "Questions to cover after the caller responds to the opening greeting."
+      : "Questions to cover after the person responds to the opening line.";
 
   function updateConfig<K extends keyof NaturalPresetConfig>(
     key: K,
@@ -95,10 +103,30 @@ export function NaturalPromptBuilder({
       className="space-y-4 rounded-md border border-border bg-muted/20 p-4"
       data-ocid={`${dataOcidPrefix}.builder`}
     >
+      <div className="flex gap-3 rounded-md border border-primary/20 bg-background/70 p-3">
+        <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <Info className="h-3.5 w-3.5" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">
+            Build or write your AI instructions
+          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Fill out the fields here and generate a prompt to populate the AI
+            Instructions box, or skip the builder and write custom instructions
+            directly before saving.
+          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            The opening line is treated as the first spoken turn only; the agent
+            waits for a response before using the must-ask items.
+          </p>
+        </div>
+      </div>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-1.5 sm:max-w-xs">
           <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Natural Prompt Builder
+            AI Instructions Builder
           </Label>
           <Select value={templateId} onValueChange={applyTemplate}>
             <SelectTrigger
@@ -125,7 +153,7 @@ export function NaturalPromptBuilder({
           data-ocid={`${dataOcidPrefix}.generate_button`}
         >
           <Wand2 className="h-4 w-4" />
-          Generate Prompt
+          Generate AI Instructions
         </Button>
       </div>
 
@@ -182,6 +210,9 @@ export function NaturalPromptBuilder({
             data-ocid={`${dataOcidPrefix}.opening_line.textarea`}
             className="resize-none text-sm"
           />
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            {openingLineHelp}
+          </p>
         </div>
       </div>
 
@@ -215,6 +246,7 @@ export function NaturalPromptBuilder({
           value={config.mustAsk}
           onChange={(value) => updateConfig("mustAsk", value)}
           placeholder="One item per line"
+          description={mustAskHelp}
           dataOcid={`${dataOcidPrefix}.must_ask.textarea`}
         />
         <PromptListField
@@ -303,12 +335,14 @@ function PromptListField({
   value,
   onChange,
   placeholder,
+  description,
   dataOcid,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
+  description?: string;
   dataOcid: string;
 }) {
   return (
@@ -322,6 +356,11 @@ function PromptListField({
         data-ocid={dataOcid}
         className="resize-none text-sm"
       />
+      {description && (
+        <p className="text-[10px] leading-relaxed text-muted-foreground">
+          {description}
+        </p>
+      )}
     </div>
   );
 }

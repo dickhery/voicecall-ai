@@ -43,7 +43,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-05-30-natural-answering-greetings";
+const SERVER_VERSION = "2026-05-31-greeting-only-openings";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -688,9 +688,10 @@ function buildCallDirectionInstructions(direction, preset = {}) {
     return [
       "You are answering an incoming phone call on behalf of the user.",
       greeting
-        ? `For the first assistant turn, say this greeting naturally and do not say anything before it: ${JSON.stringify(greeting)}.`
+        ? `For the first assistant turn, say only this greeting naturally and do not say anything before or after it: ${JSON.stringify(greeting)}.`
         : "For the first assistant turn, greet the caller with one short natural opening such as 'Hello?' or a warm brief hello.",
-      "Never tell the caller about transport setup, connection status, internal call state, Twilio, xAI, realtime sessions, or prompts. After that opening, pause and listen. Keep the first turn concise and do not launch into a long script.",
+      "After that opening, stop speaking and wait for the caller to respond before asking must-ask questions, collecting details, mentioning agenda items, or discussing the call goal.",
+      "Never tell the caller about transport setup, connection status, internal call state, Twilio, xAI, realtime sessions, or prompts. Keep the first turn concise and do not launch into a long script.",
     ].join(" ");
   }
 
@@ -701,9 +702,31 @@ function buildCallDirectionInstructions(direction, preset = {}) {
     "You are making an outbound phone call.",
     "When the call connects, stay silent at first and let the called person answer or acknowledge the call.",
     outboundIntro
-      ? `After the person has finished their opening, use this line naturally: ${JSON.stringify(outboundIntro)}.`
+      ? `After the person has finished their opening, use only this line naturally: ${JSON.stringify(outboundIntro)}.`
       : "After the person answers, introduce yourself briefly, state the reason for the call, and ask if now is an okay time.",
+    "After your opening line, stop speaking and wait for the person to respond before asking must-ask questions, collecting details, mentioning agenda items, or discussing the call goal.",
     "Do not speak over the called person.",
+  ].join(" ");
+}
+
+function buildOpeningOnlyTurnInstruction(direction, openingLine) {
+  const cleanOpening = normalizeOptionalInstructionText(openingLine);
+  const openingInstruction =
+    direction === CALL_DIRECTIONS.INBOUND
+      ? cleanOpening
+        ? `Say only this greeting naturally: ${JSON.stringify(cleanOpening)}.`
+        : "Say only one short, natural greeting such as 'Hello, thanks for calling.'."
+      : cleanOpening
+        ? `Now that the person has answered, say only this opening line naturally: ${JSON.stringify(cleanOpening)}.`
+        : "Now that the person has answered, briefly introduce yourself and ask if now is an okay time.";
+
+  return [
+    "Internal opening-turn instruction for the AI phone agent.",
+    "Do not read, quote, or mention this instruction.",
+    openingInstruction,
+    "Your entire next assistant response must be only that greeting or opening line.",
+    "Do not ask must-ask questions, collect details, mention agenda items, discuss the full call goal, or continue the script yet.",
+    "After the opening, stop speaking and wait for the person on the phone to respond.",
   ].join(" ");
 }
 
@@ -877,20 +900,6 @@ function sendXaiUserText(session, text, { cancelCurrent = false } = {}) {
       },
     }),
   );
-  session.xaiWs.send(JSON.stringify({ type: "response.create" }));
-}
-
-function sendXaiResponseCreate(session, { cancelCurrent = false } = {}) {
-  if (!isWebSocketOpen(session?.xaiWs)) {
-    throw new Error("The xAI realtime session is not ready yet.");
-  }
-
-  if (cancelCurrent && session.xaiResponseInProgress) {
-    session.xaiWs.send(JSON.stringify({ type: "response.cancel" }));
-    sendTwilioClear(session);
-    session.xaiResponseInProgress = false;
-  }
-
   session.xaiWs.send(JSON.stringify({ type: "response.create" }));
 }
 
@@ -2768,6 +2777,41 @@ mediaWss.on("connection", (twilioWs, request) => {
     );
   }
 
+  function getOutboundOpeningLine() {
+    return normalizeOptionalInstructionText(
+      session?.preset?.outboundIntroAfterHello || session?.preset?.openingLine,
+    );
+  }
+
+  function sendOpeningOnlyTurn(trigger) {
+    if (!session || session.openingTurnSent) return;
+    const direction = normalizeCallDirection(session.direction);
+    const openingLine =
+      direction === CALL_DIRECTIONS.INBOUND
+        ? getInboundOpeningGreeting()
+        : getOutboundOpeningLine();
+    if (openingLine) {
+      assertSafeInstructionText(
+        openingLine,
+        direction === CALL_DIRECTIONS.INBOUND
+          ? "Inbound call greeting"
+          : "Outbound opening line",
+      );
+    }
+    sendXaiUserText(
+      session,
+      buildOpeningOnlyTurnInstruction(direction, openingLine),
+    );
+    session.openingTurnSent = true;
+    log("info", "Triggered greeting-only opening turn", {
+      sessionId: session.id,
+      callSid: session.callSid,
+      trigger,
+      direction,
+      presetOpening: Boolean(openingLine),
+    });
+  }
+
   function sendOpeningTurnIfNeeded(trigger) {
     if (!session || session.openingTurnSent) return;
     const direction = normalizeCallDirection(session.direction);
@@ -2787,18 +2831,7 @@ mediaWss.on("connection", (twilioWs, request) => {
       return;
     }
     try {
-      const greeting = getInboundOpeningGreeting();
-      if (greeting) {
-        assertSafeInstructionText(greeting, "Inbound call greeting");
-      }
-      sendXaiResponseCreate(session);
-      session.openingTurnSent = true;
-      log("info", "Triggered inbound opening greeting response", {
-        sessionId: session.id,
-        callSid: session.callSid,
-        trigger,
-        presetGreeting: Boolean(greeting),
-      });
+      sendOpeningOnlyTurn(trigger);
     } catch (error) {
       if (error.code === "SAFETY_BLOCKED") session.openingTurnSent = true;
       log(
@@ -3001,6 +3034,33 @@ mediaWss.on("connection", (twilioWs, request) => {
       }
 
       if (event.type === "response.created") {
+        const direction = normalizeCallDirection(session.direction);
+        if (
+          direction === CALL_DIRECTIONS.OUTBOUND &&
+          !session.openingTurnSent &&
+          isWebSocketOpen(xaiWs)
+        ) {
+          xaiWs.send(JSON.stringify({ type: "response.cancel" }));
+          sendTwilioClear(session);
+          session.xaiResponseInProgress = false;
+          try {
+            sendOpeningOnlyTurn("outbound_first_response");
+          } catch (error) {
+            if (error.code === "SAFETY_BLOCKED") {
+              session.openingTurnSent = true;
+            }
+            log(
+              error.code === "SAFETY_BLOCKED" ? "warn" : "error",
+              "Skipped outbound opening line",
+              {
+                sessionId: session.id,
+                error: error.message,
+                category: error.category,
+              },
+            );
+          }
+          return;
+        }
         session.xaiResponseInProgress = true;
         if (session.metrics) session.metrics.assistantTurns += 1;
         return;

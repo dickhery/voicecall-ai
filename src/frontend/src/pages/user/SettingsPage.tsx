@@ -199,8 +199,12 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
       {/* System Prompt */}
       <div className="space-y-1.5">
         <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-          AI Instructions / System Prompt
+          AI Instructions
         </Label>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Generate these from the builder above, then edit them here, or write
+          your own custom instructions from scratch.
+        </p>
         <Textarea
           {...register("systemPrompt", {
             required: "System prompt is required",
@@ -211,7 +215,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
               message: "System prompt is too long",
             },
           })}
-          placeholder="You are a professional sales representative. Greet the customer warmly, ask how you can help them today, and guide them through..."
+          placeholder="Describe how the AI should introduce itself, what it should accomplish, what it must ask later in the call, and anything it should avoid."
           rows={5}
           maxLength={MAX_AI_INSTRUCTIONS_CHARS}
           data-ocid="settings.preset.system_prompt.textarea"
@@ -565,8 +569,8 @@ export default function SettingsPage() {
                 <CardHeader className="pb-4">
                   <CardTitle className="text-base">New Preset</CardTitle>
                   <CardDescription>
-                    Configure a new AI call profile with voice, instructions,
-                    and conversation timing
+                    Generate AI instructions or write your own, choose a voice,
+                    and tune the conversation timing.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

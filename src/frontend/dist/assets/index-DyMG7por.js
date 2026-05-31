@@ -46654,8 +46654,13 @@ function buildNaturalPhonePrompt(config, direction) {
   const openingInstruction = direction === "inbound" ? openingLine ? [
     `- Greeting line: "${openingLine}"`,
     "- Say the greeting line as the first assistant turn, with nothing before it.",
+    "- Stop after the greeting line and wait for the caller to respond before asking must-ask questions or discussing the call goal.",
     "- Do not mention connection status or internal call setup."
-  ].join("\n") : "- Start with one short, natural greeting, then listen." : openingLine ? `- After the person answers or acknowledges the call, say this naturally: "${openingLine}"` : "- Stay silent until the person answers, then introduce yourself briefly and ask if now is an okay time.";
+  ].join("\n") : "- Start with one short, natural greeting, then listen." : openingLine ? [
+    `- After the person answers or acknowledges the call, say this naturally: "${openingLine}"`,
+    "- Stop after the opening line and wait for the person to respond before asking must-ask questions or discussing the call goal."
+  ].join("\n") : "- Stay silent until the person answers, then introduce yourself briefly and ask if now is an okay time.";
+  const firstTurnInstruction = direction === "inbound" ? "- First assistant turn: greeting only. The caller's response starts the rest of the conversation." : "- First assistant turn after the person answers: opening line only. Their response starts the rest of the conversation.";
   return [
     "You are a real-time AI phone agent. Sound natural, calm, and conversational.",
     "",
@@ -46670,6 +46675,11 @@ function buildNaturalPhonePrompt(config, direction) {
     "",
     "Opening:",
     openingInstruction,
+    "",
+    "Conversation sequence:",
+    firstTurnInstruction,
+    "- Do not combine the opening line with must-ask questions, must-mention items, or the full call goal.",
+    "- After the person responds, work through the must-ask and must-mention items naturally, one question at a time.",
     "",
     "Speaking style:",
     `- Tone: ${config.tone}`,
@@ -46738,6 +46748,8 @@ function NaturalPromptBuilder({
     ),
     [direction]
   );
+  const openingLineHelp = direction === "inbound" ? "The AI says this first, then waits for the caller before asking follow-up questions." : "The AI uses this after the person answers, then waits before moving into the call details.";
+  const mustAskHelp = direction === "inbound" ? "Questions to cover after the caller responds to the opening greeting." : "Questions to cover after the person responds to the opening line.";
   function updateConfig(key, value) {
     setConfig((current) => ({ ...current, [key]: value }));
   }
@@ -46761,9 +46773,17 @@ function NaturalPromptBuilder({
       className: "space-y-4 rounded-md border border-border bg-muted/20 p-4",
       "data-ocid": `${dataOcidPrefix}.builder`,
       children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 rounded-md border border-primary/20 bg-background/70 p-3", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Info, { className: "h-3.5 w-3.5" }) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-foreground", children: "Build or write your AI instructions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Fill out the fields here and generate a prompt to populate the AI Instructions box, or skip the builder and write custom instructions directly before saving." }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "The opening line is treated as the first spoken turn only; the agent waits for a response before using the must-ask items." })
+          ] })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5 sm:max-w-xs", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase tracking-wide text-muted-foreground", children: "Natural Prompt Builder" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase tracking-wide text-muted-foreground", children: "AI Instructions Builder" }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs(Select, { value: templateId, onValueChange: applyTemplate, children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(
                 SelectTrigger,
@@ -46789,7 +46809,7 @@ function NaturalPromptBuilder({
               "data-ocid": `${dataOcidPrefix}.generate_button`,
               children: [
                 /* @__PURE__ */ jsxRuntimeExports.jsx(WandSparkles, { className: "h-4 w-4" }),
-                "Generate Prompt"
+                "Generate AI Instructions"
               ]
             }
           )
@@ -46847,7 +46867,8 @@ function NaturalPromptBuilder({
                 "data-ocid": `${dataOcidPrefix}.opening_line.textarea`,
                 className: "resize-none text-sm"
               }
-            )
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] leading-relaxed text-muted-foreground", children: openingLineHelp })
           ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
@@ -46890,6 +46911,7 @@ function NaturalPromptBuilder({
               value: config.mustAsk,
               onChange: (value) => updateConfig("mustAsk", value),
               placeholder: "One item per line",
+              description: mustAskHelp,
               dataOcid: `${dataOcidPrefix}.must_ask.textarea`
             }
           ),
@@ -46967,6 +46989,7 @@ function PromptListField({
   value,
   onChange,
   placeholder,
+  description,
   dataOcid
 }) {
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
@@ -46981,7 +47004,8 @@ function PromptListField({
         "data-ocid": dataOcid,
         className: "resize-none text-sm"
       }
-    )
+    ),
+    description && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] leading-relaxed text-muted-foreground", children: description })
   ] });
 }
 function useStateMachine(initialState, machine) {
@@ -50129,7 +50153,8 @@ function AnsweringPresetCard({
                   }
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-                  /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { htmlFor: `answering-preset-instructions-${preset.id}`, children: "Instructions" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { htmlFor: `answering-preset-instructions-${preset.id}`, children: "AI Instructions" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Generate these from the builder above, then edit them here, or write your own custom answering instructions from scratch." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     Textarea,
                     {
@@ -50430,7 +50455,8 @@ function AnsweringServicePage() {
             }
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { children: "Instructions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { children: "AI Instructions" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Generate these from the builder above, then edit them here, or write your own custom answering instructions from scratch." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Textarea,
               {
@@ -62726,7 +62752,8 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
       }
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-      /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold text-muted-foreground uppercase tracking-wide", children: "AI Instructions / System Prompt" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold text-muted-foreground uppercase tracking-wide", children: "AI Instructions" }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Generate these from the builder above, then edit them here, or write your own custom instructions from scratch." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         Textarea,
         {
@@ -62738,7 +62765,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
               message: "System prompt is too long"
             }
           }),
-          placeholder: "You are a professional sales representative. Greet the customer warmly, ask how you can help them today, and guide them through...",
+          placeholder: "Describe how the AI should introduce itself, what it should accomplish, what it must ask later in the call, and anything it should avoid.",
           rows: 5,
           maxLength: MAX_AI_INSTRUCTIONS_CHARS,
           "data-ocid": "settings.preset.system_prompt.textarea",
@@ -63046,7 +63073,7 @@ function SettingsPage() {
           children: [
             /* @__PURE__ */ jsxRuntimeExports.jsxs(CardHeader, { className: "pb-4", children: [
               /* @__PURE__ */ jsxRuntimeExports.jsx(CardTitle, { className: "text-base", children: "New Preset" }),
-              /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { children: "Configure a new AI call profile with voice, instructions, and conversation timing" })
+              /* @__PURE__ */ jsxRuntimeExports.jsx(CardDescription, { children: "Generate AI instructions or write your own, choose a voice, and tune the conversation timing." })
             ] }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(
               PresetForm,
