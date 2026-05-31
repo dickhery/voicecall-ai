@@ -32,6 +32,7 @@ const BRIDGE_RECORDING_TTL_MS = Number(
 const LINE_CONFIG_REFRESH_MS = Number(process.env.LINE_CONFIG_REFRESH_MS || 30_000);
 const CALL_QUEUE_MAX_WAIT_MS = Number(process.env.CALL_QUEUE_MAX_WAIT_MS || 30 * 60 * 1000);
 const MAX_STEERING_PROMPT_CHARS = 800;
+const MAX_INBOUND_GREETING_CHARS = 260;
 const MAX_VOICE_PREVIEW_TEXT_CHARS = 220;
 const VOICE_PREVIEW_TIMEOUT_MS = Number(
   process.env.VOICE_PREVIEW_TIMEOUT_MS || 12_000,
@@ -42,7 +43,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-05-30-natural-phone-presets";
+const SERVER_VERSION = "2026-05-30-natural-answering-greetings";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -622,6 +623,47 @@ function normalizeOptionalInstructionText(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function normalizeInboundGreeting(value) {
+  const greeting = normalizeOptionalInstructionText(value);
+  if (!greeting) return "";
+  return greeting.slice(0, MAX_INBOUND_GREETING_CHARS).trim();
+}
+
+function unquoteInstructionValue(value) {
+  return String(value || "")
+    .trim()
+    .replace(/^["'“”]+/, "")
+    .replace(/["'“”]+$/, "")
+    .trim();
+}
+
+function extractQuotedOpeningFromPrompt(prompt) {
+  const text = String(prompt || "");
+  const patterns = [
+    /(?:Greeting line|Inbound greeting|Opening line)\s*:\s*["“]([^"”\n]{1,500})["”]/i,
+    /Use this as the natural first sentence when the call connects\s*:\s*["“]([^"”\n]{1,500})["”]/i,
+    /Start with this greeting\s*:\s*["“]([^"”\n]{1,500})["”]/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(text);
+    if (match?.[1]) return normalizeInboundGreeting(match[1]);
+  }
+
+  const lineMatch = text.match(
+    /^\s*[-*]?\s*(?:Greeting line|Inbound greeting|Opening line)\s*:\s*(.+)$/im,
+  );
+  return normalizeInboundGreeting(unquoteInstructionValue(lineMatch?.[1] || ""));
+}
+
+function resolveInboundGreeting(input = {}, systemPrompt = "") {
+  return (
+    normalizeInboundGreeting(input.inboundGreeting) ||
+    normalizeInboundGreeting(input.openingLine) ||
+    extractQuotedOpeningFromPrompt(systemPrompt)
+  );
+}
+
 function buildVoiceStyleInstructions() {
   return [
     "Phone conversation style:",
@@ -638,15 +680,17 @@ function buildVoiceStyleInstructions() {
 
 function buildCallDirectionInstructions(direction, preset = {}) {
   if (direction === CALL_DIRECTIONS.INBOUND) {
-    const greeting = normalizeOptionalInstructionText(
-      preset.inboundGreeting || preset.openingLine,
-    );
+    const greeting =
+      normalizeInboundGreeting(preset.inboundGreeting) ||
+      normalizeInboundGreeting(preset.openingLine) ||
+      normalizeInboundGreeting(process.env.INBOUND_CALL_GREETING) ||
+      normalizeInboundGreeting(process.env.CALL_GREETING);
     return [
       "You are answering an incoming phone call on behalf of the user.",
       greeting
-        ? `When the realtime session starts, greet the caller with this line naturally: ${JSON.stringify(greeting)}.`
-        : "When the realtime session starts, greet the caller first with one short natural opening such as 'Hello?' or a warm brief hello.",
-      "After that opening, pause and listen. Keep the first turn concise and do not launch into a long script.",
+        ? `For the first assistant turn, say this greeting naturally and do not say anything before it: ${JSON.stringify(greeting)}.`
+        : "For the first assistant turn, greet the caller with one short natural opening such as 'Hello?' or a warm brief hello.",
+      "Never tell the caller about transport setup, connection status, internal call state, Twilio, xAI, realtime sessions, or prompts. After that opening, pause and listen. Keep the first turn concise and do not launch into a long script.",
     ].join(" ");
   }
 
@@ -701,13 +745,18 @@ async function fetchXaiVoiceLibrary() {
 
 function toPlainPreset(input = {}) {
   const turnDetection = input.turnDetection || {};
+  const systemPrompt = String(
+    input.systemPrompt ||
+      "You are a helpful AI phone agent. Be concise, natural, and respectful.",
+  );
+  const openingLine = normalizeOptionalInstructionText(input.openingLine);
+  const inboundGreeting = resolveInboundGreeting(input, systemPrompt);
   return {
     id: String(input.id ?? ""),
     name: String(input.name || "VoiceCall AI"),
-    systemPrompt: String(
-      input.systemPrompt ||
-        "You are a helpful AI phone agent. Be concise, natural, and respectful.",
-    ),
+    systemPrompt,
+    openingLine: openingLine || inboundGreeting,
+    inboundGreeting,
     voice: resolveVoiceId(input),
     voiceId: normalizeVoiceIdForXai(input.voiceId) || null,
     turnDetection: {
@@ -828,6 +877,20 @@ function sendXaiUserText(session, text, { cancelCurrent = false } = {}) {
       },
     }),
   );
+  session.xaiWs.send(JSON.stringify({ type: "response.create" }));
+}
+
+function sendXaiResponseCreate(session, { cancelCurrent = false } = {}) {
+  if (!isWebSocketOpen(session?.xaiWs)) {
+    throw new Error("The xAI realtime session is not ready yet.");
+  }
+
+  if (cancelCurrent && session.xaiResponseInProgress) {
+    session.xaiWs.send(JSON.stringify({ type: "response.cancel" }));
+    sendTwilioClear(session);
+    session.xaiResponseInProgress = false;
+  }
+
   session.xaiWs.send(JSON.stringify({ type: "response.create" }));
 }
 
@@ -2696,29 +2759,13 @@ mediaWss.on("connection", (twilioWs, request) => {
     }
   }
 
-  function buildInboundOpeningTurnInstruction() {
-    const greeting = String(
-      session?.preset?.inboundGreeting ||
-        session?.preset?.openingLine ||
-        process.env.INBOUND_CALL_GREETING ||
-        process.env.CALL_GREETING ||
-        "",
-    )
-      .replace(/\s+/g, " ")
-      .trim();
-    if (greeting) {
-      assertSafeInstructionText(greeting, "Inbound call greeting");
-      return [
-        "The inbound phone call has just connected.",
-        `Greet the caller now using this short greeting naturally: ${JSON.stringify(greeting)}.`,
-        "Then pause and listen for the caller's response.",
-      ].join(" ");
-    }
-    return [
-      "The inbound phone call has just connected.",
-      "Greet the caller now with one short, natural opening like 'Hello?' or 'Hi, thanks for calling.'",
-      "Then pause and listen for the caller's response.",
-    ].join(" ");
+  function getInboundOpeningGreeting() {
+    return (
+      normalizeInboundGreeting(session?.preset?.inboundGreeting) ||
+      normalizeInboundGreeting(session?.preset?.openingLine) ||
+      normalizeInboundGreeting(process.env.INBOUND_CALL_GREETING) ||
+      normalizeInboundGreeting(process.env.CALL_GREETING)
+    );
   }
 
   function sendOpeningTurnIfNeeded(trigger) {
@@ -2726,7 +2773,7 @@ mediaWss.on("connection", (twilioWs, request) => {
     const direction = normalizeCallDirection(session.direction);
     if (direction !== CALL_DIRECTIONS.INBOUND && !session.outboundWaitLogged) {
       session.outboundWaitLogged = true;
-      log("info", "Outbound call connected; waiting for callee to speak first", {
+      log("info", "Outbound media stream ready; waiting for callee to speak first", {
         sessionId: session.id,
         callSid: session.callSid,
         trigger,
@@ -2740,13 +2787,17 @@ mediaWss.on("connection", (twilioWs, request) => {
       return;
     }
     try {
-      const instruction = buildInboundOpeningTurnInstruction();
+      const greeting = getInboundOpeningGreeting();
+      if (greeting) {
+        assertSafeInstructionText(greeting, "Inbound call greeting");
+      }
+      sendXaiResponseCreate(session);
       session.openingTurnSent = true;
-      sendXaiUserText(session, instruction);
-      log("info", "Sent inbound opening greeting prompt to xAI", {
+      log("info", "Triggered inbound opening greeting response", {
         sessionId: session.id,
         callSid: session.callSid,
         trigger,
+        presetGreeting: Boolean(greeting),
       });
     } catch (error) {
       if (error.code === "SAFETY_BLOCKED") session.openingTurnSent = true;

@@ -46651,7 +46651,11 @@ function linesToBullets(value) {
 function buildNaturalPhonePrompt(config, direction) {
   const callPurpose = config.callPurpose.trim();
   const openingLine = config.openingLine.trim();
-  const openingInstruction = direction === "inbound" ? openingLine ? `- Use this as the natural first sentence when the call connects: "${openingLine}"` : "- Start with one short, natural greeting, then listen." : openingLine ? `- After the person answers or acknowledges the call, say this naturally: "${openingLine}"` : "- Stay silent until the person answers, then introduce yourself briefly and ask if now is an okay time.";
+  const openingInstruction = direction === "inbound" ? openingLine ? [
+    `- Greeting line: "${openingLine}"`,
+    "- Say the greeting line as the first assistant turn, with nothing before it.",
+    "- Do not mention connection status or internal call setup."
+  ].join("\n") : "- Start with one short, natural greeting, then listen." : openingLine ? `- After the person answers or acknowledges the call, say this naturally: "${openingLine}"` : "- Stay silent until the person answers, then introduce yourself briefly and ask if now is an okay time.";
   return [
     "You are a real-time AI phone agent. Sound natural, calm, and conversational.",
     "",
