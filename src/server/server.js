@@ -44,7 +44,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-06-02-identity-enforcement";
+const SERVER_VERSION = "2026-06-02-line-rotation";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -282,6 +282,7 @@ let lineConfigCache = {
   fetchedAt: 0,
   pending: null,
 };
+let lineRotationCursor = 0;
 
 const twilioClient =
   process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN
@@ -1880,12 +1881,51 @@ function enqueueCallSession(session) {
   if (!callQueue.includes(session.id)) callQueue.push(session.id);
 }
 
-async function getAvailableLineNumber() {
+function chooseAvailableLineNumber(numbers) {
+  if (!Array.isArray(numbers) || numbers.length === 0) {
+    lineRotationCursor = 0;
+    return "";
+  }
+
+  lineRotationCursor %= numbers.length;
+  for (let offset = 0; offset < numbers.length; offset += 1) {
+    const index = (lineRotationCursor + offset) % numbers.length;
+    const number = numbers[index];
+    if (!activeLineSessions.has(number)) {
+      lineRotationCursor = (index + 1) % numbers.length;
+      return number;
+    }
+  }
+
+  return "";
+}
+
+async function reserveAvailableLineForSession(session) {
+  if (!session || session.finished) return "";
+  if (
+    session.lineNumber &&
+    activeLineSessions.get(session.lineNumber) === session.id
+  ) {
+    return session.lineNumber;
+  }
+
   const numbers = await getConfiguredTwilioLineNumbers();
-  return numbers.find((number) => !activeLineSessions.has(number)) || "";
+  const lineNumber = chooseAvailableLineNumber(numbers);
+  if (!lineNumber) return "";
+
+  assignLineToSession(session, lineNumber);
+  return lineNumber;
 }
 
 function assignLineToSession(session, lineNumber) {
+  if (!session || !lineNumber) return;
+  if (
+    session.lineNumber &&
+    session.lineNumber !== lineNumber &&
+    activeLineSessions.get(session.lineNumber) === session.id
+  ) {
+    activeLineSessions.delete(session.lineNumber);
+  }
   session.lineNumber = lineNumber;
   activeLineSessions.set(lineNumber, session.id);
 }
@@ -1966,6 +2006,7 @@ async function cancelQueuedSession(session, reason = "queued_call_canceled") {
   session.finished = true;
   session.state = "canceled";
   session.billingStoppedAt ||= Date.now();
+  releaseSessionLine(session);
   if (session.reservationId) {
     try {
       const actor = await getBackendActor();
@@ -1987,9 +2028,16 @@ async function createTwilioCallForSession(session, lineNumber, actor) {
   if (!session || session.finished) return null;
 
   session.state = "dialing";
-  assignLineToSession(session, lineNumber);
 
   try {
+    const lineOwner = activeLineSessions.get(lineNumber);
+    if (lineOwner && lineOwner !== session.id) {
+      throw new Error(`Twilio line ${lineNumber} is already in use.`);
+    }
+    if (lineOwner !== session.id) {
+      assignLineToSession(session, lineNumber);
+    }
+
     const callCreateOptions = {
       to: session.recipientPhone,
       from: lineNumber,
@@ -2068,7 +2116,7 @@ async function dispatchQueuedSessions() {
         continue;
       }
 
-      const lineNumber = await getAvailableLineNumber();
+      const lineNumber = await reserveAvailableLineForSession(session);
       if (!lineNumber) break;
 
       callQueue.shift();
@@ -2076,6 +2124,7 @@ async function dispatchQueuedSessions() {
         const actor = await getBackendActor();
         await createTwilioCallForSession(session, lineNumber, actor);
       } catch (error) {
+        releaseSessionLine(session);
         log("error", "Unable to dispatch queued call", {
           sessionId,
           error: error.message,
@@ -2431,7 +2480,7 @@ app.post("/initiate-call", async (req, res) => {
     };
     callSessions.set(sessionId, session);
 
-    const lineNumber = await getAvailableLineNumber();
+    const lineNumber = await reserveAvailableLineForSession(session);
     if (!lineNumber) {
       enqueueCallSession(session);
       log("info", "Call queued because all Twilio lines are busy", {
