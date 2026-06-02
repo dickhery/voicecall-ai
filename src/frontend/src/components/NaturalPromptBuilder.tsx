@@ -156,8 +156,8 @@ export function NaturalPromptBuilder({
                 the final AI Instructions text before saving.
               </p>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                The agent treats this as private guidance, speaks in its own
-                words, and uses the opening line only for the first turn.
+                Put the exact name or identity the AI should say in Agent Role,
+                then use the opening line only for the first turn.
               </p>
             </div>
           </div>
@@ -206,9 +206,13 @@ export function NaturalPromptBuilder({
                 onChange={(event) =>
                   updateConfig("agentRole", event.target.value)
                 }
-                placeholder="Friendly support assistant"
+                placeholder="Jordan Rivera from Acme support"
                 data-ocid={`${dataOcidPrefix}.agent_role.input`}
               />
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                Use the exact name, title, or role the AI should introduce
+                itself with.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">

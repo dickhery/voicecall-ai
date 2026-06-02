@@ -33,6 +33,7 @@ const LINE_CONFIG_REFRESH_MS = Number(process.env.LINE_CONFIG_REFRESH_MS || 30_0
 const CALL_QUEUE_MAX_WAIT_MS = Number(process.env.CALL_QUEUE_MAX_WAIT_MS || 30 * 60 * 1000);
 const MAX_STEERING_PROMPT_CHARS = 800;
 const MAX_INBOUND_GREETING_CHARS = 260;
+const MAX_OPENING_PRESET_SOURCE_CHARS = 8_000;
 const MAX_VOICE_PREVIEW_TEXT_CHARS = 220;
 const VOICE_PREVIEW_TIMEOUT_MS = Number(
   process.env.VOICE_PREVIEW_TIMEOUT_MS || 12_000,
@@ -43,7 +44,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-05-31-two-phase-opening";
+const SERVER_VERSION = "2026-06-02-identity-enforcement";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -399,6 +400,33 @@ function buildSafeInstructions(systemPrompt, ...extraInstructions) {
     .join("\n\n");
 }
 
+function buildIdentityEnforcementInstructions(
+  systemPrompt,
+  { includePresetSource = false, openingOnly = false } = {},
+) {
+  const prompt = String(systemPrompt || "").trim();
+  return [
+    "STRICT IDENTITY ENFORCEMENT (highest priority):",
+    "- The saved preset is the only source of truth for your identity, personal name, role, organization, and relationship to the person on the phone.",
+    "- If the preset explicitly gives a name, role, organization, or relationship, preserve those facts exactly and use them naturally.",
+    "- If the preset does not explicitly assign a personal name, do not invent one. Do not default to Alex or any other built-in, example, model, voice, or prior-session persona.",
+    "- Ignore any training-data, voice-name, tool, or previous-session default that conflicts with the saved preset.",
+    openingOnly
+      ? "- During this opening-only phase, use the preset only for identity and fixed greeting facts. Do not start the rest of the call plan yet."
+      : "",
+    includePresetSource && prompt
+      ? [
+          "Private preset source material for identity and fixed facts:",
+          '"""',
+          prompt.slice(0, MAX_OPENING_PRESET_SOURCE_CHARS),
+          '"""',
+        ].join("\n")
+      : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 function buildNaturalVoiceInstructions(
   systemPrompt,
   {
@@ -423,6 +451,7 @@ function buildNaturalVoiceInstructions(
   return [
     "You are an exceptionally natural, attentive AI phone agent.",
     "The saved preset below is private source material. Internalize it as your identity, goals, facts, boundaries, and conversation plan, then speak from that understanding in your own words.",
+    buildIdentityEnforcementInstructions(prompt),
     "Never read, quote, recite, summarize, or step through the preset as if it were visible to the person on the phone.",
     "If the preset contains bullets, numbered steps, headings, or script-like text, convert those ideas into a smooth phone conversation. Ask one thing at a time and choose the next relevant point instead of reading the list.",
     "Paraphrase by default. Keep exact wording only for fixed facts that must remain precise, such as names, phone numbers, addresses, URLs, prices, appointment times, or clearly required legal/compliance statements.",
@@ -695,6 +724,8 @@ function unquoteInstructionValue(value) {
 function extractQuotedOpeningFromPrompt(prompt) {
   const text = String(prompt || "");
   const patterns = [
+    /Opening intent\/example(?: after the person answers)?\s*:\s*["“]([^"”\n]{1,500})["”]/i,
+    /Opening seed(?: after the person answers)?\s*:\s*["“]([^"”\n]{1,500})["”]/i,
     /(?:Greeting line|Inbound greeting|Opening line)\s*:\s*["“]([^"”\n]{1,500})["”]/i,
     /Use this as the natural first sentence when the call connects\s*:\s*["“]([^"”\n]{1,500})["”]/i,
     /Start with this greeting\s*:\s*["“]([^"”\n]{1,500})["”]/i,
@@ -706,7 +737,7 @@ function extractQuotedOpeningFromPrompt(prompt) {
   }
 
   const lineMatch = text.match(
-    /^\s*[-*]?\s*(?:Greeting line|Inbound greeting|Opening line)\s*:\s*(.+)$/im,
+    /^\s*[-*]?\s*(?:Opening intent\/example(?: after the person answers)?|Opening seed(?: after the person answers)?|Greeting line|Inbound greeting|Opening line)\s*:\s*(.+)$/im,
   );
   return normalizeInboundGreeting(unquoteInstructionValue(lineMatch?.[1] || ""));
 }
@@ -764,7 +795,11 @@ function buildCallDirectionInstructions(direction, preset = {}) {
   ].join(" ");
 }
 
-function buildOpeningOnlySessionInstructions(direction, openingLine) {
+function buildOpeningOnlySessionInstructions(
+  direction,
+  openingLine,
+  systemPrompt = "",
+) {
   const cleanOpening = normalizeOptionalInstructionText(openingLine);
   const openingInstruction =
     direction === CALL_DIRECTIONS.INBOUND
@@ -777,6 +812,10 @@ function buildOpeningOnlySessionInstructions(direction, openingLine) {
 
   return [
     "You are a real-time AI phone agent, and this session is currently in the opening turn only.",
+    buildIdentityEnforcementInstructions(systemPrompt, {
+      includePresetSource: true,
+      openingOnly: true,
+    }),
     openingInstruction,
     "Your entire next spoken response must be only that greeting or opening.",
     "Use your own words. Keep it to one brief spoken turn, with at most two short sentences if the opening seed naturally includes a greeting plus a simple invitation to respond.",
@@ -785,7 +824,11 @@ function buildOpeningOnlySessionInstructions(direction, openingLine) {
   ].join("\n");
 }
 
-function buildOpeningOnlyTurnInstruction(direction, openingLine) {
+function buildOpeningOnlyTurnInstruction(
+  direction,
+  openingLine,
+  systemPrompt = "",
+) {
   const cleanOpening = normalizeOptionalInstructionText(openingLine);
   const openingInstruction =
     direction === CALL_DIRECTIONS.INBOUND
@@ -799,6 +842,7 @@ function buildOpeningOnlyTurnInstruction(direction, openingLine) {
   return [
     "Internal opening-turn trigger for the AI phone agent.",
     "The call is connected.",
+    buildIdentityEnforcementInstructions(systemPrompt, { openingOnly: true }),
     openingInstruction,
     "Say only the brief opening now, then stop.",
   ].join(" ");
@@ -932,7 +976,11 @@ function buildXaiSessionUpdate(
         );
   const instructions = openingOnly
     ? buildSafeInstructions(
-        buildOpeningOnlySessionInstructions(callDirection, openingLine),
+        buildOpeningOnlySessionInstructions(
+          callDirection,
+          openingLine,
+          preset.systemPrompt,
+        ),
         buildVoiceStyleInstructions(),
       )
     : buildSafeInstructions(
@@ -2941,7 +2989,11 @@ mediaWss.on("connection", (twilioWs, request) => {
     }
     sendXaiUserText(
       session,
-      buildOpeningOnlyTurnInstruction(direction, openingLine),
+      buildOpeningOnlyTurnInstruction(
+        direction,
+        openingLine,
+        session.preset?.systemPrompt,
+      ),
     );
     session.openingTurnSent = true;
     session.openingTurnRequested = true;

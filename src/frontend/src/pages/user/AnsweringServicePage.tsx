@@ -821,8 +821,9 @@ function AnsweringPresetCard({
               </Label>
               <p className="text-xs leading-relaxed text-muted-foreground">
                 Type a custom prompt here, or open the builder above to generate
-                a starting point and then edit it. Include role, goal, facts,
-                boundaries, and expected questions.
+                a starting point and then edit it. Include the exact name or
+                role the AI should use, plus the goal, facts, boundaries, and
+                expected questions.
               </p>
               <Textarea
                 id={`answering-preset-instructions-${preset.id}`}
@@ -1138,8 +1139,9 @@ export default function AnsweringServicePage() {
                       <Label>AI Instructions</Label>
                       <p className="text-xs leading-relaxed text-muted-foreground">
                         Type a custom prompt here, or open the builder above to
-                        generate a starting point and then edit it. Include
-                        role, goal, facts, boundaries, and expected questions.
+                        generate a starting point and then edit it. Include the
+                        exact name or role the AI should use, plus the goal,
+                        facts, boundaries, and expected questions.
                       </p>
                       <Textarea
                         value={input.systemPrompt}
@@ -1152,7 +1154,7 @@ export default function AnsweringServicePage() {
                         rows={5}
                         maxLength={MAX_AI_INSTRUCTIONS_CHARS}
                         className="resize-none font-mono text-xs"
-                        placeholder="You answer calls for a small design studio. Ask for the caller's name, reason for calling, and preferred callback time."
+                        placeholder="You are Jordan Rivera, the front desk assistant for a small design studio. Ask for the caller's name, reason for calling, and preferred callback time."
                         required
                       />
                     </div>
