@@ -46493,6 +46493,7 @@ const DEFAULT_NATURAL_PRESET_CONFIG = {
   pacing: "balanced",
   formality: "neutral",
   expectedSituation: "",
+  conditionalGuidance: "",
   mustAsk: "",
   mustMention: "",
   mustAvoid: "",
@@ -46516,6 +46517,7 @@ const NATURAL_PRESET_TEMPLATES = [
       mustMention: "Why you are calling",
       mustAvoid: "Do not sound pushy\nDo not ask for payment details\nDo not continue if they say they are busy; offer to call later",
       fallbackBehavior: "If they ask something you do not know, say you can pass the message along.",
+      conditionalGuidance: "If they ask what this is about, say it is about confirming their upcoming appointment.\nIf they are busy, offer to note a better callback time.",
       endingGoal: "End with the appointment confirmed, rescheduled, or flagged for follow-up."
     }
   },
@@ -46531,7 +46533,8 @@ const NATURAL_PRESET_TEMPLATES = [
       mustAsk: "Ask for the caller's name\nAsk what they need help with\nAsk one follow-up question before suggesting a next step",
       mustMention: "You can take a message or pass details to the team when needed",
       mustAvoid: "Do not blame the caller\nDo not overpromise a resolution\nDo not ask multiple questions at once",
-      fallbackBehavior: "If the answer depends on private account details, offer to take a message for a human follow-up."
+      fallbackBehavior: "If the answer depends on private account details, offer to take a message for a human follow-up.",
+      conditionalGuidance: "If they ask for account-specific details, explain that a team member can follow up after verifying the account.\nIf they ask for a human, offer to take a detailed message."
     }
   },
   {
@@ -46547,6 +46550,7 @@ const NATURAL_PRESET_TEMPLATES = [
       mustAsk: "Ask what they are looking for\nAsk their timeline\nAsk the best way for the team to follow up",
       mustMention: "Keep the call brief unless they ask for details",
       mustAvoid: "Do not pressure the person\nDo not make pricing promises\nDo not keep talking if they are not interested",
+      conditionalGuidance: "If they ask about pricing, say the team can share exact pricing during the follow-up.\nIf they are not the right contact, ask who would be best to speak with.",
       endingGoal: "Capture fit, timeline, and follow-up preference."
     }
   },
@@ -46563,6 +46567,7 @@ const NATURAL_PRESET_TEMPLATES = [
       mustAsk: "Ask for the caller's name\nAsk the reason for the call\nAsk the best callback number if a follow-up is needed",
       mustMention: "You can pass the message along",
       mustAvoid: "Do not pretend to be a human\nDo not invent policies or availability\nDo not ask for sensitive payment information",
+      conditionalGuidance: "If asked whether you are a person, say you are an AI assistant for the team.\nIf they need a human urgently, offer to take the details for a callback.",
       endingGoal: "Finish with a clear message or answer and a polite sign-off."
     }
   },
@@ -46725,6 +46730,12 @@ function buildNaturalPhonePrompt(config, direction) {
     config.expectedSituation.trim() ? `Expected situation:
 - ${config.expectedSituation.trim()}` : "",
     "",
+    config.conditionalGuidance.trim() ? [
+      "Expected questions and conditional guidance:",
+      "Use these private notes only when relevant. Answer naturally in your own words, and do not announce that you are following a rule.",
+      linesToBullets(config.conditionalGuidance)
+    ].join("\n") : "",
+    "",
     "Must ask:",
     linesToBullets(config.mustAsk),
     "",
@@ -46770,6 +46781,7 @@ function NaturalPromptBuilder({
   dataOcidPrefix = "natural_prompt"
 }) {
   const [templateId, setTemplateId] = reactExports.useState("none");
+  const [isOpen, setIsOpen] = reactExports.useState(false);
   const [config, setConfig] = reactExports.useState(
     () => createNaturalPresetConfig()
   );
@@ -46798,207 +46810,314 @@ function NaturalPromptBuilder({
   function generatePrompt() {
     onPromptChange(buildNaturalPhonePrompt(config, direction));
   }
-  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-    "div",
-    {
-      className: "space-y-4 rounded-md border border-border bg-muted/20 p-4",
-      "data-ocid": `${dataOcidPrefix}.builder`,
-      children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 rounded-md border border-primary/20 bg-background/70 p-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Info, { className: "h-3.5 w-3.5" }) }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-foreground", children: "Build or write your AI instructions" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Fill out the fields here to describe the agent's role, goals, and boundaries. The agent treats the result as private guidance and speaks from it in its own words." }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "The opening line is an example for the first turn only; the agent keeps the intent, varies the wording, then waits for a response." })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5 sm:max-w-xs", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase tracking-wide text-muted-foreground", children: "AI Instructions Builder" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsxs(Select, { value: templateId, onValueChange: applyTemplate, children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", "data-ocid": `${dataOcidPrefix}.builder_wrapper`, children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "rounded-md border border-border bg-muted/20 p-3", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex min-w-0 gap-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary", children: /* @__PURE__ */ jsxRuntimeExports.jsx(WandSparkles, { className: "h-4 w-4" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0 space-y-1", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-foreground", children: "AI Instructions Builder" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Open guided fields to generate a starting prompt, or type your own instructions directly in the AI Instructions box below." })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        Button,
+        {
+          type: "button",
+          variant: isOpen ? "secondary" : "outline",
+          className: "w-full shrink-0 justify-center gap-2 sm:w-auto",
+          onClick: () => setIsOpen((open) => !open),
+          "aria-expanded": isOpen,
+          "aria-controls": `${dataOcidPrefix}-builder-panel`,
+          "data-ocid": `${dataOcidPrefix}.toggle_button`,
+          children: [
+            isOpen ? /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronUp, { className: "h-4 w-4" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(ChevronDown, { className: "h-4 w-4" }),
+            isOpen ? "Hide Builder" : "Open Builder"
+          ]
+        }
+      )
+    ] }) }),
+    isOpen && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      "div",
+      {
+        id: `${dataOcidPrefix}-builder-panel`,
+        className: "space-y-4 rounded-md border border-border bg-muted/20 p-4",
+        "data-ocid": `${dataOcidPrefix}.builder`,
+        children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex gap-3 rounded-md border border-primary/20 bg-background/70 p-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Info, { className: "h-3.5 w-3.5" }) }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-foreground", children: "Build or write your AI instructions" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Fill out structured fields for the agent's role, goals, expected questions, and boundaries. Generate the prompt, then freely edit the final AI Instructions text before saving." }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "The agent treats this as private guidance, speaks in its own words, and uses the opening line only for the first turn." })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5 sm:max-w-xs", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold uppercase tracking-wide text-muted-foreground", children: "Template" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs(Select, { value: templateId, onValueChange: applyTemplate, children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  SelectTrigger,
+                  {
+                    className: "w-full",
+                    "data-ocid": `${dataOcidPrefix}.template.select`,
+                    children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectValue, { placeholder: "Choose a template" })
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs(SelectContent, { children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: "none", children: "Blank" }),
+                  templates.map((template) => /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: template.id, children: template.label }, template.id))
+                ] })
+              ] })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs(
+              Button,
+              {
+                type: "button",
+                variant: "secondary",
+                className: "gap-2",
+                onClick: generatePrompt,
+                "data-ocid": `${dataOcidPrefix}.generate_button`,
+                children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(WandSparkles, { className: "h-4 w-4" }),
+                  "Generate AI Instructions"
+                ]
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Agent Role" }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                SelectTrigger,
+                Input,
                 {
-                  className: "w-full",
-                  "data-ocid": `${dataOcidPrefix}.template.select`,
-                  children: /* @__PURE__ */ jsxRuntimeExports.jsx(SelectValue, { placeholder: "Choose a template" })
+                  value: config.agentRole,
+                  onChange: (event) => updateConfig("agentRole", event.target.value),
+                  placeholder: "Friendly support assistant",
+                  "data-ocid": `${dataOcidPrefix}.agent_role.input`
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Organization" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Input,
+                {
+                  value: config.organization,
+                  onChange: (event) => updateConfig("organization", event.target.value),
+                  placeholder: "Company or project name",
+                  "data-ocid": `${dataOcidPrefix}.organization.input`
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Relationship" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Input,
+                {
+                  value: config.relationshipToCaller,
+                  onChange: (event) => updateConfig("relationshipToCaller", event.target.value),
+                  placeholder: "Front desk, callback helper, teammate",
+                  "data-ocid": `${dataOcidPrefix}.relationship.input`
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Call Goal" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Textarea,
+                {
+                  value: config.callPurpose,
+                  onChange: (event) => updateConfig("callPurpose", event.target.value),
+                  rows: 3,
+                  placeholder: "Confirm the appointment and collect any changes",
+                  "data-ocid": `${dataOcidPrefix}.call_goal.textarea`,
+                  className: "resize-none text-sm"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Opening Line" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Textarea,
+                {
+                  value: config.openingLine,
+                  onChange: (event) => updateConfig("openingLine", event.target.value),
+                  rows: 3,
+                  placeholder: direction === "inbound" ? "Hi, thanks for calling. How can I help?" : "Hi, this is the AI assistant calling about your appointment. Is now okay?",
+                  "data-ocid": `${dataOcidPrefix}.opening_line.textarea`,
+                  className: "resize-none text-sm"
                 }
               ),
-              /* @__PURE__ */ jsxRuntimeExports.jsxs(SelectContent, { children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: "none", children: "Blank" }),
-                templates.map((template) => /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: template.id, children: template.label }, template.id))
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] leading-relaxed text-muted-foreground", children: openingLineHelp })
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              PromptSelect,
+              {
+                label: "Tone",
+                value: config.tone,
+                options: TONE_OPTIONS,
+                onChange: (value) => updateConfig("tone", value),
+                dataOcid: `${dataOcidPrefix}.tone.select`
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              PromptSelect,
+              {
+                label: "Pacing",
+                value: config.pacing,
+                options: PACING_OPTIONS,
+                onChange: (value) => updateConfig("pacing", value),
+                dataOcid: `${dataOcidPrefix}.pacing.select`
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              PromptSelect,
+              {
+                label: "Formality",
+                value: config.formality,
+                options: FORMALITY_OPTIONS,
+                onChange: (value) => updateConfig("formality", value),
+                dataOcid: `${dataOcidPrefix}.formality.select`
+              }
+            )
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold uppercase tracking-wide text-foreground", children: "Context and Expected Questions" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Add facts the agent should know before the call, including likely questions and the answer to give when they come up." })
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 lg:grid-cols-[0.85fr_1.15fr]", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Expected Situation" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Textarea,
+                  {
+                    value: config.expectedSituation,
+                    onChange: (event) => updateConfig("expectedSituation", event.target.value),
+                    rows: 4,
+                    placeholder: "They may be calling after hours, or they may already know the team.",
+                    "data-ocid": `${dataOcidPrefix}.expected_situation.textarea`,
+                    className: "resize-none text-sm"
+                  }
+                )
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "If / Then Guidance" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  Textarea,
+                  {
+                    value: config.conditionalGuidance,
+                    onChange: (event) => updateConfig("conditionalGuidance", event.target.value),
+                    rows: 4,
+                    placeholder: "If asked about my mom, say she is doing well.\nIf they ask about pricing, explain that a human can follow up with exact options.\nIf they want a human, offer to take a detailed message.",
+                    "data-ocid": `${dataOcidPrefix}.conditional_guidance.textarea`,
+                    className: "resize-none text-sm"
+                  }
+                ),
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] leading-relaxed text-muted-foreground", children: "Use one expected question, scenario, or fact per line." })
               ] })
             ] })
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs(
-            Button,
-            {
-              type: "button",
-              variant: "secondary",
-              className: "gap-2",
-              onClick: generatePrompt,
-              "data-ocid": `${dataOcidPrefix}.generate_button`,
-              children: [
-                /* @__PURE__ */ jsxRuntimeExports.jsx(WandSparkles, { className: "h-4 w-4" }),
-                "Generate AI Instructions"
-              ]
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Agent Role" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Input,
+              PromptListField,
               {
-                value: config.agentRole,
-                onChange: (event) => updateConfig("agentRole", event.target.value),
-                placeholder: "Friendly support assistant",
-                "data-ocid": `${dataOcidPrefix}.agent_role.input`
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Organization" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Input,
-              {
-                value: config.organization,
-                onChange: (event) => updateConfig("organization", event.target.value),
-                placeholder: "Company or project name",
-                "data-ocid": `${dataOcidPrefix}.organization.input`
-              }
-            )
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Call Goal" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Textarea,
-              {
-                value: config.callPurpose,
-                onChange: (event) => updateConfig("callPurpose", event.target.value),
-                rows: 3,
-                placeholder: "Confirm the appointment and collect any changes",
-                "data-ocid": `${dataOcidPrefix}.call_goal.textarea`,
-                className: "resize-none text-sm"
-              }
-            )
-          ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Opening Line" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Textarea,
-              {
-                value: config.openingLine,
-                onChange: (event) => updateConfig("openingLine", event.target.value),
-                rows: 3,
-                placeholder: direction === "inbound" ? "Hi, thanks for calling. How can I help?" : "Hi, this is the AI assistant calling about your appointment. Is now okay?",
-                "data-ocid": `${dataOcidPrefix}.opening_line.textarea`,
-                className: "resize-none text-sm"
+                label: "Must Ask",
+                value: config.mustAsk,
+                onChange: (value) => updateConfig("mustAsk", value),
+                placeholder: "One item per line",
+                description: mustAskHelp,
+                dataOcid: `${dataOcidPrefix}.must_ask.textarea`
               }
             ),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] leading-relaxed text-muted-foreground", children: openingLineHelp })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PromptSelect,
-            {
-              label: "Tone",
-              value: config.tone,
-              options: TONE_OPTIONS,
-              onChange: (value) => updateConfig("tone", value),
-              dataOcid: `${dataOcidPrefix}.tone.select`
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PromptSelect,
-            {
-              label: "Pacing",
-              value: config.pacing,
-              options: PACING_OPTIONS,
-              onChange: (value) => updateConfig("pacing", value),
-              dataOcid: `${dataOcidPrefix}.pacing.select`
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PromptSelect,
-            {
-              label: "Formality",
-              value: config.formality,
-              options: FORMALITY_OPTIONS,
-              onChange: (value) => updateConfig("formality", value),
-              dataOcid: `${dataOcidPrefix}.formality.select`
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-3", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PromptListField,
-            {
-              label: "Must Ask",
-              value: config.mustAsk,
-              onChange: (value) => updateConfig("mustAsk", value),
-              placeholder: "One item per line",
-              description: mustAskHelp,
-              dataOcid: `${dataOcidPrefix}.must_ask.textarea`
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PromptListField,
-            {
-              label: "Must Mention",
-              value: config.mustMention,
-              onChange: (value) => updateConfig("mustMention", value),
-              placeholder: "One item per line",
-              dataOcid: `${dataOcidPrefix}.must_mention.textarea`
-            }
-          ),
-          /* @__PURE__ */ jsxRuntimeExports.jsx(
-            PromptListField,
-            {
-              label: "Avoid",
-              value: config.mustAvoid,
-              onChange: (value) => updateConfig("mustAvoid", value),
-              placeholder: "One item per line",
-              dataOcid: `${dataOcidPrefix}.avoid.textarea`
-            }
-          )
-        ] }),
-        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Fallback Behavior" }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Textarea,
+              PromptListField,
               {
-                value: config.fallbackBehavior,
-                onChange: (event) => updateConfig("fallbackBehavior", event.target.value),
-                rows: 3,
-                "data-ocid": `${dataOcidPrefix}.fallback.textarea`,
-                className: "resize-none text-sm"
+                label: "Must Mention",
+                value: config.mustMention,
+                onChange: (value) => updateConfig("mustMention", value),
+                placeholder: "One item per line",
+                dataOcid: `${dataOcidPrefix}.must_mention.textarea`
+              }
+            ),
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              PromptListField,
+              {
+                label: "Avoid",
+                value: config.mustAvoid,
+                onChange: (value) => updateConfig("mustAvoid", value),
+                placeholder: "One item per line",
+                dataOcid: `${dataOcidPrefix}.avoid.textarea`
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Desired Ending" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(
-              Textarea,
-              {
-                value: config.endingGoal,
-                onChange: (event) => updateConfig("endingGoal", event.target.value),
-                rows: 3,
-                placeholder: "Confirmed, rescheduled, or ready for follow-up",
-                "data-ocid": `${dataOcidPrefix}.ending_goal.textarea`,
-                className: "resize-none text-sm"
-              }
-            )
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Fallback Behavior" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Textarea,
+                {
+                  value: config.fallbackBehavior,
+                  onChange: (event) => updateConfig("fallbackBehavior", event.target.value),
+                  rows: 3,
+                  "data-ocid": `${dataOcidPrefix}.fallback.textarea`,
+                  className: "resize-none text-sm"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Desired Ending" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Textarea,
+                {
+                  value: config.endingGoal,
+                  onChange: (event) => updateConfig("endingGoal", event.target.value),
+                  rows: 3,
+                  placeholder: "Confirmed, rescheduled, or ready for follow-up",
+                  "data-ocid": `${dataOcidPrefix}.ending_goal.textarea`,
+                  className: "resize-none text-sm"
+                }
+              )
+            ] })
+          ] }),
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid gap-3 md:grid-cols-2", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Handoff Instructions" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Textarea,
+                {
+                  value: config.handoffInstructions,
+                  onChange: (event) => updateConfig("handoffInstructions", event.target.value),
+                  rows: 3,
+                  placeholder: "When a human should follow up and what details to collect",
+                  "data-ocid": `${dataOcidPrefix}.handoff.textarea`,
+                  className: "resize-none text-sm"
+                }
+              )
+            ] }),
+            /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Extra Instructions" }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx(
+                Textarea,
+                {
+                  value: config.extraInstructions,
+                  onChange: (event) => updateConfig("extraInstructions", event.target.value),
+                  rows: 3,
+                  placeholder: "Anything else the agent should know or avoid",
+                  "data-ocid": `${dataOcidPrefix}.extra.textarea`,
+                  className: "resize-none text-sm"
+                }
+              )
+            ] })
           ] })
-        ] })
-      ]
-    }
-  );
+        ]
+      }
+    )
+  ] });
 }
 function PromptSelect({
   label,
@@ -50196,7 +50315,7 @@ function AnsweringPresetCard({
                 ),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { htmlFor: `answering-preset-instructions-${preset.id}`, children: "AI Instructions" }),
-                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: 'Describe the role, goal, facts, and boundaries. Avoid "say exactly" wording unless a specific phrase must stay fixed.' }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Type a custom prompt here, or open the builder above to generate a starting point and then edit it. Include role, goal, facts, boundaries, and expected questions." }),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
                     Textarea,
                     {
@@ -50498,7 +50617,7 @@ function AnsweringServicePage() {
           ),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { children: "AI Instructions" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: 'Describe the role, goal, facts, and boundaries. Avoid "say exactly" wording unless a specific phrase must stay fixed.' }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Type a custom prompt here, or open the builder above to generate a starting point and then edit it. Include role, goal, facts, boundaries, and expected questions." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Textarea,
               {
@@ -60313,7 +60432,7 @@ function DashboardPage() {
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { htmlFor: "dashboard-preset-instructions", children: "Instructions" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: 'Describe the role, goal, facts, and boundaries. Avoid "say exactly" wording unless a specific phrase must stay fixed.' }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Edit the saved prompt directly. Include role, goal, facts, boundaries, and expected questions the AI should be ready for." }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               Textarea,
               {
@@ -62871,7 +62990,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
     ),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-semibold text-muted-foreground uppercase tracking-wide", children: "AI Instructions" }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: 'Describe the role, goal, facts, and boundaries. Avoid "say exactly" wording unless a specific phrase must stay fixed.' }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs leading-relaxed text-muted-foreground", children: "Type a custom prompt here, or open the builder above to generate a starting point and then edit it. Include role, goal, facts, boundaries, and expected questions." }),
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         Textarea,
         {

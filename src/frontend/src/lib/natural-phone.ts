@@ -20,6 +20,7 @@ export interface NaturalPresetConfig {
   pacing: NaturalPromptPacing;
   formality: NaturalPromptFormality;
   expectedSituation: string;
+  conditionalGuidance: string;
   mustAsk: string;
   mustMention: string;
   mustAvoid: string;
@@ -56,6 +57,7 @@ export const DEFAULT_NATURAL_PRESET_CONFIG: NaturalPresetConfig = {
   pacing: "balanced",
   formality: "neutral",
   expectedSituation: "",
+  conditionalGuidance: "",
   mustAsk: "",
   mustMention: "",
   mustAvoid: "",
@@ -85,6 +87,8 @@ export const NATURAL_PRESET_TEMPLATES: NaturalPresetTemplate[] = [
         "Do not sound pushy\nDo not ask for payment details\nDo not continue if they say they are busy; offer to call later",
       fallbackBehavior:
         "If they ask something you do not know, say you can pass the message along.",
+      conditionalGuidance:
+        "If they ask what this is about, say it is about confirming their upcoming appointment.\nIf they are busy, offer to note a better callback time.",
       endingGoal:
         "End with the appointment confirmed, rescheduled, or flagged for follow-up.",
     },
@@ -108,6 +112,8 @@ export const NATURAL_PRESET_TEMPLATES: NaturalPresetTemplate[] = [
         "Do not blame the caller\nDo not overpromise a resolution\nDo not ask multiple questions at once",
       fallbackBehavior:
         "If the answer depends on private account details, offer to take a message for a human follow-up.",
+      conditionalGuidance:
+        "If they ask for account-specific details, explain that a team member can follow up after verifying the account.\nIf they ask for a human, offer to take a detailed message.",
     },
   },
   {
@@ -127,6 +133,8 @@ export const NATURAL_PRESET_TEMPLATES: NaturalPresetTemplate[] = [
       mustMention: "Keep the call brief unless they ask for details",
       mustAvoid:
         "Do not pressure the person\nDo not make pricing promises\nDo not keep talking if they are not interested",
+      conditionalGuidance:
+        "If they ask about pricing, say the team can share exact pricing during the follow-up.\nIf they are not the right contact, ask who would be best to speak with.",
       endingGoal: "Capture fit, timeline, and follow-up preference.",
     },
   },
@@ -147,6 +155,8 @@ export const NATURAL_PRESET_TEMPLATES: NaturalPresetTemplate[] = [
       mustMention: "You can pass the message along",
       mustAvoid:
         "Do not pretend to be a human\nDo not invent policies or availability\nDo not ask for sensitive payment information",
+      conditionalGuidance:
+        "If asked whether you are a person, say you are an AI assistant for the team.\nIf they need a human urgently, offer to take the details for a callback.",
       endingGoal:
         "Finish with a clear message or answer and a polite sign-off.",
     },
@@ -366,6 +376,14 @@ export function buildNaturalPhonePrompt(
     "",
     config.expectedSituation.trim()
       ? `Expected situation:\n- ${config.expectedSituation.trim()}`
+      : "",
+    "",
+    config.conditionalGuidance.trim()
+      ? [
+          "Expected questions and conditional guidance:",
+          "Use these private notes only when relevant. Answer naturally in your own words, and do not announce that you are following a rule.",
+          linesToBullets(config.conditionalGuidance),
+        ].join("\n")
       : "",
     "",
     "Must ask:",

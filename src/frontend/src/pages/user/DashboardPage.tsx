@@ -1158,8 +1158,8 @@ export default function DashboardPage() {
           <div className="space-y-2">
             <Label htmlFor="dashboard-preset-instructions">Instructions</Label>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Describe the role, goal, facts, and boundaries. Avoid "say
-              exactly" wording unless a specific phrase must stay fixed.
+              Edit the saved prompt directly. Include role, goal, facts,
+              boundaries, and expected questions the AI should be ready for.
             </p>
             <Textarea
               id="dashboard-preset-instructions"

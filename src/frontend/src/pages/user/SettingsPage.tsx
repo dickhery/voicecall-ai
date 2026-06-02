@@ -220,8 +220,9 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
           AI Instructions
         </Label>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Describe the role, goal, facts, and boundaries. Avoid "say exactly"
-          wording unless a specific phrase must stay fixed.
+          Type a custom prompt here, or open the builder above to generate a
+          starting point and then edit it. Include role, goal, facts,
+          boundaries, and expected questions.
         </p>
         <Textarea
           {...register("systemPrompt", {

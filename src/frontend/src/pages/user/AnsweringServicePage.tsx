@@ -820,8 +820,9 @@ function AnsweringPresetCard({
                 AI Instructions
               </Label>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                Describe the role, goal, facts, and boundaries. Avoid "say
-                exactly" wording unless a specific phrase must stay fixed.
+                Type a custom prompt here, or open the builder above to generate
+                a starting point and then edit it. Include role, goal, facts,
+                boundaries, and expected questions.
               </p>
               <Textarea
                 id={`answering-preset-instructions-${preset.id}`}
@@ -1136,9 +1137,9 @@ export default function AnsweringServicePage() {
                     <div className="space-y-2">
                       <Label>AI Instructions</Label>
                       <p className="text-xs leading-relaxed text-muted-foreground">
-                        Describe the role, goal, facts, and boundaries. Avoid
-                        "say exactly" wording unless a specific phrase must stay
-                        fixed.
+                        Type a custom prompt here, or open the builder above to
+                        generate a starting point and then edit it. Include
+                        role, goal, facts, boundaries, and expected questions.
                       </p>
                       <Textarea
                         value={input.systemPrompt}

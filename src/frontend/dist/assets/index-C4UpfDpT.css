@@ -3528,6 +3528,10 @@ video {
     width: 11rem;
   }
 
+  .sm\:w-auto {
+    width: auto;
+  }
+
   .sm\:max-w-2xl {
     max-width: 42rem;
   }
@@ -3742,6 +3746,10 @@ video {
 
   .lg\:grid-cols-3 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lg\:grid-cols-\[0\.85fr_1\.15fr\] {
+    grid-template-columns: 0.85fr 1.15fr;
   }
 
   .lg\:grid-cols-\[1\.05fr_0\.95fr\] {
