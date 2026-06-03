@@ -299,7 +299,7 @@ Expected:
 ```text
 ok                : True
 publicHost        : your-tunnel-host
-cors.allowedOrigins includes https://voicecallai.online
+cors.requestOriginAllowed: True
 twilioConfigured  : True
 xaiConfigured     : True
 ```
@@ -352,7 +352,7 @@ Invoke-WebRequest `
 The JSON should include:
 
 ```text
-serverVersion: 2026-05-09-stripe-prepaid-minutes
+serverVersion: 2026-06-03-cors-stream-status
 ```
 
 ## Configure the Frontend
@@ -584,7 +584,7 @@ FRONTEND_ORIGIN=https://voicecallai.online,https://www.voicecallai.online,https:
 FRONTEND_CANISTER_ID=2nukr-cyaaa-aaaak-qy2ja-cai
 ```
 
-Restart the server after changing `.env` or pulling new server code. The `/health` response includes the active CORS allow list.
+Restart the server after changing `.env` or pulling new server code. Check `/health` with the frontend `Origin` header; the response should include `cors.requestOriginAllowed: true` and the HTTP headers should include `Access-Control-Allow-Origin`.
 
 ## Useful Commands
 

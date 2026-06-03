@@ -45,7 +45,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-06-02-line-rotation";
+const SERVER_VERSION = "2026-06-03-cors-stream-status";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -204,8 +204,16 @@ function expandIcGatewayOrigins(origin) {
 }
 
 function buildAllowedOrigins() {
-  const configuredOrigins = (process.env.FRONTEND_ORIGIN || "*")
-    .split(",")
+  const originSources = [
+    process.env.FRONTEND_ORIGIN,
+    process.env.FRONTEND_URL,
+    process.env.CORS_ALLOWED_ORIGINS,
+    process.env.PUBLIC_FRONTEND_URL,
+    process.env.PUBLIC_APP_URL,
+    process.env.APP_URL,
+  ];
+  const configuredOrigins = originSources
+    .flatMap((value) => String(value || "").split(","))
     .map(normalizeOrigin)
     .filter(Boolean);
   const configuredCanisterIds = (process.env.FRONTEND_CANISTER_ID || "")
@@ -236,9 +244,9 @@ function isProduction() {
 
 function assertProductionSafetyConfig() {
   if (!isProduction()) return;
-  if (!process.env.FRONTEND_ORIGIN || allowAllOrigins) {
+  if (allowOrigins.size === 0 || allowAllOrigins) {
     throw new Error(
-      "Production FRONTEND_ORIGIN must be explicitly allowlisted and cannot include *.",
+      "Production CORS origins must be explicitly allowlisted and cannot include *.",
     );
   }
   if (process.env.VALIDATE_TWILIO_SIGNATURE !== "true") {
@@ -268,6 +276,8 @@ function safeTokenEqual(expected, supplied) {
 
 app.use(
   cors({
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Range"],
     exposedHeaders: [
       "Accept-Ranges",
       "Content-Length",
@@ -596,6 +606,14 @@ function getPublicRecordingStatusUrl(sessionId) {
   const publicBaseUrl = getPublicBaseUrl();
   if (!publicBaseUrl) return "";
   const url = new URL("/recording-status", publicBaseUrl);
+  url.searchParams.set("sessionId", sessionId);
+  return url.toString();
+}
+
+function getPublicStreamStatusUrl(sessionId) {
+  const publicBaseUrl = getPublicBaseUrl();
+  if (!publicBaseUrl) return "";
+  const url = new URL("/stream-status", publicBaseUrl);
   url.searchParams.set("sessionId", sessionId);
   return url.toString();
 }
@@ -1094,34 +1112,64 @@ function buildLiveGuidanceText(prompt) {
   ].join(" ");
 }
 
-function twilioRequestUrl(req) {
-  const proto = req.get("x-forwarded-proto") || req.protocol || "https";
-  const host = req.get("x-forwarded-host") || req.get("host");
-  return `${proto}://${host}${req.originalUrl}`;
+function firstForwardedValue(value) {
+  return String(value || "")
+    .split(",")[0]
+    .trim();
+}
+
+function uniqueValues(values) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))];
+}
+
+function twilioRequestUrlCandidates(req) {
+  const originalUrl = req.originalUrl || req.url || "/";
+  const forwardedHost = firstForwardedValue(req.get("x-forwarded-host"));
+  const requestHost = firstForwardedValue(req.get("host"));
+  const publicHost = getPublicHost();
+  const hosts = uniqueValues([forwardedHost, requestHost, publicHost]);
+  const forwardedProto = firstForwardedValue(req.get("x-forwarded-proto"));
+  const requestProto = req.protocol || "";
+  const protos = uniqueValues([forwardedProto, requestProto, "https"]).map((proto) =>
+    proto.replace(/:$/, ""),
+  );
+
+  const candidates = [];
+  for (const host of hosts) {
+    for (const proto of protos) {
+      if (!host || !proto) continue;
+      candidates.push(`${proto}://${host}${originalUrl}`);
+    }
+  }
+  if (publicHost) {
+    candidates.unshift(`https://${publicHost}${originalUrl}`);
+  }
+  return uniqueValues(candidates);
 }
 
 function validateTwilioRequest(req) {
   if (process.env.VALIDATE_TWILIO_SIGNATURE !== "true") return true;
   const signature = req.get("x-twilio-signature");
   if (!signature || !process.env.TWILIO_AUTH_TOKEN) return false;
-  return twilio.validateRequest(
-    process.env.TWILIO_AUTH_TOKEN,
-    signature,
-    twilioRequestUrl(req),
-    req.body || {},
-  );
+  for (const url of twilioRequestUrlCandidates(req)) {
+    if (
+      twilio.validateRequest(
+        process.env.TWILIO_AUTH_TOKEN,
+        signature,
+        url,
+        req.body || {},
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function makeErrorTwiML(message) {
   const response = new VoiceResponse();
   response.say({ voice: "alice" }, message);
   response.hangup();
-  return response.toString();
-}
-
-function makeRejectTwiML(reason = "busy") {
-  const response = new VoiceResponse();
-  response.reject({ reason });
   return response.toString();
 }
 
@@ -1562,7 +1610,10 @@ function broadcastMonitorAudio(session, channel, payload) {
 }
 
 function getSessionFromRequest(req) {
-  const sessionId = String(req.query.sessionId || req.body.sessionId || "");
+  const requestSessionId = String(req.query.sessionId || req.body.sessionId || "");
+  const rawCallSid = String(req.query.callSid || req.body?.CallSid || req.body?.callSid || "");
+  const callSid = /^CA[a-fA-F0-9]{32}$/.test(rawCallSid) ? rawCallSid : "";
+  const sessionId = requestSessionId || (callSid ? callsBySid.get(callSid) : "") || "";
   return { sessionId, session: callSessions.get(sessionId) };
 }
 
@@ -1893,6 +1944,12 @@ function isTerminalTwilioStatus(status) {
   );
 }
 
+function isTerminalTwilioStreamEvent(event) {
+  return ["stream-stopped", "stream-error"].includes(
+    String(event || "").toLowerCase(),
+  );
+}
+
 function getQueuedSessionIds() {
   return callQueue.filter((sessionId) => {
     const session = callSessions.get(sessionId);
@@ -2175,7 +2232,7 @@ async function dispatchQueuedSessions() {
   }
 }
 
-app.get("/health", async (_req, res) => {
+app.get("/health", async (req, res) => {
   const linePool = await getLinePoolSnapshot().catch((error) => ({
     numbers: getEnvTwilioLineNumbers(),
     active: [],
@@ -2197,6 +2254,9 @@ app.get("/health", async (_req, res) => {
       active: linePool.active.length,
       available: linePool.available.length,
       queued: linePool.queued,
+    },
+    cors: {
+      requestOriginAllowed: isOriginAllowed(req.get("origin")),
     },
     xaiConfigured: Boolean(process.env.XAI_API_KEY),
     answeringBridgeConfigured: Boolean(
@@ -2517,6 +2577,7 @@ app.post("/initiate-call", async (req, res) => {
       lastSteeringAt: null,
       twimlUrl: twimlUrl.toString(),
       statusCallbackUrl: statusCallbackUrl.toString(),
+      streamStatusCallbackUrl: getPublicStreamStatusUrl(sessionId),
       recordingStatusUrl: getPublicRecordingStatusUrl(sessionId),
       transcript: [],
       awaitingCallerTranscript: false,
@@ -2600,7 +2661,9 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
     requireRealtimeBridgeConfig();
     if (!validateTwilioRequest(req)) {
       log("warn", "Rejected incoming answering webhook with invalid signature");
-      res.status(403).send(makeErrorTwiML("Request validation failed."));
+      res
+        .status(200)
+        .send(makeErrorTwiML("The answering service is unavailable right now."));
       return;
     }
     const webhookSecret = String(req.params.webhookSecret || "").trim();
@@ -2697,6 +2760,7 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
       lastSteeringAt: null,
       twimlUrl: "",
       statusCallbackUrl: "",
+      streamStatusCallbackUrl: getPublicStreamStatusUrl(sessionId),
       recordingStatusUrl: "",
       transcript: [],
       awaitingCallerTranscript: false,
@@ -2725,6 +2789,8 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
     const stream = connect.stream({
       url: publicWsUrl,
       name: `voicecall-answering-${sessionId}`,
+      statusCallback: session.streamStatusCallbackUrl,
+      statusCallbackMethod: "POST",
     });
     stream.parameter({ name: "sessionId", value: sessionId });
     stream.parameter({ name: "mediaToken", value: mediaToken });
@@ -2758,7 +2824,9 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
           });
         });
     }
-    res.status(200).send(makeRejectTwiML("busy"));
+    res
+      .status(200)
+      .send(makeErrorTwiML("The answering service is unavailable right now."));
   }
 });
 
@@ -2883,6 +2951,8 @@ app.post("/twiml", (req, res) => {
     const stream = connect.stream({
       url: publicWsUrl,
       name: `voicecall-ai-${sessionId}`,
+      statusCallback: session.streamStatusCallbackUrl,
+      statusCallbackMethod: "POST",
     });
     stream.parameter({ name: "sessionId", value: sessionId });
     stream.parameter({ name: "mediaToken", value: session.mediaToken || "" });
@@ -2918,6 +2988,34 @@ app.post("/call-status", async (req, res) => {
     sessionId,
     callSid: req.body.CallSid,
     status: req.body.CallStatus,
+  });
+  res.sendStatus(204);
+});
+
+app.post("/stream-status", async (req, res) => {
+  if (!validateTwilioRequest(req)) {
+    log("warn", "Rejected stream callback with invalid signature");
+    res.sendStatus(403);
+    return;
+  }
+
+  const { sessionId, session } = getSessionFromRequest(req);
+  const streamEvent = String(req.body.StreamEvent || "").toLowerCase();
+  if (session) {
+    session.streamSid ||= String(req.body.StreamSid || "");
+    session.lastStreamEvent = streamEvent;
+    session.lastStreamEventAt = Date.now();
+    if (isTerminalTwilioStreamEvent(streamEvent)) {
+      session.billingStoppedAt ||= Date.now();
+      scheduleFinishPaidSession(session, `twilio_${streamEvent || "stream_done"}`);
+    }
+  }
+  log("info", "Twilio stream callback", {
+    sessionId,
+    callSid: req.body.CallSid,
+    streamSid: req.body.StreamSid,
+    streamEvent: req.body.StreamEvent,
+    streamError: req.body.StreamError,
   });
   res.sendStatus(204);
 });

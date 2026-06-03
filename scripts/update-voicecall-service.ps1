@@ -87,6 +87,7 @@ try {
   $port = if ($envValues.ContainsKey("PORT") -and $envValues["PORT"]) { $envValues["PORT"] } else { "3000" }
   $hostName = if ($envValues.ContainsKey("HOSTNAME")) { $envValues["HOSTNAME"].Trim().TrimEnd("/") } else { "" }
   $frontendOrigin = if ($envValues.ContainsKey("FRONTEND_ORIGIN")) { $envValues["FRONTEND_ORIGIN"].Trim().TrimEnd("/") } else { "" }
+  $frontendUrl = if ($envValues.ContainsKey("FRONTEND_URL")) { $envValues["FRONTEND_URL"].Trim().TrimEnd("/") } else { "" }
   $frontendCanisterId = if ($envValues.ContainsKey("FRONTEND_CANISTER_ID")) { $envValues["FRONTEND_CANISTER_ID"].Trim() } else { "" }
 
   if (-not $frontendOrigin -or $frontendOrigin -eq "*") {
@@ -98,6 +99,21 @@ try {
     }
   }
 
+  $testOrigins = @()
+  if ($frontendOrigin) {
+    $testOrigins += ($frontendOrigin -split "," | ForEach-Object { $_.Trim().TrimEnd("/") } | Where-Object { $_ -and $_ -ne "*" })
+  }
+  if ($frontendUrl) {
+    $testOrigins += $frontendUrl
+  }
+  if ($frontendCanisterId) {
+    $testOrigins += "https://$frontendCanisterId.icp0.io"
+    $testOrigins += "https://$frontendCanisterId.ic0.app"
+  }
+  $testOrigins += "https://voicecallai.online"
+  $testOrigins += "https://www.voicecallai.online"
+  $testOrigins = $testOrigins | Select-Object -Unique
+
   Write-Host "Ensuring $ServiceName points at this checkout..."
   & $NssmPath set $ServiceName AppDirectory $ServerDir
   & $NssmPath set $ServiceName AppParameters "server.js"
@@ -108,21 +124,31 @@ try {
   & $NssmPath status $ServiceName
 
   $localUrl = "http://127.0.0.1:$port/health"
-  Write-Host "Checking local CORS health: $localUrl"
-  $localResponse = Invoke-WebRequest -Uri $localUrl -Headers @{ Origin = $frontendOrigin } -UseBasicParsing
-  Write-Host "Local HTTP status: $($localResponse.StatusCode)"
-  Write-Host "Local Access-Control-Allow-Origin: $($localResponse.Headers["Access-Control-Allow-Origin"])"
-  Write-Host $localResponse.Content
+  foreach ($origin in $testOrigins) {
+    Write-Host "Checking local CORS health: $localUrl from $origin"
+    $localResponse = Invoke-WebRequest -Uri $localUrl -Headers @{ Origin = $origin } -UseBasicParsing
+    Write-Host "Local HTTP status: $($localResponse.StatusCode)"
+    Write-Host "Local Access-Control-Allow-Origin: $($localResponse.Headers["Access-Control-Allow-Origin"])"
+    Write-Host $localResponse.Content
+    if ($localResponse.Headers["Access-Control-Allow-Origin"] -ne $origin) {
+      throw "Local CORS health check did not allow $origin."
+    }
+  }
 
   if ($hostName) {
     $publicHost = $hostName -replace "^https?://", ""
     $publicHost = $publicHost -replace "/.*$", ""
     $publicUrl = "https://$publicHost/health"
-    Write-Host "Checking public CORS health: $publicUrl"
-    $publicResponse = Invoke-WebRequest -Uri $publicUrl -Headers @{ Origin = $frontendOrigin } -UseBasicParsing
-    Write-Host "Public HTTP status: $($publicResponse.StatusCode)"
-    Write-Host "Public Access-Control-Allow-Origin: $($publicResponse.Headers["Access-Control-Allow-Origin"])"
-    Write-Host $publicResponse.Content
+    foreach ($origin in $testOrigins) {
+      Write-Host "Checking public CORS health: $publicUrl from $origin"
+      $publicResponse = Invoke-WebRequest -Uri $publicUrl -Headers @{ Origin = $origin } -UseBasicParsing
+      Write-Host "Public HTTP status: $($publicResponse.StatusCode)"
+      Write-Host "Public Access-Control-Allow-Origin: $($publicResponse.Headers["Access-Control-Allow-Origin"])"
+      Write-Host $publicResponse.Content
+      if ($publicResponse.Headers["Access-Control-Allow-Origin"] -ne $origin) {
+        throw "Public CORS health check did not allow $origin."
+      }
+    }
   }
 } finally {
   Pop-Location

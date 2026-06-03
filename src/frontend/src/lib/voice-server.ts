@@ -35,6 +35,9 @@ export interface VoiceServerHealth {
     queued: number;
     numbers?: string[];
   };
+  cors?: {
+    requestOriginAllowed: boolean;
+  };
   xaiConfigured: boolean;
   billingConfigured?: boolean;
   backendCanisterId?: string;
