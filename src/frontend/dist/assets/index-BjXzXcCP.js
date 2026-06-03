@@ -33277,6 +33277,11 @@ Service({
   "deleteAnsweringPreset": Func([PresetId], [Bool], []),
   "deletePreset": Func([PresetId], [Bool], []),
   "duplicatePreset": Func([PresetId], [Opt(CallPreset)], []),
+  "extendCallReservationForServer": Func(
+    [Text],
+    [ReserveCallResult],
+    []
+  ),
   "finishCallAndDebit": Func(
     [Text, Nat, Opt(Text), Opt(Text)],
     [BillingMutationResult],
@@ -33696,6 +33701,11 @@ const idlFactory = ({ IDL: IDL2 }) => {
     "deleteAnsweringPreset": IDL2.Func([PresetId2], [IDL2.Bool], []),
     "deletePreset": IDL2.Func([PresetId2], [IDL2.Bool], []),
     "duplicatePreset": IDL2.Func([PresetId2], [IDL2.Opt(CallPreset2)], []),
+    "extendCallReservationForServer": IDL2.Func(
+      [IDL2.Text],
+      [ReserveCallResult2],
+      []
+    ),
     "finishCallAndDebit": IDL2.Func(
       [IDL2.Text, IDL2.Nat, IDL2.Opt(IDL2.Text), IDL2.Opt(IDL2.Text)],
       [BillingMutationResult2],
@@ -34282,6 +34292,20 @@ class Backend {
       }
     } else {
       const result = await this.actor.reserveCall(arg0);
+      return from_candid_ReserveCallResult(result);
+    }
+  }
+  async extendCallReservationForServer(arg0) {
+    if (this.processError) {
+      try {
+        const result = await this.actor.extendCallReservationForServer(arg0);
+        return from_candid_ReserveCallResult(result);
+      } catch (e) {
+        this.processError(e);
+        throw new Error("unreachable");
+      }
+    } else {
+      const result = await this.actor.extendCallReservationForServer(arg0);
       return from_candid_ReserveCallResult(result);
     }
   }
@@ -51474,7 +51498,7 @@ function useXaiVoice() {
         }
         markServerCallConnected(serverCall);
         ue.success("Call placed", {
-          description: `${Math.floor(Number(allowedSeconds) / 60)} paid minutes reserved`
+          description: `Initial ${Math.floor(Number(allowedSeconds) / 60)} paid minutes reserved`
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
@@ -59750,7 +59774,9 @@ function DashboardPage() {
     return d2.getDate() === now2.getDate() && d2.getMonth() === now2.getMonth() && d2.getFullYear() === now2.getFullYear();
   }).length;
   const activePresets = (presets ?? []).length;
+  const totalBalanceSeconds = Number((billingStatus == null ? void 0 : billingStatus.balanceSeconds) ?? 0n);
   const availableSeconds = Number((billingStatus == null ? void 0 : billingStatus.availableSeconds) ?? 0n);
+  const reservedSeconds = Number((billingStatus == null ? void 0 : billingStatus.reservedSeconds) ?? 0n);
   const selectedPreset = (presets ?? []).find((p2) => p2.id.toString() === selectedPresetId) ?? null;
   const isCallActive = voice.status !== "idle" && voice.status !== "completed" && voice.status !== "error";
   const savesCallArtifacts = saveTranscript || recordAudio;
@@ -59901,8 +59927,8 @@ function DashboardPage() {
           {
             icon: /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-4 h-4 text-green-400" }),
             label: "Phone Time",
-            value: formatMinutes(billingStatus == null ? void 0 : billingStatus.availableSeconds),
-            color: availableSeconds > 0 ? "text-green-400" : "text-destructive",
+            value: formatMinutes(billingStatus == null ? void 0 : billingStatus.balanceSeconds),
+            color: totalBalanceSeconds > 0 ? "text-green-400" : "text-destructive",
             loading: billingLoading
           }
         )
@@ -59923,44 +59949,66 @@ function DashboardPage() {
                 " available"
               ] })
             ] }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: billingLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: [1, 2, 3].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-24 w-full" }, i)) }) : /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: ((billingStatus == null ? void 0 : billingStatus.packages) ?? []).map((pkg) => {
-              const isBuying = buyingPackageId === pkg.id;
-              return /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                "div",
-                {
-                  className: "rounded-lg border border-border bg-muted/25 p-3",
-                  children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
-                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
-                        /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-semibold text-foreground", children: [
-                          "$",
-                          (Number(pkg.amountCents) / 100).toFixed(0)
+            /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { children: billingLoading ? /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: [1, 2, 3].map((i) => /* @__PURE__ */ jsxRuntimeExports.jsx(Skeleton, { className: "h-24 w-full" }, i)) }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-border bg-muted/20 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: "Total balance" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-foreground", children: formatMinutes(billingStatus == null ? void 0 : billingStatus.balanceSeconds) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-border bg-muted/20 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: "Available" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "mt-1 text-sm font-semibold text-green-400", children: formatMinutes(billingStatus == null ? void 0 : billingStatus.availableSeconds) })
+                ] }),
+                /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "rounded-lg border border-border bg-muted/20 p-3", children: [
+                  /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: "Reserved in calls" }),
+                  /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "p",
+                    {
+                      className: reservedSeconds > 0 ? "mt-1 text-sm font-semibold text-amber-400" : "mt-1 text-sm font-semibold text-muted-foreground",
+                      children: formatMinutes(billingStatus == null ? void 0 : billingStatus.reservedSeconds)
+                    }
+                  )
+                ] })
+              ] }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "grid grid-cols-1 sm:grid-cols-3 gap-3", children: ((billingStatus == null ? void 0 : billingStatus.packages) ?? []).map((pkg) => {
+                const isBuying = buyingPackageId === pkg.id;
+                return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                  "div",
+                  {
+                    className: "rounded-lg border border-border bg-muted/25 p-3",
+                    children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-start justify-between gap-2", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+                          /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-sm font-semibold text-foreground", children: [
+                            "$",
+                            (Number(pkg.amountCents) / 100).toFixed(0)
+                          ] }),
+                          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: formatMinutes(pkg.seconds) })
                         ] }),
-                        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: formatMinutes(pkg.seconds) })
+                        /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "text-xs", children: pkg.id.replace("pack_", "$") })
                       ] }),
-                      /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "text-xs", children: pkg.id.replace("pack_", "$") })
-                    ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsxs(
-                      Button,
-                      {
-                        type: "button",
-                        variant: "outline",
-                        size: "sm",
-                        className: "mt-3 w-full gap-2",
-                        onClick: () => handleBuyPackage(pkg.id),
-                        disabled: isBuying,
-                        "data-ocid": `dashboard.billing.buy.${pkg.id}`,
-                        children: [
-                          isBuying ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-3.5 h-3.5 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-3.5 h-3.5" }),
-                          "Buy"
-                        ]
-                      }
-                    )
-                  ]
-                },
-                pkg.id
-              );
-            }) }) })
+                      /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        Button,
+                        {
+                          type: "button",
+                          variant: "outline",
+                          size: "sm",
+                          className: "mt-3 w-full gap-2",
+                          onClick: () => handleBuyPackage(pkg.id),
+                          disabled: isBuying,
+                          "data-ocid": `dashboard.billing.buy.${pkg.id}`,
+                          children: [
+                            isBuying ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-3.5 h-3.5 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(CreditCard, { className: "w-3.5 h-3.5" }),
+                            "Buy"
+                          ]
+                        }
+                      )
+                    ]
+                  },
+                  pkg.id
+                );
+              }) })
+            ] }) })
           ]
         }
       ),

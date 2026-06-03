@@ -371,6 +371,7 @@ export interface backendInterface {
     deleteAnsweringPreset(id: PresetId): Promise<boolean>;
     deletePreset(id: PresetId): Promise<boolean>;
     duplicatePreset(id: PresetId): Promise<CallPreset | null>;
+    extendCallReservationForServer(reservationId: string): Promise<ReserveCallResult>;
     getAdminConfig(): Promise<{
         hasXaiKey: boolean;
         hasTwilioAuth: boolean;
@@ -787,6 +788,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.reserveCall(arg0);
+            return from_candid_ReserveCallResult(result);
+        }
+    }
+    async extendCallReservationForServer(arg0: string): Promise<ReserveCallResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.extendCallReservationForServer(arg0);
+                return from_candid_ReserveCallResult(result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.extendCallReservationForServer(arg0);
             return from_candid_ReserveCallResult(result);
         }
     }

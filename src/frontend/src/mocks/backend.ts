@@ -255,11 +255,27 @@ export const mockBackend: backendInterface = {
       user: samplePrincipal,
       recipientPhone: input.recipientPhone,
       presetId: input.presetId,
-      allowedSeconds: 5400n,
+      allowedSeconds: 900n,
       callToken: "ct_mock",
       createdAt: BigInt(Date.now() * 1_000_000),
       expiresAt: BigInt((Date.now() + 15 * 60 * 1000) * 1_000_000),
       status: CallReservationStatus.reserved,
+    },
+  }),
+
+  extendCallReservationForServer: async () => ({
+    __kind__: "ok",
+    ok: {
+      id: "res_mock",
+      callId: 3n,
+      user: samplePrincipal,
+      recipientPhone: "+15551234567",
+      presetId: 1n,
+      allowedSeconds: 1800n,
+      callToken: undefined,
+      createdAt: BigInt(Date.now() * 1_000_000),
+      expiresAt: BigInt((Date.now() + 15 * 60 * 1000) * 1_000_000),
+      status: CallReservationStatus.active,
     },
   }),
 

@@ -243,6 +243,10 @@ export interface _SERVICE {
   'deletePreset' : ActorMethod<[PresetId], boolean>,
   'deleteAnsweringPreset' : ActorMethod<[PresetId], boolean>,
   'duplicatePreset' : ActorMethod<[PresetId], [] | [CallPreset]>,
+  'extendCallReservationForServer' : ActorMethod<
+    [string],
+    ReserveCallResult
+  >,
   'finishCallAndDebit' : ActorMethod<
     [string, bigint, [] | [string], [] | [string]],
     BillingMutationResult

@@ -27,6 +27,12 @@ const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
 const TRANSCRIPT_FINISH_GRACE_MS = 2_500;
 const RECORDING_FINISH_GRACE_MS = 10_000;
+const BILLING_EXTENSION_LEAD_MS = Number(
+  process.env.BILLING_EXTENSION_LEAD_MS || 30_000,
+);
+const BILLING_STALE_ACTIVITY_GRACE_MS = Number(
+  process.env.BILLING_STALE_ACTIVITY_GRACE_MS || 30_000,
+);
 const BRIDGE_RECORDING_TTL_MS = Number(
   process.env.BRIDGE_RECORDING_TTL_MS || 7 * 24 * 60 * 60 * 1000,
 );
@@ -45,7 +51,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-06-03-cors-stream-status";
+const SERVER_VERSION = "2026-06-03-rolling-billing";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -1501,7 +1507,16 @@ function finalizeBridgeRecording(session) {
     sourceUrl: null,
     status: "completed",
     duration: session.billingStartedAt
-      ? String(Math.max(0, Math.ceil(((session.billingStoppedAt || Date.now()) - session.billingStartedAt) / 1000)))
+      ? String(
+          Math.max(
+            0,
+            Math.ceil(
+              ((session.billingFinishedAt || session.billingStoppedAt || Date.now()) -
+                session.billingStartedAt) /
+                1000,
+            ),
+          ),
+        )
       : null,
   };
   session.bridgeRecordingChunks = [];
@@ -1812,6 +1827,46 @@ function callArtifactsToText(session) {
   return text ? text.slice(0, 20_000) : null;
 }
 
+function markBillingActivity(session, field, at = Date.now()) {
+  if (!session) return at;
+  session[field] = at;
+  session.lastBillingActivityAt = Math.max(
+    Number(session.lastBillingActivityAt || 0),
+    at,
+  );
+  return at;
+}
+
+function getLastBillingActivityAt(session) {
+  if (!session) return 0;
+  return Math.max(
+    Number(session.lastMediaAt || 0),
+    Number(session.lastStreamEventAt || 0),
+    Number(session.lastStatusAt || 0),
+    Number(session.lastBillingActivityAt || 0),
+    Number(session.billingStartedAt || 0),
+  );
+}
+
+function resolveBillingFinishedAt(session, now = Date.now()) {
+  if (!session?.billingStartedAt) {
+    return session?.billingStoppedAt || now;
+  }
+  if (session.billingStoppedAt) return session.billingStoppedAt;
+
+  const lastActivityAt = getLastBillingActivityAt(session);
+  if (lastActivityAt && now - lastActivityAt > BILLING_STALE_ACTIVITY_GRACE_MS) {
+    return lastActivityAt;
+  }
+  return now;
+}
+
+function clearBillingCheckpoint(session) {
+  if (!session?.cutoffTimer) return;
+  clearTimeout(session.cutoffTimer);
+  session.cutoffTimer = null;
+}
+
 async function finishPaidSession(session, reason = "completed") {
   if (!session || session.finished) return;
   if (session.state === "queued" && !session.callSid) {
@@ -1819,12 +1874,9 @@ async function finishPaidSession(session, reason = "completed") {
     return;
   }
   session.finished = true;
-  session.billingFinishedAt = session.billingStoppedAt || Date.now();
+  session.billingFinishedAt = resolveBillingFinishedAt(session);
   removeQueuedSession(session.id);
-  if (session.cutoffTimer) {
-    clearTimeout(session.cutoffTimer);
-    session.cutoffTimer = null;
-  }
+  clearBillingCheckpoint(session);
   if (session.finishTimer) {
     clearTimeout(session.finishTimer);
     session.finishTimer = null;
@@ -1853,6 +1905,8 @@ async function finishPaidSession(session, reason = "completed") {
         reservationId: session.reservationId,
         callSid: session.callSid,
         usedSeconds,
+        billedUntil: session.billingFinishedAt,
+        lastBillingActivityAt: getLastBillingActivityAt(session) || null,
         reason,
         naturalness: buildNaturalnessMetricSummary(session),
       });
@@ -1889,6 +1943,7 @@ async function finishPaidSession(session, reason = "completed") {
 function scheduleFinishPaidSession(session, reason = "completed") {
   if (!session || session.finished) return;
   session.billingStoppedAt ||= Date.now();
+  clearBillingCheckpoint(session);
   const recordingStatus = String(session.recording?.status || "").toLowerCase();
   const waitingForRecording =
     session.recordAudio &&
@@ -1910,32 +1965,117 @@ function scheduleFinishPaidSession(session, reason = "completed") {
   finishPaidSession(session, reason);
 }
 
-function startBillingTimer(session, closeBoth) {
-  if (!session || session.billingStartedAt) return;
-  session.billingStartedAt = Date.now();
-  const allowedSeconds = Math.max(1, Number(session.allowedSeconds || 1));
-  session.cutoffTimer = setTimeout(async () => {
-    log("info", "Paid call time exhausted", {
+async function extendPaidSessionReservation(session) {
+  if (!session?.reservationId || session.finished || session.billingExtensionInFlight) {
+    return false;
+  }
+  session.billingExtensionInFlight = true;
+  const previousAllowedSeconds = Math.max(0, Number(session.allowedSeconds || 0));
+  try {
+    const actor = await getBackendActor();
+    const reservation = normalizeReservation(
+      okOrThrow(
+        await actor.extendCallReservationForServer(session.reservationId),
+        "Unable to extend paid call reservation.",
+      ),
+    );
+    const nextAllowedSeconds = Math.max(
+      previousAllowedSeconds,
+      Number(reservation.allowedSeconds || 0),
+    );
+    if (nextAllowedSeconds <= previousAllowedSeconds) return false;
+
+    session.allowedSeconds = nextAllowedSeconds;
+    log("info", "Extended paid call reservation", {
       sessionId: session.id,
       reservationId: session.reservationId,
       callSid: session.callSid,
-      allowedSeconds,
+      previousAllowedSeconds,
+      allowedSeconds: nextAllowedSeconds,
     });
-    try {
-      if (session.callSid && twilioClient) {
-        await twilioClient.calls(session.callSid).update({ status: "completed" });
-      }
-    } catch (error) {
-      log("warn", "Unable to end Twilio call at paid-time cutoff", {
-        callSid: session.callSid,
-        error: error.message,
-      });
+    broadcastMonitorEvent(session, {
+      type: "billing_extended",
+      allowedSeconds: nextAllowedSeconds,
+    });
+    return true;
+  } catch (error) {
+    log("warn", "Unable to extend paid call reservation", {
+      sessionId: session.id,
+      reservationId: session.reservationId,
+      callSid: session.callSid,
+      previousAllowedSeconds,
+      error: error.message,
+    });
+    return false;
+  } finally {
+    session.billingExtensionInFlight = false;
+  }
+}
+
+async function endPaidSessionAtCutoff(session, closeBoth) {
+  if (!session || session.finished) return;
+  const allowedSeconds = Math.max(1, Number(session.allowedSeconds || 1));
+  log("info", "Paid call time exhausted", {
+    sessionId: session.id,
+    reservationId: session.reservationId,
+    callSid: session.callSid,
+    allowedSeconds,
+  });
+  try {
+    if (session.callSid && twilioClient) {
+      await twilioClient.calls(session.callSid).update({ status: "completed" });
     }
-    session.billingStoppedAt ||= Date.now();
-    closeBoth();
-    await finishPaidSession(session, "paid_time_exhausted");
-  }, allowedSeconds * 1000);
+  } catch (error) {
+    log("warn", "Unable to end Twilio call at paid-time cutoff", {
+      callSid: session.callSid,
+      error: error.message,
+    });
+  }
+  session.billingStoppedAt ||= Date.now();
+  closeBoth?.();
+  await finishPaidSession(session, "paid_time_exhausted");
+}
+
+function scheduleBillingCheckpoint(session, closeBoth) {
+  if (!session || session.finished || !session.billingStartedAt) return;
+  clearBillingCheckpoint(session);
+
+  const now = Date.now();
+  const allowedSeconds = Math.max(1, Number(session.allowedSeconds || 1));
+  const cutoffAt = session.billingStartedAt + allowedSeconds * 1000;
+  const extensionAt = Math.max(
+    session.billingStartedAt,
+    cutoffAt - Math.max(0, BILLING_EXTENSION_LEAD_MS),
+  );
+  const nextCheckpointAt = now < extensionAt ? extensionAt : cutoffAt;
+  const delayMs = Math.max(0, nextCheckpointAt - now);
+
+  session.cutoffTimer = setTimeout(async () => {
+    if (!session || session.finished) return;
+    const currentCutoffAt =
+      session.billingStartedAt + Math.max(1, Number(session.allowedSeconds || 1)) * 1000;
+    const beforeCutoff = Date.now() < currentCutoffAt;
+    const extended = await extendPaidSessionReservation(session);
+    if (session.finished) return;
+    if (extended) {
+      scheduleBillingCheckpoint(session, closeBoth);
+      return;
+    }
+    if (beforeCutoff) {
+      scheduleBillingCheckpoint(session, closeBoth);
+      return;
+    }
+    await endPaidSessionAtCutoff(session, closeBoth);
+  }, delayMs);
   session.cutoffTimer.unref?.();
+}
+
+function startBillingTimer(session, closeBoth) {
+  if (!session || session.billingStartedAt) return;
+  const startedAt = Date.now();
+  session.billingStartedAt = startedAt;
+  markBillingActivity(session, "lastMediaAt", startedAt);
+  scheduleBillingCheckpoint(session, closeBoth);
 }
 
 function isTerminalTwilioStatus(status) {
@@ -2558,6 +2698,11 @@ app.post("/initiate-call", async (req, res) => {
       billingStartedAt: null,
       billingFinishedAt: null,
       billingStoppedAt: null,
+      lastBillingActivityAt: null,
+      lastMediaAt: null,
+      lastStatusAt: null,
+      lastStreamEventAt: null,
+      billingExtensionInFlight: false,
       cutoffTimer: null,
       finishTimer: null,
       finished: false,
@@ -2741,6 +2886,11 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
       billingStartedAt: null,
       billingFinishedAt: null,
       billingStoppedAt: null,
+      lastBillingActivityAt: null,
+      lastMediaAt: null,
+      lastStatusAt: null,
+      lastStreamEventAt: null,
+      billingExtensionInFlight: false,
       cutoffTimer: null,
       finishTimer: null,
       finished: false,
@@ -2905,6 +3055,7 @@ app.post("/end-call", async (req, res) => {
     }
     await twilioClient.calls(callSid).update({ status: "completed" });
     session.endedAt = Date.now();
+    markBillingActivity(session, "lastStatusAt", session.endedAt);
     session.billingStoppedAt ||= session.endedAt;
     scheduleFinishPaidSession(session, "user_requested_end_fallback");
     res.json({ ok: true });
@@ -2977,10 +3128,10 @@ app.post("/call-status", async (req, res) => {
   const { sessionId, session } = getSessionFromRequest(req);
   if (session) {
     session.lastStatus = req.body.CallStatus;
-    session.lastStatusAt = Date.now();
+    const statusAt = markBillingActivity(session, "lastStatusAt");
     updateSessionRecordingFromBody(session, req.body);
     if (isTerminalTwilioStatus(req.body.CallStatus)) {
-      session.billingStoppedAt ||= Date.now();
+      session.billingStoppedAt ||= statusAt;
       scheduleFinishPaidSession(session, `twilio_${req.body.CallStatus}`);
     }
   }
@@ -3004,9 +3155,9 @@ app.post("/stream-status", async (req, res) => {
   if (session) {
     session.streamSid ||= String(req.body.StreamSid || "");
     session.lastStreamEvent = streamEvent;
-    session.lastStreamEventAt = Date.now();
+    const streamEventAt = markBillingActivity(session, "lastStreamEventAt");
     if (isTerminalTwilioStreamEvent(streamEvent)) {
-      session.billingStoppedAt ||= Date.now();
+      session.billingStoppedAt ||= streamEventAt;
       scheduleFinishPaidSession(session, `twilio_${streamEvent || "stream_done"}`);
     }
   }
@@ -3613,6 +3764,7 @@ mediaWss.on("connection", (twilioWs, request) => {
       }
       session.twilioWs = twilioWs;
       session.streamSid = streamSid;
+      markBillingActivity(session, "lastStreamEventAt");
       if (session.metrics) session.metrics.streamStartedAt ||= Date.now();
       startBillingTimer(session, closeBoth);
       connectToStt();
@@ -3621,6 +3773,7 @@ mediaWss.on("connection", (twilioWs, request) => {
     }
 
     if (data.event === "media") {
+      if (session) markBillingActivity(session, "lastMediaAt");
       if (data.media?.payload) {
         broadcastMonitorAudio(session, "caller", data.media.payload);
         appendBridgeRecordingAudio(session, data.media.payload);
@@ -3642,7 +3795,10 @@ mediaWss.on("connection", (twilioWs, request) => {
         sessionId: session?.id,
         streamSid,
       });
-      if (session) session.billingStoppedAt ||= Date.now();
+      if (session) {
+        const stoppedAt = markBillingActivity(session, "lastStreamEventAt");
+        session.billingStoppedAt ||= stoppedAt;
+      }
       finishCallerTranscription();
       closeBoth();
       scheduleFinishPaidSession(session, "twilio_media_stop");
@@ -3652,7 +3808,10 @@ mediaWss.on("connection", (twilioWs, request) => {
   twilioWs.on("close", () => {
     if (xaiWs && xaiWs.readyState === WebSocket.OPEN) xaiWs.close();
     if (session?.twilioWs === twilioWs) session.twilioWs = null;
-    if (session) session.billingStoppedAt ||= Date.now();
+    if (session) {
+      const stoppedAt = markBillingActivity(session, "lastStreamEventAt");
+      session.billingStoppedAt ||= stoppedAt;
+    }
     finishCallerTranscription();
     scheduleFinishPaidSession(session, "twilio_ws_close");
   });

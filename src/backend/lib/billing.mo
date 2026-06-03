@@ -8,6 +8,7 @@ import Types "../types/billing";
 
 module {
   private let RESERVATION_TTL_NS : Int = 900_000_000_000;
+  private let RESERVATION_CHUNK_SECONDS : Nat = 900;
   private let MAX_RESERVATION_SECONDS : Nat = 14_400;
   private let BILLING_INCREMENT_SECONDS : Nat = 60;
 
@@ -267,7 +268,7 @@ module {
     if (available == 0) {
       return #err("You need prepaid phone time before starting a call.");
     };
-    let allowedSeconds = Nat.min(available, MAX_RESERVATION_SECONDS);
+    let allowedSeconds = Nat.min(available, RESERVATION_CHUNK_SECONDS);
     let idNumber = state.nextReservationId.value;
     state.nextReservationId.value += 1;
     let now = Time.now();
@@ -295,6 +296,66 @@ module {
     state.reservedSecondsByUser.add(user, currentlyReserved + allowedSeconds);
     state.callReservations.add(id, reservation);
     #ok(toReservationPublic(reservation, true));
+  };
+
+  public func extendReservation(
+    state : State,
+    reservationId : Text,
+  ) : Types.ReserveCallResult {
+    switch (state.callReservations.get(reservationId)) {
+      case null { #err("Reservation not found") };
+      case (?reservation) {
+        switch (reservation.status) {
+          case (#active) {};
+          case (#reserved) {};
+          case (#finished) { return #err("Reservation is already finished") };
+          case (#canceled) { return #err("Reservation was canceled") };
+        };
+
+        if (reservation.allowedSeconds >= MAX_RESERVATION_SECONDS) {
+          return #err("Maximum call reservation has already been reached");
+        };
+
+        let available = getAvailableSeconds(state, reservation.user);
+        if (available == 0) {
+          return #err("No prepaid phone time is available to extend this call.");
+        };
+
+        let remainingReservationCapacity = MAX_RESERVATION_SECONDS - reservation.allowedSeconds;
+        let additionalSeconds = Nat.min(
+          available,
+          Nat.min(RESERVATION_CHUNK_SECONDS, remainingReservationCapacity),
+        );
+        if (additionalSeconds == 0) {
+          return #err("No prepaid phone time is available to extend this call.");
+        };
+
+        let updatedAllowedSeconds = reservation.allowedSeconds + additionalSeconds;
+        let updatedReservation : Types.CallReservation = {
+          id = reservation.id;
+          callId = reservation.callId;
+          user = reservation.user;
+          recipientPhone = reservation.recipientPhone;
+          presetId = reservation.presetId;
+          allowedSeconds = updatedAllowedSeconds;
+          callToken = reservation.callToken;
+          createdAt = reservation.createdAt;
+          expiresAt = reservation.expiresAt;
+          var status = reservation.status;
+          var startedAt = reservation.startedAt;
+          var finishedAt = reservation.finishedAt;
+          var usedSeconds = reservation.usedSeconds;
+          var billedSeconds = reservation.billedSeconds;
+          var callSid = reservation.callSid;
+          var transcript = reservation.transcript;
+          var canceledReason = reservation.canceledReason;
+        };
+        state.callReservations.add(reservation.id, updatedReservation);
+        let currentlyReserved = getReservedSeconds(state, reservation.user);
+        state.reservedSecondsByUser.add(reservation.user, currentlyReserved + additionalSeconds);
+        #ok(toReservationPublic(updatedReservation, false));
+      };
+    };
   };
 
   public func verifyCallReservation(

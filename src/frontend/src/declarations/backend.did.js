@@ -291,6 +291,11 @@ export const idlService = IDL.Service({
   'deleteAnsweringPreset' : IDL.Func([PresetId], [IDL.Bool], []),
   'deletePreset' : IDL.Func([PresetId], [IDL.Bool], []),
   'duplicatePreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], []),
+  'extendCallReservationForServer' : IDL.Func(
+      [IDL.Text],
+      [ReserveCallResult],
+      [],
+    ),
   'finishCallAndDebit' : IDL.Func(
       [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
       [BillingMutationResult],
@@ -714,6 +719,11 @@ export const idlFactory = ({ IDL }) => {
     'deleteAnsweringPreset' : IDL.Func([PresetId], [IDL.Bool], []),
     'deletePreset' : IDL.Func([PresetId], [IDL.Bool], []),
     'duplicatePreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], []),
+    'extendCallReservationForServer' : IDL.Func(
+        [IDL.Text],
+        [ReserveCallResult],
+        [],
+      ),
     'finishCallAndDebit' : IDL.Func(
         [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
         [BillingMutationResult],

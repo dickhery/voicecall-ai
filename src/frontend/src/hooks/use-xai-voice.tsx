@@ -559,7 +559,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
 
         markServerCallConnected(serverCall);
         toast.success("Call placed", {
-          description: `${Math.floor(Number(allowedSeconds) / 60)} paid minutes reserved`,
+          description: `Initial ${Math.floor(Number(allowedSeconds) / 60)} paid minutes reserved`,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";

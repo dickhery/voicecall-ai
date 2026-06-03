@@ -295,6 +295,29 @@ mixin (
     result;
   };
 
+  public shared ({ caller }) func extendCallReservationForServer(
+    reservationId : Text,
+  ) : async BillingTypes.ReserveCallResult {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
+    let result = BillingLib.extendReservation(billingState, reservationId);
+    switch (result) {
+      case (#ok(reservation)) {
+        CallsLib.addSystemLog(
+          callsState,
+          #info,
+          "Extended paid call reservation " # reservation.id # " to " # debug_show(reservation.allowedSeconds) # " seconds",
+          ?reservation.callId,
+        );
+      };
+      case (#err(message)) {
+        CallsLib.addSystemLog(callsState, #warn, "Call reservation extension rejected: " # message, null);
+      };
+    };
+    result;
+  };
+
   public shared ({ caller }) func cancelCallReservation(
     reservationId : Text,
     reason : Text,

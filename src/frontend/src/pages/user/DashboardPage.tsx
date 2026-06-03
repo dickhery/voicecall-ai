@@ -454,7 +454,9 @@ export default function DashboardPage() {
     );
   }).length;
   const activePresets = (presets ?? []).length;
+  const totalBalanceSeconds = Number(billingStatus?.balanceSeconds ?? 0n);
   const availableSeconds = Number(billingStatus?.availableSeconds ?? 0n);
+  const reservedSeconds = Number(billingStatus?.reservedSeconds ?? 0n);
 
   const selectedPreset =
     (presets ?? []).find((p) => p.id.toString() === selectedPresetId) ?? null;
@@ -616,9 +618,9 @@ export default function DashboardPage() {
             <StatCard
               icon={<CreditCard className="w-4 h-4 text-green-400" />}
               label="Phone Time"
-              value={formatMinutes(billingStatus?.availableSeconds)}
+              value={formatMinutes(billingStatus?.balanceSeconds)}
               color={
-                availableSeconds > 0 ? "text-green-400" : "text-destructive"
+                totalBalanceSeconds > 0 ? "text-green-400" : "text-destructive"
               }
               loading={billingLoading}
             />
@@ -647,47 +649,75 @@ export default function DashboardPage() {
                   ))}
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {(billingStatus?.packages ?? []).map((pkg) => {
-                    const isBuying = buyingPackageId === pkg.id;
-                    return (
-                      <div
-                        key={pkg.id}
-                        className="rounded-lg border border-border bg-muted/25 p-3"
+                <>
+                  <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="rounded-lg border border-border bg-muted/20 p-3">
+                      <p className="text-xs text-muted-foreground">Total balance</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">
+                        {formatMinutes(billingStatus?.balanceSeconds)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-border bg-muted/20 p-3">
+                      <p className="text-xs text-muted-foreground">Available</p>
+                      <p className="mt-1 text-sm font-semibold text-green-400">
+                        {formatMinutes(billingStatus?.availableSeconds)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-border bg-muted/20 p-3">
+                      <p className="text-xs text-muted-foreground">Reserved in calls</p>
+                      <p
+                        className={
+                          reservedSeconds > 0
+                            ? "mt-1 text-sm font-semibold text-amber-400"
+                            : "mt-1 text-sm font-semibold text-muted-foreground"
+                        }
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">
-                              ${(Number(pkg.amountCents) / 100).toFixed(0)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatMinutes(pkg.seconds)}
-                            </p>
-                          </div>
-                          <Badge variant="outline" className="text-xs">
-                            {pkg.id.replace("pack_", "$")}
-                          </Badge>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="mt-3 w-full gap-2"
-                          onClick={() => handleBuyPackage(pkg.id)}
-                          disabled={isBuying}
-                          data-ocid={`dashboard.billing.buy.${pkg.id}`}
+                        {formatMinutes(billingStatus?.reservedSeconds)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {(billingStatus?.packages ?? []).map((pkg) => {
+                      const isBuying = buyingPackageId === pkg.id;
+                      return (
+                        <div
+                          key={pkg.id}
+                          className="rounded-lg border border-border bg-muted/25 p-3"
                         >
-                          {isBuying ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <CreditCard className="w-3.5 h-3.5" />
-                          )}
-                          Buy
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-semibold text-foreground">
+                                ${(Number(pkg.amountCents) / 100).toFixed(0)}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatMinutes(pkg.seconds)}
+                              </p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {pkg.id.replace("pack_", "$")}
+                            </Badge>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="mt-3 w-full gap-2"
+                            onClick={() => handleBuyPackage(pkg.id)}
+                            disabled={isBuying}
+                            data-ocid={`dashboard.billing.buy.${pkg.id}`}
+                          >
+                            {isBuying ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <CreditCard className="w-3.5 h-3.5" />
+                            )}
+                            Buy
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

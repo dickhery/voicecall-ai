@@ -296,6 +296,8 @@ service : {
   deleteAnsweringPreset: (id: PresetId) -> (bool);
   deletePreset: (id: PresetId) -> (bool);
   duplicatePreset: (id: PresetId) -> (opt CallPreset);
+  extendCallReservationForServer: (reservationId: text) ->
+   (ReserveCallResult);
   finishAnsweringLiveSessionForServer: (sessionId: text) -> (bool);
   finishCallAndDebit: (reservationId: text, usedSeconds: nat, callSid:
    opt text, transcript: opt text) -> (BillingMutationResult);
