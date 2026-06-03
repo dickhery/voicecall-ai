@@ -1,8 +1,6 @@
 import "dotenv/config";
 import http from "node:http";
 import crypto from "node:crypto";
-import fs from "node:fs";
-import path from "node:path";
 import { Readable } from "node:stream";
 import cors from "cors";
 import express from "express";
@@ -29,6 +27,9 @@ const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
 const TRANSCRIPT_FINISH_GRACE_MS = 2_500;
 const RECORDING_FINISH_GRACE_MS = 10_000;
+const CALL_ARTIFACT_FINALIZE_MAX_WAIT_MS = Number(
+  process.env.CALL_ARTIFACT_FINALIZE_MAX_WAIT_MS || 30_000,
+);
 const BILLING_EXTENSION_LEAD_MS = Number(
   process.env.BILLING_EXTENSION_LEAD_MS || 30_000,
 );
@@ -52,9 +53,6 @@ const ORPHANED_TWILIO_CALL_END_MS = Number(
 );
 const BRIDGE_RECORDING_TTL_MS = Number(
   process.env.BRIDGE_RECORDING_TTL_MS || 7 * 24 * 60 * 60 * 1000,
-);
-const BRIDGE_RECORDING_DIR = path.resolve(
-  process.env.BRIDGE_RECORDING_DIR || "data/bridge-recordings",
 );
 const LINE_CONFIG_REFRESH_MS = Number(process.env.LINE_CONFIG_REFRESH_MS || 30_000);
 const CALL_QUEUE_MAX_WAIT_MS = Number(process.env.CALL_QUEUE_MAX_WAIT_MS || 30 * 60 * 1000);
@@ -279,11 +277,15 @@ function assertProductionSafetyConfig() {
   if (process.env.VALIDATE_TWILIO_SIGNATURE !== "true") {
     throw new Error("Production VALIDATE_TWILIO_SIGNATURE must be true.");
   }
-  if (!process.env.RECORDING_ACCESS_SECRET) {
-    throw new Error("Production RECORDING_ACCESS_SECRET must be configured.");
+  if (!getRecordingAccessSecret()) {
+    throw new Error(
+      "Production recording access signing secret must be configured.",
+    );
   }
-  if (!process.env.BRIDGE_RECORDING_ACCESS_SECRET) {
-    throw new Error("Production BRIDGE_RECORDING_ACCESS_SECRET must be configured.");
+  if (!getBridgeRecordingAccessSecret()) {
+    throw new Error(
+      "Production bridge recording access signing secret must be configured.",
+    );
   }
 }
 
@@ -1468,37 +1470,18 @@ function generateVoicePreviewAudio({ voiceId, text }) {
 }
 
 function getBridgeRecordingAccessSecret() {
-  return process.env.BRIDGE_RECORDING_ACCESS_SECRET || "";
+  return (
+    process.env.BRIDGE_RECORDING_ACCESS_SECRET ||
+    process.env.RECORDING_ACCESS_SECRET ||
+    process.env.ICP_SERVER_IDENTITY_SECRET_KEY ||
+    process.env.XAI_API_KEY ||
+    process.env.TWILIO_AUTH_TOKEN ||
+    ""
+  );
 }
 
 function isValidBridgeRecordingId(recordingId) {
   return /^br_[a-f0-9-]{36}$/i.test(String(recordingId || ""));
-}
-
-function getBridgeRecordingPath(recordingId) {
-  if (!isValidBridgeRecordingId(recordingId)) {
-    throw new Error("Bridge recording ID is invalid.");
-  }
-  return path.join(BRIDGE_RECORDING_DIR, `${recordingId}.wav`);
-}
-
-function persistBridgeRecording(recordingId, media) {
-  fs.mkdirSync(BRIDGE_RECORDING_DIR, { recursive: true });
-  fs.writeFileSync(getBridgeRecordingPath(recordingId), media);
-}
-
-function readBridgeRecording(recordingId) {
-  try {
-    return fs.readFileSync(getBridgeRecordingPath(recordingId));
-  } catch (error) {
-    if (error?.code !== "ENOENT") {
-      log("warn", "Unable to read persisted bridge recording", {
-        recordingId,
-        error: error.message,
-      });
-    }
-    return null;
-  }
 }
 
 function signBridgeRecordingAccess(recordingId) {
@@ -1556,16 +1539,6 @@ function finalizeBridgeRecording(session) {
 
   const recordingId = `br_${session.id}`;
   const media = buildPcmWavFromMuLaw(chunks);
-  try {
-    persistBridgeRecording(recordingId, media);
-  } catch (error) {
-    log("error", "Unable to persist bridge recording", {
-      recordingId,
-      sessionId: session.id,
-      callSid: session.callSid,
-      error: error.message,
-    });
-  }
   bridgeRecordings.set(recordingId, {
     media,
     callSid: session.callSid || "",
@@ -1595,7 +1568,13 @@ function finalizeBridgeRecording(session) {
 }
 
 function getRecordingAccessSecret() {
-  return process.env.RECORDING_ACCESS_SECRET || "";
+  return (
+    process.env.RECORDING_ACCESS_SECRET ||
+    process.env.TWILIO_AUTH_TOKEN ||
+    process.env.ICP_SERVER_IDENTITY_SECRET_KEY ||
+    process.env.XAI_API_KEY ||
+    ""
+  );
 }
 
 function signRecordingAccess(recordingSid, callSid = "") {
@@ -1995,6 +1974,61 @@ function scheduleBackendFinalizeRetry(session, reason) {
   session.finalizeRetryTimer.unref?.();
 }
 
+function getPendingCallArtifacts(session) {
+  const recordingStatus = String(session?.recording?.status || "").toLowerCase();
+  const waitingForRecording =
+    Boolean(session?.recordAudio) &&
+    Boolean(session?.permissionConfirmed) &&
+    session?.recordingMode !== "bridge" &&
+    !session?.recording?.url &&
+    !["completed", "absent"].includes(recordingStatus);
+  const waitingForTranscript =
+    Boolean(session?.saveTranscript) &&
+    Boolean(session?.permissionConfirmed) &&
+    Boolean(session?.awaitingCallerTranscript);
+  return {
+    recording: waitingForRecording,
+    transcript: waitingForTranscript,
+    any: waitingForRecording || waitingForTranscript,
+  };
+}
+
+function getCallArtifactFinalizeWait(session, reason) {
+  const pending = getPendingCallArtifacts(session);
+  if (!pending.any) {
+    session.artifactWaitStartedAt = null;
+    return null;
+  }
+
+  const now = Date.now();
+  session.artifactWaitStartedAt ||= now;
+  const elapsedMs = now - session.artifactWaitStartedAt;
+  if (elapsedMs >= CALL_ARTIFACT_FINALIZE_MAX_WAIT_MS) {
+    log("warn", "Finishing call before all opted-in artifacts arrived", {
+      sessionId: session.id,
+      callSid: session.callSid,
+      reservationId: session.reservationId,
+      waitingForRecording: pending.recording,
+      waitingForTranscript: pending.transcript,
+      elapsedMs,
+      reason,
+    });
+    session.artifactWaitStartedAt = null;
+    return null;
+  }
+
+  const preferredDelayMs = pending.recording
+    ? RECORDING_FINISH_GRACE_MS
+    : TRANSCRIPT_FINISH_GRACE_MS;
+  return {
+    pending,
+    delayMs: Math.max(
+      250,
+      Math.min(preferredDelayMs, CALL_ARTIFACT_FINALIZE_MAX_WAIT_MS - elapsedMs),
+    ),
+  };
+}
+
 async function finishBackendReservationByCallSid({
   callSid,
   usedSeconds = 0,
@@ -2093,6 +2127,10 @@ async function finishPaidSession(session, reason = "completed") {
     await cancelQueuedSession(session, reason);
     return;
   }
+  if (getCallArtifactFinalizeWait(session, reason)) {
+    scheduleFinishPaidSession(session, reason);
+    return;
+  }
   session.finalizeInFlight = true;
   session.pendingBackendFinalize = false;
   session.billingFinishedAt ||= resolveBillingFinishedAt(session);
@@ -2176,20 +2214,14 @@ function scheduleFinishPaidSession(session, reason = "completed") {
   if (!session || session.backendFinalized || session.finalizeInFlight) return;
   session.billingStoppedAt ||= Date.now();
   clearBillingCheckpoint(session);
-  const recordingStatus = String(session.recording?.status || "").toLowerCase();
-  const waitingForRecording =
-    session.recordAudio &&
-    session.permissionConfirmed &&
-    !session.recording?.url &&
-    !["completed", "absent"].includes(recordingStatus);
-  const waitingForTranscript =
-    session.saveTranscript && session.permissionConfirmed && session.awaitingCallerTranscript;
-  if (waitingForRecording || waitingForTranscript) {
+  const wait = getCallArtifactFinalizeWait(session, reason);
+  if (wait) {
     if (!session.finishTimer) {
       session.deferredFinishReason = reason;
       session.finishTimer = setTimeout(() => {
-        finishPaidSession(session, session.deferredFinishReason || reason);
-      }, waitingForRecording ? RECORDING_FINISH_GRACE_MS : TRANSCRIPT_FINISH_GRACE_MS);
+        session.finishTimer = null;
+        scheduleFinishPaidSession(session, session.deferredFinishReason || reason);
+      }, wait.delayMs);
       session.finishTimer.unref?.();
     }
     return;
@@ -2792,26 +2824,21 @@ app.get("/bridge-recordings/:recordingId", (req, res) => {
       return;
     }
     const recording = bridgeRecordings.get(recordingId);
-    let media = recording?.media || null;
     if (recording?.expiresAt < Date.now()) {
       bridgeRecordings.delete(recordingId);
-      media = null;
     }
-    if (!media) {
-      media = readBridgeRecording(recordingId);
-    }
-    if (!media) {
+    if (!recording?.media || recording.expiresAt < Date.now()) {
       res.status(404).json({ ok: false, error: "Recording is no longer available." });
       return;
     }
     res.setHeader("Content-Type", "audio/wav");
-    res.setHeader("Content-Length", String(media.length));
+    res.setHeader("Content-Length", String(recording.media.length));
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     res.setHeader(
       "Content-Disposition",
       `${req.query.download === "1" ? "attachment" : "inline"}; filename="voicecall-answering-${recordingId}.wav"`,
     );
-    res.send(media);
+    res.send(recording.media);
   } catch (error) {
     log("error", "Failed to stream bridge recording", {
       recordingId: req.params.recordingId,
@@ -3888,12 +3915,8 @@ mediaWss.on("connection", (twilioWs, request) => {
         }
         session.awaitingCallerTranscript = false;
         if (sttWs?.readyState === WebSocket.OPEN) sttWs.close();
-        const recordingStatus = String(session.recording?.status || "").toLowerCase();
-        const waitingForRecording =
-          session.recordAudio &&
-          !session.recording?.url &&
-          !["completed", "absent"].includes(recordingStatus);
-        if (session.finishTimer && !waitingForRecording) {
+        const pendingArtifacts = getPendingCallArtifacts(session);
+        if (session.finishTimer && !pendingArtifacts.recording) {
           finishPaidSession(session, "xai_stt_completed");
         }
         return;
