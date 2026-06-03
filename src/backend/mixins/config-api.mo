@@ -91,6 +91,24 @@ mixin (
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: must be logged in");
     };
+    switch (ConfigLib.getPreset(configState, callPresetVoiceIds, id)) {
+      case null { null };
+      case (?preset) {
+        if (Principal.equal(preset.ownerId, caller) or AccessControl.isAdmin(accessControlState, caller)) {
+          ?preset;
+        } else {
+          null;
+        };
+      };
+    };
+  };
+
+  public query ({ caller }) func getPresetForServer(
+    id : Common.PresetId,
+  ) : async ?ConfigTypes.CallPreset {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
     ConfigLib.getPreset(configState, callPresetVoiceIds, id);
   };
 
@@ -136,7 +154,16 @@ mixin (
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: must be logged in");
     };
-    ConfigLib.duplicatePreset(configState, callPresetVoiceIds, caller, id);
+    switch (ConfigLib.getPreset(configState, callPresetVoiceIds, id)) {
+      case null { null };
+      case (?preset) {
+        if (Principal.equal(preset.ownerId, caller) or AccessControl.isAdmin(accessControlState, caller)) {
+          ConfigLib.duplicatePreset(configState, callPresetVoiceIds, caller, id);
+        } else {
+          null;
+        };
+      };
+    };
   };
 
   public shared ({ caller }) func createAnsweringPreset(

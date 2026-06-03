@@ -214,14 +214,6 @@ export const mockBackend: backendInterface = {
 
   getCallerUserRole: async () => UserRole.admin,
 
-  getEphemeralToken: async (_presetId: bigint) => ({
-    __kind__: "ok",
-    ok: {
-      token: "ephemeral-token-sample-12345",
-      websocketUrl: "wss://api.x.ai/v1/audio/speech/realtime",
-    },
-  }),
-
   getAnsweringPreset: async (_id: bigint) => sampleAnsweringPreset,
 
   getMyBillingStatus: async () => ({
@@ -296,12 +288,6 @@ export const mockBackend: backendInterface = {
   setTwilioLineEnabled: async (phoneNumber: string, enabled: boolean) => ({
     __kind__: "ok",
     ok: [{ phoneNumber, name: phoneNumber, enabled }],
-  }),
-
-  transform: async (_input) => ({
-    status: BigInt(200),
-    body: new Uint8Array(),
-    headers: [],
   }),
 
   twilioWebhook: async (_callSid: string, _callStatus: string) => "<Response/>",

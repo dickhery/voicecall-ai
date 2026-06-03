@@ -173,10 +173,6 @@ export const AnsweringLiveSession = IDL.Record({
 });
 export const PresetId = IDL.Nat;
 export const CallId = IDL.Nat;
-export const EphemeralTokenResult = IDL.Variant({
-  'ok' : IDL.Record({ 'token' : IDL.Text, 'websocketUrl' : IDL.Text }),
-  'err' : IDL.Text,
-});
 export const InitiateCallInput = IDL.Record({
   'recipientPhone' : IDL.Text,
   'presetId' : IDL.Nat,
@@ -255,24 +251,6 @@ export const BillingMutationResult = IDL.Variant({
   'ok' : IDL.Bool,
   'err' : IDL.Text,
 });
-export const http_header = IDL.Record({
-  'value' : IDL.Text,
-  'name' : IDL.Text,
-});
-export const http_request_result = IDL.Record({
-  'status' : IDL.Nat,
-  'body' : IDL.Vec(IDL.Nat8),
-  'headers' : IDL.Vec(http_header),
-});
-export const TransformationInput = IDL.Record({
-  'context' : IDL.Vec(IDL.Nat8),
-  'response' : http_request_result,
-});
-export const TransformationOutput = IDL.Record({
-  'status' : IDL.Nat,
-  'body' : IDL.Vec(IDL.Nat8),
-  'headers' : IDL.Vec(http_header),
-});
 
 export const idlService = IDL.Service({
   '_initializeAccessControl' : IDL.Func([], [], []),
@@ -334,7 +312,6 @@ export const idlService = IDL.Service({
   'getCallRecord' : IDL.Func([CallId], [IDL.Opt(CallRecordPublic)], ['query']),
   'getBillingPackages' : IDL.Func([], [IDL.Vec(BillingPackage)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-  'getEphemeralToken' : IDL.Func([PresetId], [EphemeralTokenResult], []),
   'getAnsweringPreset' : IDL.Func(
       [PresetId],
       [IDL.Opt(AnsweringPreset)],
@@ -342,6 +319,11 @@ export const idlService = IDL.Service({
     ),
   'getMyBillingStatus' : IDL.Func([], [BillingStatus], ['query']),
   'getPreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], ['query']),
+  'getPresetForServer' : IDL.Func(
+      [PresetId],
+      [IDL.Opt(CallPreset)],
+      ['query'],
+    ),
   'getPurchaseIntentForServer' : IDL.Func(
       [IDL.Text],
       [IDL.Opt(PurchaseIntentPublic)],
@@ -402,11 +384,6 @@ export const idlService = IDL.Service({
       [IDL.Text, IDL.Bool],
       [TwilioLineMutationResult],
       [],
-    ),
-  'transform' : IDL.Func(
-      [TransformationInput],
-      [TransformationOutput],
-      ['query'],
     ),
   'twilioWebhook' : IDL.Func([IDL.Text, IDL.Text], [IDL.Text], []),
   'updateCallStatus' : IDL.Func(
@@ -619,10 +596,6 @@ export const idlFactory = ({ IDL }) => {
   });
   const PresetId = IDL.Nat;
   const CallId = IDL.Nat;
-  const EphemeralTokenResult = IDL.Variant({
-    'ok' : IDL.Record({ 'token' : IDL.Text, 'websocketUrl' : IDL.Text }),
-    'err' : IDL.Text,
-  });
   const InitiateCallInput = IDL.Record({
     'recipientPhone' : IDL.Text,
     'presetId' : IDL.Nat,
@@ -701,21 +674,6 @@ export const idlFactory = ({ IDL }) => {
     'ok' : IDL.Bool,
     'err' : IDL.Text,
   });
-  const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
-  const http_request_result = IDL.Record({
-    'status' : IDL.Nat,
-    'body' : IDL.Vec(IDL.Nat8),
-    'headers' : IDL.Vec(http_header),
-  });
-  const TransformationInput = IDL.Record({
-    'context' : IDL.Vec(IDL.Nat8),
-    'response' : http_request_result,
-  });
-  const TransformationOutput = IDL.Record({
-    'status' : IDL.Nat,
-    'body' : IDL.Vec(IDL.Nat8),
-    'headers' : IDL.Vec(http_header),
-  });
   
   return IDL.Service({
     '_initializeAccessControl' : IDL.Func([], [], []),
@@ -778,10 +736,9 @@ export const idlFactory = ({ IDL }) => {
         [CallId],
         [IDL.Opt(CallRecordPublic)],
         ['query'],
-      ),
+    ),
     'getBillingPackages' : IDL.Func([], [IDL.Vec(BillingPackage)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
-    'getEphemeralToken' : IDL.Func([PresetId], [EphemeralTokenResult], []),
     'getAnsweringPreset' : IDL.Func(
         [PresetId],
         [IDL.Opt(AnsweringPreset)],
@@ -789,6 +746,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getMyBillingStatus' : IDL.Func([], [BillingStatus], ['query']),
     'getPreset' : IDL.Func([PresetId], [IDL.Opt(CallPreset)], ['query']),
+    'getPresetForServer' : IDL.Func(
+        [PresetId],
+        [IDL.Opt(CallPreset)],
+        ['query'],
+      ),
     'getPurchaseIntentForServer' : IDL.Func(
         [IDL.Text],
         [IDL.Opt(PurchaseIntentPublic)],
@@ -853,11 +815,6 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Text, IDL.Bool],
         [TwilioLineMutationResult],
         [],
-      ),
-    'transform' : IDL.Func(
-        [TransformationInput],
-        [TransformationOutput],
-        ['query'],
       ),
     'twilioWebhook' : IDL.Func([IDL.Text, IDL.Text], [IDL.Text], []),
     'updateCallStatus' : IDL.Func(

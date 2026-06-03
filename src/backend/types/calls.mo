@@ -44,12 +44,6 @@ module {
     #err : Text;
   };
 
-  // Ephemeral token response
-  public type EphemeralTokenResult = {
-    #ok : { token : Text; websocketUrl : Text };
-    #err : Text;
-  };
-
   // System log entry
   public type SystemLog = {
     timestamp : Int;

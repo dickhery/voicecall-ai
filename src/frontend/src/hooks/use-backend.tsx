@@ -7,7 +7,6 @@ import type {
   CallId,
   CallPresetMutationResult,
   CreatePurchaseIntentResult,
-  EphemeralTokenResult,
   InitiateCallInput,
   InitiateCallResult,
   PresetId,
@@ -322,16 +321,6 @@ export function useReserveCall() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["myCalls"] });
       qc.invalidateQueries({ queryKey: ["myBillingStatus"] });
-    },
-  });
-}
-
-export function useGetEphemeralToken() {
-  const { actor } = useBackendActor();
-  return useMutation<EphemeralTokenResult, Error, PresetId>({
-    mutationFn: async (presetId) => {
-      if (!actor) throw new Error("Actor not available");
-      return actor.getEphemeralToken(presetId);
     },
   });
 }

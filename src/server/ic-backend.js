@@ -91,6 +91,19 @@ const AnsweringPreset = IDL.Record({
   lastIncomingAt: IDL.Opt(IDL.Int),
 });
 
+const CallPreset = IDL.Record({
+  id: IDL.Nat,
+  ownerId: IDL.Principal,
+  name: IDL.Text,
+  systemPrompt: IDL.Text,
+  voice: Voice,
+  voiceId: IDL.Opt(IDL.Text),
+  turnDetection: TurnDetection,
+  audioFormat: AudioFormat,
+  sampleRate: SampleRate,
+  toolsEnabled: ToolsEnabled,
+});
+
 const AnsweringPresetMutationResult = IDL.Variant({
   ok: AnsweringPreset,
   err: IDL.Text,
@@ -161,6 +174,11 @@ const idlFactory = ({ IDL }) =>
     getTwilioLineNumbersForServer: IDL.Func(
       [],
       [IDL.Vec(IDL.Text)],
+      ["query"],
+    ),
+    getPresetForServer: IDL.Func(
+      [IDL.Nat],
+      [IDL.Opt(CallPreset)],
       ["query"],
     ),
     getAnsweringPresetForServer: IDL.Func(
@@ -369,6 +387,31 @@ export function normalizeAnsweringPreset(preset) {
     updatedAt: preset.updatedAt,
     verifiedAt: unwrapOptional(preset.verifiedAt),
     lastIncomingAt: unwrapOptional(preset.lastIncomingAt),
+  };
+}
+
+export function normalizeCallPreset(preset) {
+  if (!preset) return null;
+  return {
+    id: preset.id.toString(),
+    ownerId: preset.ownerId.toText(),
+    name: preset.name,
+    systemPrompt: preset.systemPrompt,
+    voice: variantKey(preset.voice),
+    voiceId: unwrapOptional(preset.voiceId),
+    turnDetection: {
+      serverVad: preset.turnDetection.serverVad,
+      threshold: Number(preset.turnDetection.threshold ?? 0.5),
+      silenceDurationMs: Number(preset.turnDetection.silenceDurationMs ?? 500),
+      prefixPaddingMs: Number(preset.turnDetection.prefixPaddingMs ?? 200),
+    },
+    audioFormat: variantKey(preset.audioFormat),
+    sampleRate: variantKey(preset.sampleRate),
+    toolsEnabled: {
+      webSearch: Boolean(preset.toolsEnabled?.webSearch),
+      xSearch: Boolean(preset.toolsEnabled?.xSearch),
+      functionCalling: Boolean(preset.toolsEnabled?.functionCalling),
+    },
   };
 }
 

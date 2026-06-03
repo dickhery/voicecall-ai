@@ -33160,10 +33160,6 @@ const AnsweringLiveSession = Record({
 });
 const PresetId = Nat;
 const CallId = Nat;
-const EphemeralTokenResult = Variant({
-  "ok": Record({ "token": Text, "websocketUrl": Text }),
-  "err": Text
-});
 const InitiateCallInput = Record({
   "recipientPhone": Text,
   "presetId": Nat
@@ -33242,24 +33238,6 @@ const BillingMutationResult = Variant({
   "ok": Bool,
   "err": Text
 });
-const http_header = Record({
-  "value": Text,
-  "name": Text
-});
-const http_request_result = Record({
-  "status": Nat,
-  "body": Vec(Nat8),
-  "headers": Vec(http_header)
-});
-const TransformationInput = Record({
-  "context": Vec(Nat8),
-  "response": http_request_result
-});
-const TransformationOutput = Record({
-  "status": Nat,
-  "body": Vec(Nat8),
-  "headers": Vec(http_header)
-});
 Service({
   "_initializeAccessControl": Func([], [], []),
   "adminAddPromoMinutes": Func(
@@ -33320,7 +33298,6 @@ Service({
   "getCallRecord": Func([CallId], [Opt(CallRecordPublic)], ["query"]),
   "getBillingPackages": Func([], [Vec(BillingPackage)], ["query"]),
   "getCallerUserRole": Func([], [UserRole$1], ["query"]),
-  "getEphemeralToken": Func([PresetId], [EphemeralTokenResult], []),
   "getAnsweringPreset": Func(
     [PresetId],
     [Opt(AnsweringPreset)],
@@ -33328,6 +33305,11 @@ Service({
   ),
   "getMyBillingStatus": Func([], [BillingStatus], ["query"]),
   "getPreset": Func([PresetId], [Opt(CallPreset)], ["query"]),
+  "getPresetForServer": Func(
+    [PresetId],
+    [Opt(CallPreset)],
+    ["query"]
+  ),
   "getPurchaseIntentForServer": Func(
     [Text],
     [Opt(PurchaseIntentPublic)],
@@ -33388,11 +33370,6 @@ Service({
     [Text, Bool],
     [TwilioLineMutationResult],
     []
-  ),
-  "transform": Func(
-    [TransformationInput],
-    [TransformationOutput],
-    ["query"]
   ),
   "twilioWebhook": Func([Text, Text], [Text], []),
   "updateCallStatus": Func(
@@ -33602,10 +33579,6 @@ const idlFactory = ({ IDL: IDL2 }) => {
   });
   const PresetId2 = IDL2.Nat;
   const CallId2 = IDL2.Nat;
-  const EphemeralTokenResult2 = IDL2.Variant({
-    "ok": IDL2.Record({ "token": IDL2.Text, "websocketUrl": IDL2.Text }),
-    "err": IDL2.Text
-  });
   const InitiateCallInput2 = IDL2.Record({
     "recipientPhone": IDL2.Text,
     "presetId": IDL2.Nat
@@ -33684,21 +33657,6 @@ const idlFactory = ({ IDL: IDL2 }) => {
     "ok": IDL2.Bool,
     "err": IDL2.Text
   });
-  const http_header2 = IDL2.Record({ "value": IDL2.Text, "name": IDL2.Text });
-  const http_request_result2 = IDL2.Record({
-    "status": IDL2.Nat,
-    "body": IDL2.Vec(IDL2.Nat8),
-    "headers": IDL2.Vec(http_header2)
-  });
-  const TransformationInput2 = IDL2.Record({
-    "context": IDL2.Vec(IDL2.Nat8),
-    "response": http_request_result2
-  });
-  const TransformationOutput2 = IDL2.Record({
-    "status": IDL2.Nat,
-    "body": IDL2.Vec(IDL2.Nat8),
-    "headers": IDL2.Vec(http_header2)
-  });
   return IDL2.Service({
     "_initializeAccessControl": IDL2.Func([], [], []),
     "adminAddPromoMinutes": IDL2.Func(
@@ -33763,7 +33721,6 @@ const idlFactory = ({ IDL: IDL2 }) => {
     ),
     "getBillingPackages": IDL2.Func([], [IDL2.Vec(BillingPackage2)], ["query"]),
     "getCallerUserRole": IDL2.Func([], [UserRole2], ["query"]),
-    "getEphemeralToken": IDL2.Func([PresetId2], [EphemeralTokenResult2], []),
     "getAnsweringPreset": IDL2.Func(
       [PresetId2],
       [IDL2.Opt(AnsweringPreset2)],
@@ -33771,6 +33728,11 @@ const idlFactory = ({ IDL: IDL2 }) => {
     ),
     "getMyBillingStatus": IDL2.Func([], [BillingStatus2], ["query"]),
     "getPreset": IDL2.Func([PresetId2], [IDL2.Opt(CallPreset2)], ["query"]),
+    "getPresetForServer": IDL2.Func(
+      [PresetId2],
+      [IDL2.Opt(CallPreset2)],
+      ["query"]
+    ),
     "getPurchaseIntentForServer": IDL2.Func(
       [IDL2.Text],
       [IDL2.Opt(PurchaseIntentPublic2)],
@@ -33835,11 +33797,6 @@ const idlFactory = ({ IDL: IDL2 }) => {
       [IDL2.Text, IDL2.Bool],
       [TwilioLineMutationResult2],
       []
-    ),
-    "transform": IDL2.Func(
-      [TransformationInput2],
-      [TransformationOutput2],
-      ["query"]
     ),
     "twilioWebhook": IDL2.Func([IDL2.Text, IDL2.Text], [IDL2.Text], []),
     "updateCallStatus": IDL2.Func(
@@ -34188,20 +34145,6 @@ class Backend {
       return from_candid_UserRole_n33(this._uploadFile, this._downloadFile, result);
     }
   }
-  async getEphemeralToken(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.getEphemeralToken(arg0);
-        return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.getEphemeralToken(arg0);
-      return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
-    }
-  }
   async getAnsweringPreset(arg0) {
     if (this.processError) {
       try {
@@ -34410,20 +34353,6 @@ class Backend {
     } else {
       const result = await this.actor.setTwilioLineEnabled(arg0, arg1);
       return from_candid_TwilioLineMutationResult(result);
-    }
-  }
-  async transform(arg0) {
-    if (this.processError) {
-      try {
-        const result = await this.actor.transform(arg0);
-        return result;
-      } catch (e) {
-        this.processError(e);
-        throw new Error("unreachable");
-      }
-    } else {
-      const result = await this.actor.transform(arg0);
-      return result;
     }
   }
   async twilioWebhook(arg0, arg1) {
@@ -34692,9 +34621,6 @@ function from_candid_CallRecordPublic_n7(_uploadFile, _downloadFile, value) {
 function from_candid_CallStatus_n9(_uploadFile, _downloadFile, value) {
   return from_candid_variant_n10(_uploadFile, _downloadFile, value);
 }
-function from_candid_EphemeralTokenResult_n35(_uploadFile, _downloadFile, value) {
-  return from_candid_variant_n36(_uploadFile, _downloadFile, value);
-}
 function from_candid_InitiateCallResult_n37(_uploadFile, _downloadFile, value) {
   return from_candid_variant_n38(_uploadFile, _downloadFile, value);
 }
@@ -34774,15 +34700,6 @@ function from_candid_variant_n30(_uploadFile, _downloadFile, value) {
 }
 function from_candid_variant_n34(_uploadFile, _downloadFile, value) {
   return "admin" in value ? "admin" : "user" in value ? "user" : "guest" in value ? "guest" : value;
-}
-function from_candid_variant_n36(_uploadFile, _downloadFile, value) {
-  return "ok" in value ? {
-    __kind__: "ok",
-    ok: value.ok
-  } : "err" in value ? {
-    __kind__: "err",
-    err: value.err
-  } : value;
 }
 function from_candid_variant_n38(_uploadFile, _downloadFile, value) {
   return "ok" in value ? {
@@ -39928,9 +39845,10 @@ async function startVoiceServerCall({
 }
 async function endVoiceServerCall({
   callSid,
-  sessionId
+  sessionId,
+  monitorToken
 }) {
-  await postJson("/end-call", { callSid, sessionId });
+  await postJson("/end-call", { callSid, sessionId, monitorToken });
 }
 async function steerVoiceServerCall({
   sessionId,
@@ -39943,12 +39861,14 @@ async function steerVoiceServerCall({
     prompt
   });
 }
-async function getVoiceServerCallSession(sessionId) {
+async function getVoiceServerCallSession(sessionId, monitorToken) {
   const baseUrl = await getVoiceServerUrl();
-  const response = await fetch(
-    `${baseUrl}/call-session/${encodeURIComponent(sessionId)}`,
-    { cache: "no-store" }
+  const url = new URL(
+    `/call-session/${encodeURIComponent(sessionId)}`,
+    baseUrl
   );
+  url.searchParams.set("monitorToken", monitorToken);
+  const response = await fetch(url.toString(), { cache: "no-store" });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || "ok" in payload && payload.ok === false) {
     throw new Error(
@@ -39989,11 +39909,13 @@ async function getLiveAudioMonitorUrl({
 }
 async function getRecordingAccessUrl({
   recordingSid,
-  callSid
+  callSid,
+  monitorToken
 }) {
   const baseUrl = await getVoiceServerUrl();
   const url = new URL(`/recordings/${recordingSid}/access`, baseUrl);
   if (callSid) url.searchParams.set("callSid", callSid);
+  if (monitorToken) url.searchParams.set("monitorToken", monitorToken);
   const response = await fetch(url.toString(), { cache: "no-store" });
   const payload = await response.json().catch(() => ({}));
   const errorMessage = "error" in payload ? payload.error : void 0;
@@ -51400,11 +51322,14 @@ function useXaiVoice() {
     resetAfterDelay
   ]);
   const startConnectedSessionPolling = reactExports.useCallback(
-    (sessionId) => {
+    (sessionId, monitorToken) => {
       cleanupSessionPolling();
       const poll = async () => {
         try {
-          const serverCall = await getVoiceServerCallSession(sessionId);
+          const serverCall = await getVoiceServerCallSession(
+            sessionId,
+            monitorToken
+          );
           if (isTerminalVoiceServerStatus(serverCall.status)) {
             completeLocalCall();
           }
@@ -51430,16 +51355,24 @@ function useXaiVoice() {
       setLiveAudioAvailable(Boolean(serverCall.monitorToken));
       setStatus("in_call");
       startDurationTimer();
-      startConnectedSessionPolling(serverCall.sessionId);
+      if (serverCall.monitorToken) {
+        startConnectedSessionPolling(
+          serverCall.sessionId,
+          serverCall.monitorToken
+        );
+      }
     },
     [startDurationTimer, startConnectedSessionPolling]
   );
   const startQueuePolling = reactExports.useCallback(
-    (sessionId) => {
+    (sessionId, monitorToken) => {
       cleanupQueuePolling();
       const poll = async () => {
         try {
-          const serverCall = await getVoiceServerCallSession(sessionId);
+          const serverCall = await getVoiceServerCallSession(
+            sessionId,
+            monitorToken
+          );
           if (serverCall.callSid) {
             cleanupQueuePolling();
             markServerCallConnected({
@@ -51528,7 +51461,12 @@ function useXaiVoice() {
           setErrorMessage(
             serverCall.queuePosition ? `Waiting for a free line. Position ${serverCall.queuePosition}.` : "Waiting for a free line."
           );
-          startQueuePolling(serverCall.sessionId);
+          if (!serverCall.monitorToken) {
+            throw new Error(
+              "Queued call token was not returned by the voice server."
+            );
+          }
+          startQueuePolling(serverCall.sessionId, serverCall.monitorToken);
           ue.info("All lines are busy. Your call is queued.", {
             description: serverCall.queuePosition ? `Queue position ${serverCall.queuePosition}` : void 0
           });
@@ -51574,9 +51512,10 @@ function useXaiVoice() {
   const endCall = reactExports.useCallback(() => {
     const callSid = activeCallSidRef.current;
     const sessionId = activeSessionIdRef.current;
+    const monitorToken = monitorTokenRef.current;
     completeLocalCall();
     if (callSid || sessionId) {
-      endVoiceServerCall({ callSid, sessionId }).catch((err) => {
+      endVoiceServerCall({ callSid, sessionId, monitorToken }).catch((err) => {
         const message = err instanceof Error ? err.message : "Unknown error";
         ue.error(`Unable to end Twilio call: ${message}`);
       });

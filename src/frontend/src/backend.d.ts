@@ -7,16 +7,6 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
-export type EphemeralTokenResult = {
-    __kind__: "ok";
-    ok: {
-        token: string;
-        websocketUrl: string;
-    };
-} | {
-    __kind__: "err";
-    err: string;
-};
 export interface CallRecordPublic {
     id: bigint;
     startTime: bigint;
@@ -34,11 +24,6 @@ export interface TurnDetection {
     threshold: number;
     silenceDurationMs: bigint;
     serverVad: boolean;
-}
-export interface TransformationOutput {
-    status: bigint;
-    body: Uint8Array;
-    headers: Array<http_header>;
 }
 export type PresetId = bigint;
 export interface CallPreset {
@@ -86,22 +71,9 @@ export type TwilioLineMutationResult = {
     __kind__: "err";
     err: string;
 };
-export interface http_header {
-    value: string;
-    name: string;
-}
-export interface http_request_result {
-    status: bigint;
-    body: Uint8Array;
-    headers: Array<http_header>;
-}
 export interface InitiateCallInput {
     recipientPhone: string;
     presetId: bigint;
-}
-export interface TransformationInput {
-    context: Uint8Array;
-    response: http_request_result;
 }
 export interface CallPresetInput {
     toolsEnabled: ToolsEnabled;
@@ -172,7 +144,6 @@ export interface backendInterface {
     }>;
     getCallRecord(id: CallId): Promise<CallRecordPublic | null>;
     getCallerUserRole(): Promise<UserRole>;
-    getEphemeralToken(presetId: PresetId): Promise<EphemeralTokenResult>;
     getPreset(id: PresetId): Promise<CallPreset | null>;
     initiateCall(input: InitiateCallInput): Promise<InitiateCallResult>;
     isCallerAdmin(): Promise<boolean>;
@@ -182,7 +153,6 @@ export interface backendInterface {
     setTwilioLine(input: TwilioLineInput): Promise<TwilioLineMutationResult>;
     removeTwilioLine(phoneNumber: string): Promise<TwilioLineMutationResult>;
     setTwilioLineEnabled(phoneNumber: string, enabled: boolean): Promise<TwilioLineMutationResult>;
-    transform(input: TransformationInput): Promise<TransformationOutput>;
     twilioWebhook(callSid: string, callStatus: string): Promise<string>;
     updateCallStatus(callId: CallId, status: CallStatus, transcript: string | null): Promise<boolean>;
     updatePreset(id: PresetId, input: CallPresetInput): Promise<CallPreset | null>;

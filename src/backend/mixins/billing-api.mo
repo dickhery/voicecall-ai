@@ -1,6 +1,10 @@
 import Runtime "mo:core/Runtime";
 import Principal "mo:core/Principal";
 import Time "mo:core/Time";
+import Random "mo:core/Random";
+import Text "mo:core/Text";
+import Blob "mo:core/Blob";
+import Nat8 "mo:core/Nat8";
 import AccessControl "mo:caffeineai-authorization/access-control";
 import BillingLib "../lib/billing";
 import CallsLib "../lib/calls";
@@ -18,6 +22,21 @@ mixin (
   answeringPresetVoiceIds : ConfigLib.VoiceIdState,
 ) {
   let ANSWERING_PRESET_ID_OFFSET : Nat = 1_000_000_000;
+
+  private func byteToHex(byte : Nat8) : Text {
+    let alphabet = "0123456789abcdef".toArray();
+    let value = byte.toNat();
+    Text.fromChar(alphabet[value / 16]) # Text.fromChar(alphabet[value % 16]);
+  };
+
+  private func randomCallToken() : async Text {
+    let entropy = await Random.blob();
+    var token = "ct_";
+    for (byte in entropy.toArray().values()) {
+      token #= byteToHex(byte);
+    };
+    token;
+  };
 
   public query ({ caller }) func getMyBillingStatus() : async BillingTypes.BillingStatus {
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
@@ -117,6 +136,7 @@ mixin (
     if (not AccessControl.hasPermission(accessControlState, caller, #user)) {
       Runtime.trap("Unauthorized: must be logged in");
     };
+    let callToken = await randomCallToken();
     switch (ConfigLib.getPreset(configState, callPresetVoiceIds, input.presetId)) {
       case null { return #err("Preset not found") };
       case (?preset) {
@@ -143,6 +163,7 @@ mixin (
       input.recipientPhone,
       input.presetId,
       callRecord.id,
+      callToken,
     );
     switch (reservation) {
       case (#ok(reserved)) {
@@ -176,6 +197,7 @@ mixin (
     if (not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: server admin only");
     };
+    let callToken = await randomCallToken();
     switch (ConfigLib.getAnsweringPresetForIncoming(answeringState, answeringPresetVoiceIds, webhookSecret, twilioToNumber)) {
       case (#err(message)) { return #err(message) };
       case (#ok(preset)) {
@@ -197,6 +219,7 @@ mixin (
           callerPhone,
           callPresetId,
           callRecord.id,
+          callToken,
         );
         switch (reservation) {
           case (#ok(reserved)) {

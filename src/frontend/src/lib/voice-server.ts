@@ -26,21 +26,21 @@ export interface CallCaptureOptions {
 
 export interface VoiceServerHealth {
   ok: boolean;
-  publicHost: string;
+  publicHost?: string;
   twilioConfigured: boolean;
   twilioLines?: {
     configured: number;
     active: number;
     available: number;
     queued: number;
-    numbers: string[];
+    numbers?: string[];
   };
   xaiConfigured: boolean;
   billingConfigured?: boolean;
   backendCanisterId?: string;
   backendHost?: string;
   icpServerPrincipal?: string;
-  model: string;
+  model?: string;
 }
 
 export interface XaiVoiceOption {
@@ -218,11 +218,13 @@ export async function startVoiceServerCall({
 export async function endVoiceServerCall({
   callSid,
   sessionId,
+  monitorToken,
 }: {
   callSid?: string | null;
   sessionId?: string | null;
+  monitorToken?: string | null;
 }): Promise<void> {
-  await postJson<{ ok: true }>("/end-call", { callSid, sessionId });
+  await postJson<{ ok: true }>("/end-call", { callSid, sessionId, monitorToken });
 }
 
 export async function steerVoiceServerCall({
@@ -243,12 +245,15 @@ export async function steerVoiceServerCall({
 
 export async function getVoiceServerCallSession(
   sessionId: string,
+  monitorToken: string,
 ): Promise<VoiceServerCall> {
   const baseUrl = await getVoiceServerUrl();
-  const response = await fetch(
-    `${baseUrl}/call-session/${encodeURIComponent(sessionId)}`,
-    { cache: "no-store" },
+  const url = new URL(
+    `/call-session/${encodeURIComponent(sessionId)}`,
+    baseUrl,
   );
+  url.searchParams.set("monitorToken", monitorToken);
+  const response = await fetch(url.toString(), { cache: "no-store" });
   const payload = (await response.json().catch(() => ({}))) as
     | VoiceServerCall
     | { ok?: false; error?: string };
@@ -306,13 +311,16 @@ export async function getLiveAudioMonitorUrl({
 export async function getRecordingAccessUrl({
   recordingSid,
   callSid,
+  monitorToken,
 }: {
   recordingSid: string;
   callSid?: string | null;
+  monitorToken?: string | null;
 }): Promise<string> {
   const baseUrl = await getVoiceServerUrl();
   const url = new URL(`/recordings/${recordingSid}/access`, baseUrl);
   if (callSid) url.searchParams.set("callSid", callSid);
+  if (monitorToken) url.searchParams.set("monitorToken", monitorToken);
   const response = await fetch(url.toString(), { cache: "no-store" });
   const payload = (await response.json().catch(() => ({}))) as
     | RecordingAccessResponse

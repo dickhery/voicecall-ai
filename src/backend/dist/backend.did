@@ -1,14 +1,3 @@
-type http_request_result = 
- record {
-   body: blob;
-   headers: vec http_header;
-   status: nat;
- };
-type http_header = 
- record {
-   name: text;
-   value: text;
- };
 type Voice = 
  variant {
    ara;
@@ -46,17 +35,6 @@ type TurnDetection =
    serverVad: bool;
    silenceDurationMs: nat;
    threshold: float64;
- };
-type TransformationOutput = 
- record {
-   body: blob;
-   headers: vec http_header;
-   status: nat;
- };
-type TransformationInput = 
- record {
-   context: blob;
-   response: http_request_result;
  };
 type ToolsEnabled = 
  record {
@@ -127,14 +105,6 @@ type InitiateCallInput =
  record {
    presetId: nat;
    recipientPhone: text;
- };
-type EphemeralTokenResult = 
- variant {
-   err: text;
-   ok: record {
-         token: text;
-         websocketUrl: text;
-       };
  };
 type CreatePurchaseIntentResult = 
  variant {
@@ -343,9 +313,9 @@ service : {
   getBillingPackages: () -> (vec BillingPackage) query;
   getCallRecord: (id: CallId) -> (opt CallRecordPublic) query;
   getCallerUserRole: () -> (UserRole) query;
-  getEphemeralToken: (presetId: PresetId) -> (EphemeralTokenResult);
   getMyBillingStatus: () -> (BillingStatus) query;
   getPreset: (id: PresetId) -> (opt CallPreset) query;
+  getPresetForServer: (id: PresetId) -> (opt CallPreset) query;
   getPurchaseIntentForServer: (purchaseIntentId: text) ->
    (opt PurchaseIntentPublic) query;
   getTwilioLineNumbersForServer: () -> (vec text) query;
@@ -370,7 +340,6 @@ service : {
   setTwilioLine: (input: TwilioLineInput) -> (TwilioLineMutationResult);
   setTwilioLineEnabled: (phoneNumber: text, enabled: bool) ->
    (TwilioLineMutationResult);
-  transform: (input: TransformationInput) -> (TransformationOutput) query;
   twilioWebhook: (callSid: text, callStatus: text) -> (text);
   updateAnsweringPreset: (id: PresetId, input: AnsweringPresetInput) ->
    (AnsweringPresetMutationResult);

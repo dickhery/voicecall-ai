@@ -89,16 +89,6 @@ export class ExternalBlob {
         return this;
     }
 }
-export type EphemeralTokenResult = {
-    __kind__: "ok";
-    ok: {
-        token: string;
-        websocketUrl: string;
-    };
-} | {
-    __kind__: "err";
-    err: string;
-};
 export interface CallRecordPublic {
     id: bigint;
     startTime: bigint;
@@ -116,11 +106,6 @@ export interface TurnDetection {
     threshold: number;
     silenceDurationMs: bigint;
     serverVad: boolean;
-}
-export interface TransformationOutput {
-    status: bigint;
-    body: Uint8Array;
-    headers: Array<http_header>;
 }
 export type PresetId = bigint;
 export interface CallPreset {
@@ -316,22 +301,9 @@ export type TwilioLineMutationResult = {
     __kind__: "err";
     err: string;
 };
-export interface http_header {
-    value: string;
-    name: string;
-}
-export interface http_request_result {
-    status: bigint;
-    body: Uint8Array;
-    headers: Array<http_header>;
-}
 export interface InitiateCallInput {
     recipientPhone: string;
     presetId: bigint;
-}
-export interface TransformationInput {
-    context: Uint8Array;
-    response: http_request_result;
 }
 export interface CallPresetInput {
     toolsEnabled: ToolsEnabled;
@@ -409,7 +381,6 @@ export interface backendInterface {
     getBillingPackages(): Promise<Array<BillingPackage>>;
     getCallRecord(id: CallId): Promise<CallRecordPublic | null>;
     getCallerUserRole(): Promise<UserRole>;
-    getEphemeralToken(presetId: PresetId): Promise<EphemeralTokenResult>;
     getAnsweringPreset(id: PresetId): Promise<AnsweringPreset | null>;
     getMyBillingStatus(): Promise<BillingStatus>;
     getPreset(id: PresetId): Promise<CallPreset | null>;
@@ -425,7 +396,6 @@ export interface backendInterface {
     setTwilioLine(input: TwilioLineInput): Promise<TwilioLineMutationResult>;
     removeTwilioLine(phoneNumber: string): Promise<TwilioLineMutationResult>;
     setTwilioLineEnabled(phoneNumber: string, enabled: boolean): Promise<TwilioLineMutationResult>;
-    transform(input: TransformationInput): Promise<TransformationOutput>;
     twilioWebhook(callSid: string, callStatus: string): Promise<string>;
     updateCallStatus(callId: CallId, status: CallStatus, transcript: string | null): Promise<boolean>;
     updateAnsweringPreset(id: PresetId, input: AnsweringPresetInput): Promise<AnsweringPresetMutationResult>;
@@ -433,7 +403,7 @@ export interface backendInterface {
     updatePreset(id: PresetId, input: CallPresetInput): Promise<CallPreset | null>;
     updatePresetInstructions(id: PresetId, systemPrompt: string): Promise<CallPresetMutationResult>;
 }
-import type { AudioFormat as _AudioFormat, CallPreset as _CallPreset, CallPresetInput as _CallPresetInput, CallRecordPublic as _CallRecordPublic, CallStatus as _CallStatus, EphemeralTokenResult as _EphemeralTokenResult, InitiateCallResult as _InitiateCallResult, SampleRate as _SampleRate, SystemLog as _SystemLog, ToolsEnabled as _ToolsEnabled, TurnDetection as _TurnDetection, UserRole as _UserRole, Voice as _Voice } from "./declarations/backend.did.d.ts";
+import type { AudioFormat as _AudioFormat, CallPreset as _CallPreset, CallPresetInput as _CallPresetInput, CallRecordPublic as _CallRecordPublic, CallStatus as _CallStatus, InitiateCallResult as _InitiateCallResult, SampleRate as _SampleRate, SystemLog as _SystemLog, ToolsEnabled as _ToolsEnabled, TurnDetection as _TurnDetection, UserRole as _UserRole, Voice as _Voice } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControl(): Promise<void> {
@@ -680,20 +650,6 @@ export class Backend implements backendInterface {
             return from_candid_UserRole_n33(this._uploadFile, this._downloadFile, result);
         }
     }
-    async getEphemeralToken(arg0: PresetId): Promise<EphemeralTokenResult> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.getEphemeralToken(arg0);
-                return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.getEphemeralToken(arg0);
-            return from_candid_EphemeralTokenResult_n35(this._uploadFile, this._downloadFile, result);
-        }
-    }
     async getAnsweringPreset(arg0: PresetId): Promise<AnsweringPreset | null> {
         if (this.processError) {
             try {
@@ -902,20 +858,6 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.setTwilioLineEnabled(arg0, arg1);
             return from_candid_TwilioLineMutationResult(result);
-        }
-    }
-    async transform(arg0: TransformationInput): Promise<TransformationOutput> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.transform(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.transform(arg0);
-            return result;
         }
     }
     async twilioWebhook(arg0: string, arg1: string): Promise<string> {
@@ -1183,9 +1125,6 @@ function from_candid_CallRecordPublic_n7(_uploadFile: (file: ExternalBlob) => Pr
 }
 function from_candid_CallStatus_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CallStatus): CallStatus {
     return from_candid_variant_n10(_uploadFile, _downloadFile, value);
-}
-function from_candid_EphemeralTokenResult_n35(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _EphemeralTokenResult): EphemeralTokenResult {
-    return from_candid_variant_n36(_uploadFile, _downloadFile, value);
 }
 function from_candid_InitiateCallResult_n37(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _InitiateCallResult): InitiateCallResult {
     return from_candid_variant_n38(_uploadFile, _downloadFile, value);

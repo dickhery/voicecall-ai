@@ -146,10 +146,6 @@ export interface CallReservationPublic {
 }
 export type CreatePurchaseIntentResult = { 'ok' : PurchaseIntentPublic } |
   { 'err' : string };
-export type EphemeralTokenResult = {
-    'ok' : { 'token' : string, 'websocketUrl' : string }
-  } |
-  { 'err' : string };
 export interface InitiateCallInput {
   'recipientPhone' : string,
   'presetId' : bigint,
@@ -197,15 +193,6 @@ export interface ToolsEnabled {
   'functionCalling' : boolean,
 }
 export type StripeMode = { 'live' : null } | { 'test' : null };
-export interface TransformationInput {
-  'context' : Uint8Array,
-  'response' : http_request_result,
-}
-export interface TransformationOutput {
-  'status' : bigint,
-  'body' : Uint8Array,
-  'headers' : Array<http_header>,
-}
 export interface TurnDetection {
   'prefixPaddingMs' : bigint,
   'threshold' : number,
@@ -232,12 +219,6 @@ export type Voice = { 'ara' : null } |
   { 'leo' : null } |
   { 'rex' : null } |
   { 'sal' : null };
-export interface http_header { 'value' : string, 'name' : string }
-export interface http_request_result {
-  'status' : bigint,
-  'body' : Uint8Array,
-  'headers' : Array<http_header>,
-}
 export interface _SERVICE {
   '_initializeAccessControl' : ActorMethod<[], undefined>,
   'adminAddPromoMinutes' : ActorMethod<
@@ -279,10 +260,10 @@ export interface _SERVICE {
   'getBillingPackages' : ActorMethod<[], Array<BillingPackage>>,
   'getCallRecord' : ActorMethod<[CallId], [] | [CallRecordPublic]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  'getEphemeralToken' : ActorMethod<[PresetId], EphemeralTokenResult>,
   'getAnsweringPreset' : ActorMethod<[PresetId], [] | [AnsweringPreset]>,
   'getMyBillingStatus' : ActorMethod<[], BillingStatus>,
   'getPreset' : ActorMethod<[PresetId], [] | [CallPreset]>,
+  'getPresetForServer' : ActorMethod<[PresetId], [] | [CallPreset]>,
   'getPurchaseIntentForServer' : ActorMethod<
     [string],
     [] | [PurchaseIntentPublic]
@@ -318,7 +299,6 @@ export interface _SERVICE {
     [string, boolean],
     TwilioLineMutationResult
   >,
-  'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
   'twilioWebhook' : ActorMethod<[string, string], string>,
   'updateCallStatus' : ActorMethod<
     [CallId, CallStatus, [] | [string]],

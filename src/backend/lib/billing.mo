@@ -261,6 +261,7 @@ module {
     recipientPhone : Text,
     presetId : Nat,
     callId : Nat,
+    callToken : Text,
   ) : Types.ReserveCallResult {
     let available = getAvailableSeconds(state, user);
     if (available == 0) {
@@ -271,7 +272,6 @@ module {
     state.nextReservationId.value += 1;
     let now = Time.now();
     let id = "res_" # idNumber.toText();
-    let token = "ct_" # idNumber.toText() # "_" # now.toText() # "_" # user.toText();
     let reservation : Types.CallReservation = {
       id;
       callId;
@@ -279,7 +279,7 @@ module {
       recipientPhone;
       presetId;
       allowedSeconds;
-      callToken = token;
+      callToken;
       createdAt = now;
       expiresAt = now + RESERVATION_TTL_NS;
       var status = #reserved;

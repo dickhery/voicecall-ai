@@ -151,6 +151,7 @@ type UserRole__1073662873 = {#admin; #guest; #user};
 type Voice__817973016 = {#ara; #eve; #leo; #rex; #sal};
 actor {
   stable ANSWERING_PRESET_ID_OFFSET : Nat;
+  stable MAX_CALL_TRANSCRIPT_CHARS : Nat;
   stable accessControlState :
     {
       var adminAssigned : Bool;

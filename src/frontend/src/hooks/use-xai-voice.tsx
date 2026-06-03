@@ -381,12 +381,15 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   ]);
 
   const startConnectedSessionPolling = useCallback(
-    (sessionId: string) => {
+    (sessionId: string, monitorToken: string) => {
       cleanupSessionPolling();
 
       const poll = async () => {
         try {
-          const serverCall = await getVoiceServerCallSession(sessionId);
+          const serverCall = await getVoiceServerCallSession(
+            sessionId,
+            monitorToken,
+          );
           if (isTerminalVoiceServerStatus(serverCall.status)) {
             completeLocalCall();
           }
@@ -419,18 +422,26 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       setLiveAudioAvailable(Boolean(serverCall.monitorToken));
       setStatus("in_call");
       startDurationTimer();
-      startConnectedSessionPolling(serverCall.sessionId);
+      if (serverCall.monitorToken) {
+        startConnectedSessionPolling(
+          serverCall.sessionId,
+          serverCall.monitorToken,
+        );
+      }
     },
     [startDurationTimer, startConnectedSessionPolling],
   );
 
   const startQueuePolling = useCallback(
-    (sessionId: string) => {
+    (sessionId: string, monitorToken: string) => {
       cleanupQueuePolling();
 
       const poll = async () => {
         try {
-          const serverCall = await getVoiceServerCallSession(sessionId);
+          const serverCall = await getVoiceServerCallSession(
+            sessionId,
+            monitorToken,
+          );
           if (serverCall.callSid) {
             cleanupQueuePolling();
             markServerCallConnected({
@@ -532,7 +543,12 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
               ? `Waiting for a free line. Position ${serverCall.queuePosition}.`
               : "Waiting for a free line.",
           );
-          startQueuePolling(serverCall.sessionId);
+          if (!serverCall.monitorToken) {
+            throw new Error(
+              "Queued call token was not returned by the voice server.",
+            );
+          }
+          startQueuePolling(serverCall.sessionId, serverCall.monitorToken);
           toast.info("All lines are busy. Your call is queued.", {
             description: serverCall.queuePosition
               ? `Queue position ${serverCall.queuePosition}`
@@ -584,10 +600,11 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const endCall = useCallback(() => {
     const callSid = activeCallSidRef.current;
     const sessionId = activeSessionIdRef.current;
+    const monitorToken = monitorTokenRef.current;
     completeLocalCall();
 
     if (callSid || sessionId) {
-      endVoiceServerCall({ callSid, sessionId }).catch((err) => {
+      endVoiceServerCall({ callSid, sessionId, monitorToken }).catch((err) => {
         const message = err instanceof Error ? err.message : "Unknown error";
         toast.error(`Unable to end Twilio call: ${message}`);
       });

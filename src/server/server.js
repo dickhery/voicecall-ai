@@ -11,6 +11,7 @@ import {
   getBackendActor,
   getIcpServerPrincipalText,
   normalizeAnsweringPreset,
+  normalizeCallPreset,
   normalizePurchaseIntent,
   normalizeReservation,
   okOrThrow,
@@ -229,6 +230,42 @@ function isOriginAllowed(origin) {
   return allowOrigins.has(normalizeOrigin(origin));
 }
 
+function isProduction() {
+  return process.env.NODE_ENV === "production";
+}
+
+function assertProductionSafetyConfig() {
+  if (!isProduction()) return;
+  if (!process.env.FRONTEND_ORIGIN || allowAllOrigins) {
+    throw new Error(
+      "Production FRONTEND_ORIGIN must be explicitly allowlisted and cannot include *.",
+    );
+  }
+  if (process.env.VALIDATE_TWILIO_SIGNATURE !== "true") {
+    throw new Error("Production VALIDATE_TWILIO_SIGNATURE must be true.");
+  }
+  if (!process.env.RECORDING_ACCESS_SECRET) {
+    throw new Error("Production RECORDING_ACCESS_SECRET must be configured.");
+  }
+  if (!process.env.BRIDGE_RECORDING_ACCESS_SECRET) {
+    throw new Error("Production BRIDGE_RECORDING_ACCESS_SECRET must be configured.");
+  }
+}
+
+assertProductionSafetyConfig();
+
+function safeTokenEqual(expected, supplied) {
+  const expectedValue = String(expected || "");
+  const suppliedValue = String(supplied || "");
+  if (!expectedValue || !suppliedValue) return false;
+  const expectedBytes = Buffer.from(expectedValue);
+  const suppliedBytes = Buffer.from(suppliedValue);
+  return (
+    expectedBytes.length === suppliedBytes.length &&
+    crypto.timingSafeEqual(expectedBytes, suppliedBytes)
+  );
+}
+
 app.use(
   cors({
     exposedHeaders: [
@@ -331,8 +368,11 @@ function getFrontendReturnBase(rawUrl) {
   if (!/^https?:\/\//i.test(normalized)) {
     throw new Error("Stripe return URL must be an absolute http or https URL.");
   }
-  new URL(normalized);
-  return normalized;
+  const parsed = new URL(normalized);
+  if (!isOriginAllowed(parsed.origin)) {
+    throw new Error("Stripe return URL origin is not allowed.");
+  }
+  return parsed.toString();
 }
 
 function centsToDollars(amountCents) {
@@ -1342,13 +1382,7 @@ function generateVoicePreviewAudio({ voiceId, text }) {
 }
 
 function getBridgeRecordingAccessSecret() {
-  return (
-    process.env.BRIDGE_RECORDING_ACCESS_SECRET ||
-    process.env.RECORDING_ACCESS_SECRET ||
-    process.env.ICP_SERVER_IDENTITY_SECRET_KEY ||
-    process.env.XAI_API_KEY ||
-    ""
-  );
+  return process.env.BRIDGE_RECORDING_ACCESS_SECRET || "";
 }
 
 function signBridgeRecordingAccess(recordingId) {
@@ -1426,12 +1460,7 @@ function finalizeBridgeRecording(session) {
 }
 
 function getRecordingAccessSecret() {
-  return (
-    process.env.RECORDING_ACCESS_SECRET ||
-    process.env.TWILIO_AUTH_TOKEN ||
-    process.env.ICP_SERVER_IDENTITY_SECRET_KEY ||
-    ""
-  );
+  return process.env.RECORDING_ACCESS_SECRET || "";
 }
 
 function signRecordingAccess(recordingSid, callSid = "") {
@@ -1449,12 +1478,7 @@ function isRecordingAccessTokenValid(recordingSid, callSid, token) {
   const supplied = String(token || "").trim();
   if (!supplied) return false;
   const expected = signRecordingAccess(recordingSid, callSid);
-  const suppliedBytes = Buffer.from(supplied);
-  const expectedBytes = Buffer.from(expected);
-  return (
-    suppliedBytes.length === expectedBytes.length &&
-    crypto.timingSafeEqual(suppliedBytes, expectedBytes)
-  );
+  return safeTokenEqual(expected, supplied);
 }
 
 function buildPublicRecordingMediaUrl(recordingSid, callSid = "") {
@@ -1540,6 +1564,20 @@ function broadcastMonitorAudio(session, channel, payload) {
 function getSessionFromRequest(req) {
   const sessionId = String(req.query.sessionId || req.body.sessionId || "");
   return { sessionId, session: callSessions.get(sessionId) };
+}
+
+function getRequestControlToken(req) {
+  return String(
+    req.query.monitorToken ||
+      req.query.token ||
+      req.body?.monitorToken ||
+      req.body?.controlToken ||
+      "",
+  );
+}
+
+function isSessionControlTokenValid(session, token) {
+  return Boolean(session && safeTokenEqual(session.monitorToken, token));
 }
 
 async function getPurchaseIntentOrThrow(purchaseIntentId) {
@@ -1951,12 +1989,12 @@ function getSessionStatus(session) {
   return session?.state || (session?.callSid ? "active" : "queued");
 }
 
-function buildCallSessionPayload(session) {
+function buildCallSessionPayload(session, { includeMonitorToken = false } = {}) {
   return {
     ok: true,
     sessionId: session.id,
     callSid: session.callSid || "",
-    monitorToken: session.monitorToken || "",
+    monitorToken: includeMonitorToken ? session.monitorToken || "" : "",
     status: getSessionStatus(session),
     queued: session.state === "queued",
     queuePosition: getQueuePosition(session.id),
@@ -2149,11 +2187,6 @@ app.get("/health", async (_req, res) => {
     ok: true,
     serverVersion: SERVER_VERSION,
     startedAt: SERVER_STARTED_AT,
-    publicHost: getPublicHost(),
-    cors: {
-      allowAllOrigins,
-      allowedOrigins: Array.from(allowOrigins),
-    },
     twilioConfigured: Boolean(
       process.env.TWILIO_ACCOUNT_SID &&
         process.env.TWILIO_AUTH_TOKEN &&
@@ -2164,7 +2197,6 @@ app.get("/health", async (_req, res) => {
       active: linePool.active.length,
       available: linePool.available.length,
       queued: linePool.queued,
-      numbers: linePool.numbers,
     },
     xaiConfigured: Boolean(process.env.XAI_API_KEY),
     answeringBridgeConfigured: Boolean(
@@ -2181,10 +2213,6 @@ app.get("/health", async (_req, res) => {
         process.env.STRIPE_LIVE_SECRET_KEY &&
         process.env.STRIPE_LIVE_WEBHOOK_SECRET,
     ),
-    backendCanisterId: process.env.BACKEND_CANISTER_ID || "",
-    backendHost: process.env.BACKEND_HOST || "https://icp-api.io",
-    icpServerPrincipal: getIcpServerPrincipalText(),
-    model: XAI_MODEL,
   });
 });
 
@@ -2234,6 +2262,16 @@ app.get("/recordings/:recordingSid/access", async (req, res) => {
     requireTwilioConfig();
     const recordingSid = normalizeRecordingSid(req.params.recordingSid);
     const callSid = normalizeCallSid(req.query.callSid);
+    const token = getRequestControlToken(req);
+
+    const sessionId = callSid ? callsBySid.get(callSid) : "";
+    const session = sessionId ? callSessions.get(sessionId) : null;
+    if (!session || !isSessionControlTokenValid(session, token)) {
+      res
+        .status(403)
+        .json({ ok: false, error: "Recording access is not authorized." });
+      return;
+    }
 
     if (callSid) {
       const recording = await twilioClient.recordings(recordingSid).fetch();
@@ -2416,7 +2454,14 @@ app.post("/initiate-call", async (req, res) => {
       okOrThrow(verified, "Unable to verify paid call reservation."),
     );
     const recipientPhone = normalizePhone(reservation.recipientPhone);
-    const preset = toPlainPreset(req.body.preset);
+    const rawPreset = unwrapOptional(
+      await actor.getPresetForServer(BigInt(reservation.presetId)),
+    );
+    const storedPreset = normalizeCallPreset(rawPreset);
+    if (!storedPreset) {
+      throw new Error("Reserved call preset was not found.");
+    }
+    const preset = toPlainPreset(storedPreset);
     assertSafeInstructionText(preset.systemPrompt, "Call preset instructions");
     const callId = String(req.body.callId || reservation.callId || "");
     if (callId && callId !== reservation.callId) {
@@ -2424,6 +2469,7 @@ app.post("/initiate-call", async (req, res) => {
     }
     const sessionId = crypto.randomUUID();
     const monitorToken = crypto.randomBytes(24).toString("base64url");
+    const mediaToken = crypto.randomBytes(32).toString("base64url");
     const publicBaseUrl = getPublicBaseUrl();
     const twimlUrl = new URL("/twiml", publicBaseUrl);
     twimlUrl.searchParams.set("sessionId", sessionId);
@@ -2435,6 +2481,7 @@ app.post("/initiate-call", async (req, res) => {
     session = {
       id: sessionId,
       monitorToken,
+      mediaToken,
       callId,
       reservationId,
       allowedSeconds: reservation.allowedSeconds,
@@ -2490,7 +2537,7 @@ app.post("/initiate-call", async (req, res) => {
       });
 
       res.status(202).json({
-        ...buildCallSessionPayload(session),
+        ...buildCallSessionPayload(session, { includeMonitorToken: true }),
         allowedSeconds: reservation.allowedSeconds,
       });
       return;
@@ -2551,6 +2598,11 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
   let reservation = null;
   try {
     requireRealtimeBridgeConfig();
+    if (!validateTwilioRequest(req)) {
+      log("warn", "Rejected incoming answering webhook with invalid signature");
+      res.status(403).send(makeErrorTwiML("Request validation failed."));
+      return;
+    }
     const webhookSecret = String(req.params.webhookSecret || "").trim();
     const twilioToNumber = normalizePhone(req.body.To);
     const callerPhone = normalizeIncomingCallerPhone(req.body.From);
@@ -2594,6 +2646,7 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
 
     const sessionId = crypto.randomUUID();
     const monitorToken = crypto.randomBytes(24).toString("base64url");
+    const mediaToken = crypto.randomBytes(32).toString("base64url");
     const publicWsUrl = getPublicWsUrl();
     if (!publicWsUrl) {
       throw new Error("Voice server public WebSocket URL is not configured.");
@@ -2605,6 +2658,7 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
     session = {
       id: sessionId,
       monitorToken,
+      mediaToken,
       callId: reservation.callId,
       reservationId: reservation.id,
       answeringPresetId: answeringPreset.id,
@@ -2673,6 +2727,7 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
       name: `voicecall-answering-${sessionId}`,
     });
     stream.parameter({ name: "sessionId", value: sessionId });
+    stream.parameter({ name: "mediaToken", value: mediaToken });
     stream.parameter({ name: "callId", value: String(reservation.callId || "") });
     stream.parameter({ name: "presetName", value: answeringPreset.name });
     stream.parameter({ name: "direction", value: session.direction });
@@ -2717,7 +2772,7 @@ app.post("/steer-call", (req, res) => {
       res.status(404).json({ ok: false, error: "Call session not found." });
       return;
     }
-    if (!token || token !== session.monitorToken) {
+    if (!isSessionControlTokenValid(session, token)) {
       res.status(403).json({ ok: false, error: "Invalid live call token." });
       return;
     }
@@ -2755,33 +2810,35 @@ app.post("/steer-call", (req, res) => {
 app.post("/end-call", async (req, res) => {
   try {
     requireServerConfig();
-    const callSid = String(req.body.callSid || "");
+    let callSid = String(req.body.callSid || "");
     const sessionId = String(req.body.sessionId || "");
-    if (!callSid && sessionId) {
-      const session = callSessions.get(sessionId);
-      if (!session) {
-        res.json({ ok: true });
-        return;
-      }
-      if (session.state === "queued" && !session.callSid) {
-        await cancelQueuedSession(session, "Caller canceled queued call.");
-        res.json({ ok: true });
-        return;
-      }
+    const token = getRequestControlToken(req);
+    const activeSessionId = sessionId || (callSid ? callsBySid.get(callSid) : "");
+    const session = activeSessionId ? callSessions.get(activeSessionId) : null;
+    if (!session) {
+      res.json({ ok: true });
+      return;
     }
+    if (!isSessionControlTokenValid(session, token)) {
+      res.status(403).json({ ok: false, error: "Invalid live call token." });
+      return;
+    }
+    if (callSid && session.callSid && callSid !== session.callSid) {
+      throw new Error("Call SID does not match the call session.");
+    }
+    if (session.state === "queued" && !session.callSid) {
+      await cancelQueuedSession(session, "Caller canceled queued call.");
+      res.json({ ok: true });
+      return;
+    }
+    callSid = session.callSid || callSid;
     if (!/^CA[a-fA-F0-9]{32}$/.test(callSid)) {
       throw new Error("A valid Twilio CallSid is required.");
     }
     await twilioClient.calls(callSid).update({ status: "completed" });
-    const activeSessionId = callsBySid.get(callSid);
-    if (activeSessionId) {
-      const session = callSessions.get(activeSessionId);
-      if (session) {
-        session.endedAt = Date.now();
-        session.billingStoppedAt ||= session.endedAt;
-        scheduleFinishPaidSession(session, "user_requested_end_fallback");
-      }
-    }
+    session.endedAt = Date.now();
+    session.billingStoppedAt ||= session.endedAt;
+    scheduleFinishPaidSession(session, "user_requested_end_fallback");
     res.json({ ok: true });
   } catch (error) {
     log("error", "Failed to end call", { error: error.message });
@@ -2795,7 +2852,11 @@ app.get("/call-session/:sessionId", (req, res) => {
     res.status(404).json({ ok: false, error: "Call session not found." });
     return;
   }
-  res.json(buildCallSessionPayload(session));
+  if (!isSessionControlTokenValid(session, getRequestControlToken(req))) {
+    res.status(403).json({ ok: false, error: "Invalid live call token." });
+    return;
+  }
+  res.json(buildCallSessionPayload(session, { includeMonitorToken: true }));
 });
 
 app.post("/twiml", (req, res) => {
@@ -2824,6 +2885,7 @@ app.post("/twiml", (req, res) => {
       name: `voicecall-ai-${sessionId}`,
     });
     stream.parameter({ name: "sessionId", value: sessionId });
+    stream.parameter({ name: "mediaToken", value: session.mediaToken || "" });
     stream.parameter({ name: "callId", value: session.callId || "" });
     stream.parameter({ name: "presetName", value: session.preset.name });
     stream.parameter({ name: "direction", value: session.direction || "" });
@@ -2933,7 +2995,7 @@ monitorWss.on("connection", (ws, request) => {
   const sessionId = url.searchParams.get("sessionId") || "";
   const token = url.searchParams.get("token") || "";
   const session = callSessions.get(sessionId);
-  if (!session || session.finished || token !== session.monitorToken) {
+  if (!session || session.finished || !isSessionControlTokenValid(session, token)) {
     ws.send(JSON.stringify({ type: "error", error: "Live audio is not available." }));
     ws.close(1008, "Invalid live audio session");
     return;
@@ -3429,10 +3491,21 @@ mediaWss.on("connection", (twilioWs, request) => {
 
     if (data.event === "start") {
       streamSid = data.start?.streamSid;
-      const sessionId = data.start?.customParameters?.sessionId;
+      const customParameters = data.start?.customParameters || {};
+      const sessionId = customParameters.sessionId;
+      const mediaToken = customParameters.mediaToken;
       session = callSessions.get(sessionId);
       if (!session) {
         log("warn", "Media stream started without a matching session", {
+          sessionId,
+          streamSid,
+          remoteAddress: request.socket.remoteAddress,
+        });
+        closeBoth();
+        return;
+      }
+      if (!safeTokenEqual(session.mediaToken, mediaToken)) {
+        log("warn", "Media stream started with invalid media token", {
           sessionId,
           streamSid,
           remoteAddress: request.socket.remoteAddress,
