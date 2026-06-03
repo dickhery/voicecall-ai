@@ -60729,6 +60729,9 @@ function getRecordingMimeType(url) {
   var _a3;
   try {
     const parsed = new URL(url);
+    if (parsed.pathname.includes("/bridge-recordings/")) {
+      return "audio/wav";
+    }
     const format = (_a3 = parsed.searchParams.get("format")) == null ? void 0 : _a3.toLowerCase();
     if (format === "wav" || parsed.pathname.toLowerCase().endsWith(".wav")) {
       return "audio/wav";
@@ -61161,11 +61164,12 @@ function RecordingArtifact({
     };
   }, [callSid, recordingSid, recordingUrl]);
   const downloadUrl = playbackUrl ? withDownloadParam(playbackUrl) : null;
+  const downloadExtension = getRecordingMimeType(playbackUrl ?? recordingUrl) === "audio/wav" ? "wav" : "mp3";
   function handleDownload() {
     if (!downloadUrl) return;
     const anchor = document.createElement("a");
     anchor.href = downloadUrl;
-    anchor.download = `voicecall-recording-${recordingSid ?? "audio"}.mp3`;
+    anchor.download = `voicecall-recording-${recordingSid ?? "audio"}.${downloadExtension}`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();

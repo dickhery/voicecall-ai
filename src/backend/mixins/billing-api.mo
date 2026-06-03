@@ -369,14 +369,21 @@ mixin (
         switch (BillingLib.getReservation(billingState, reservationId)) {
           case null {};
           case (?reservation) {
-            ignore CallsLib.updateCallRecord(
-              callsState,
-              reservation.callId,
-              #failed,
-              reservation.callSid,
-              ?Time.now(),
-              ?reason,
-            );
+            switch (reservation.status) {
+              case (#canceled) {
+                ignore CallsLib.updateCallRecord(
+                  callsState,
+                  reservation.callId,
+                  #failed,
+                  reservation.callSid,
+                  ?Time.now(),
+                  ?reason,
+                );
+              };
+              case (#finished) {};
+              case (#reserved) {};
+              case (#active) {};
+            };
           };
         };
       };
@@ -398,20 +405,27 @@ mixin (
         switch (BillingLib.getReservationByCallSid(billingState, callSid)) {
           case null {};
           case (?reservation) {
-            ignore CallsLib.updateCallRecord(
-              callsState,
-              reservation.callId,
-              #failed,
-              ?callSid,
-              ?Time.now(),
-              ?reason,
-            );
-            CallsLib.addSystemLog(
-              callsState,
-              #info,
-              "Canceled paid call reservation for " # callSid # ": " # reason,
-              ?reservation.callId,
-            );
+            switch (reservation.status) {
+              case (#canceled) {
+                ignore CallsLib.updateCallRecord(
+                  callsState,
+                  reservation.callId,
+                  #failed,
+                  ?callSid,
+                  ?Time.now(),
+                  ?reason,
+                );
+                CallsLib.addSystemLog(
+                  callsState,
+                  #info,
+                  "Canceled paid call reservation for " # callSid # ": " # reason,
+                  ?reservation.callId,
+                );
+              };
+              case (#finished) {};
+              case (#reserved) {};
+              case (#active) {};
+            };
           };
         };
       };
@@ -452,13 +466,17 @@ mixin (
               case (?sid) { ?sid };
               case null { reservation.callSid };
             };
+            let finalTranscript = switch (transcript) {
+              case (?text) { ?text };
+              case null { reservation.transcript };
+            };
             ignore CallsLib.updateCallRecord(
               callsState,
               reservation.callId,
               #completed,
               finalCallSid,
               ?Time.now(),
-              transcript,
+              finalTranscript,
             );
           };
         };
@@ -502,13 +520,17 @@ mixin (
           case (?reservation) {
             switch (reservation.status) {
               case (#finished) {
+                let finalTranscript = switch (transcript) {
+                  case (?text) { ?text };
+                  case null { reservation.transcript };
+                };
                 ignore CallsLib.updateCallRecord(
                   callsState,
                   reservation.callId,
                   #completed,
                   ?callSid,
                   ?Time.now(),
-                  transcript,
+                  finalTranscript,
                 );
               };
               case (#canceled) {

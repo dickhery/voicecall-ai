@@ -1,6 +1,8 @@
 import "dotenv/config";
 import http from "node:http";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { Readable } from "node:stream";
 import cors from "cors";
 import express from "express";
@@ -51,11 +53,15 @@ const ORPHANED_TWILIO_CALL_END_MS = Number(
 const BRIDGE_RECORDING_TTL_MS = Number(
   process.env.BRIDGE_RECORDING_TTL_MS || 7 * 24 * 60 * 60 * 1000,
 );
+const BRIDGE_RECORDING_DIR = path.resolve(
+  process.env.BRIDGE_RECORDING_DIR || "data/bridge-recordings",
+);
 const LINE_CONFIG_REFRESH_MS = Number(process.env.LINE_CONFIG_REFRESH_MS || 30_000);
 const CALL_QUEUE_MAX_WAIT_MS = Number(process.env.CALL_QUEUE_MAX_WAIT_MS || 30 * 60 * 1000);
 const MAX_STEERING_PROMPT_CHARS = 800;
 const MAX_INBOUND_GREETING_CHARS = 260;
 const MAX_OPENING_PRESET_SOURCE_CHARS = 8_000;
+const MAX_CALL_ARTIFACT_TEXT_CHARS = 20_000;
 const MAX_VOICE_PREVIEW_TEXT_CHARS = 220;
 const VOICE_PREVIEW_TIMEOUT_MS = Number(
   process.env.VOICE_PREVIEW_TIMEOUT_MS || 12_000,
@@ -66,7 +72,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-06-03-answering-callsid-finalization";
+const SERVER_VERSION = "2026-06-03-call-artifact-persistence";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -1465,6 +1471,36 @@ function getBridgeRecordingAccessSecret() {
   return process.env.BRIDGE_RECORDING_ACCESS_SECRET || "";
 }
 
+function isValidBridgeRecordingId(recordingId) {
+  return /^br_[a-f0-9-]{36}$/i.test(String(recordingId || ""));
+}
+
+function getBridgeRecordingPath(recordingId) {
+  if (!isValidBridgeRecordingId(recordingId)) {
+    throw new Error("Bridge recording ID is invalid.");
+  }
+  return path.join(BRIDGE_RECORDING_DIR, `${recordingId}.wav`);
+}
+
+function persistBridgeRecording(recordingId, media) {
+  fs.mkdirSync(BRIDGE_RECORDING_DIR, { recursive: true });
+  fs.writeFileSync(getBridgeRecordingPath(recordingId), media);
+}
+
+function readBridgeRecording(recordingId) {
+  try {
+    return fs.readFileSync(getBridgeRecordingPath(recordingId));
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      log("warn", "Unable to read persisted bridge recording", {
+        recordingId,
+        error: error.message,
+      });
+    }
+    return null;
+  }
+}
+
 function signBridgeRecordingAccess(recordingId) {
   const secret = getBridgeRecordingAccessSecret();
   if (!secret) {
@@ -1520,6 +1556,16 @@ function finalizeBridgeRecording(session) {
 
   const recordingId = `br_${session.id}`;
   const media = buildPcmWavFromMuLaw(chunks);
+  try {
+    persistBridgeRecording(recordingId, media);
+  } catch (error) {
+    log("error", "Unable to persist bridge recording", {
+      recordingId,
+      sessionId: session.id,
+      callSid: session.callSid,
+      error: error.message,
+    });
+  }
   bridgeRecordings.set(recordingId, {
     media,
     callSid: session.callSid || "",
@@ -1824,17 +1870,6 @@ function stripeWebhookHandler(mode) {
 function callArtifactsToText(session) {
   if (!session) return null;
   const sections = [];
-  if (session.saveTranscript && session.permissionConfirmed && session.transcript?.length) {
-    const transcript = session.transcript
-      .map((entry) => {
-        const text = String(entry.text || "").trim();
-        return text ? `${entry.speaker}: ${text}` : "";
-      })
-      .filter(Boolean)
-      .join("\n");
-    if (transcript) sections.push(transcript);
-  }
-
   if (session.recordAudio && session.permissionConfirmed) {
     const recordingLines = ["Recording: enabled"];
     if (session.recording?.url) {
@@ -1849,8 +1884,19 @@ function callArtifactsToText(session) {
     sections.push(recordingLines.join("\n"));
   }
 
+  if (session.saveTranscript && session.permissionConfirmed && session.transcript?.length) {
+    const transcript = session.transcript
+      .map((entry) => {
+        const text = String(entry.text || "").trim();
+        return text ? `${entry.speaker}: ${text}` : "";
+      })
+      .filter(Boolean)
+      .join("\n");
+    if (transcript) sections.push(transcript);
+  }
+
   const text = sections.join("\n\n").trim();
-  return text ? text.slice(0, 20_000) : null;
+  return text ? text.slice(0, MAX_CALL_ARTIFACT_TEXT_CHARS) : null;
 }
 
 function markBillingActivity(session, field, at = Date.now()) {
@@ -2698,10 +2744,16 @@ app.get("/recordings/:recordingSid/access", async (req, res) => {
 
     const sessionId = callSid ? callsBySid.get(callSid) : "";
     const session = sessionId ? callSessions.get(sessionId) : null;
-    if (!session || !isSessionControlTokenValid(session, token)) {
+    if (session && !isSessionControlTokenValid(session, token)) {
       res
         .status(403)
         .json({ ok: false, error: "Recording access is not authorized." });
+      return;
+    }
+    if (!session && !callSid) {
+      res
+        .status(403)
+        .json({ ok: false, error: "Recording access requires a Call SID." });
       return;
     }
 
@@ -2732,24 +2784,34 @@ app.get("/bridge-recordings/:recordingId", (req, res) => {
   try {
     const recordingId = String(req.params.recordingId || "");
     const token = String(req.query.token || "");
-    if (!recordingId || token !== signBridgeRecordingAccess(recordingId)) {
+    if (
+      !isValidBridgeRecordingId(recordingId) ||
+      token !== signBridgeRecordingAccess(recordingId)
+    ) {
       res.status(403).json({ ok: false, error: "Recording access link is invalid." });
       return;
     }
     const recording = bridgeRecordings.get(recordingId);
-    if (!recording || recording.expiresAt < Date.now()) {
+    let media = recording?.media || null;
+    if (recording?.expiresAt < Date.now()) {
       bridgeRecordings.delete(recordingId);
+      media = null;
+    }
+    if (!media) {
+      media = readBridgeRecording(recordingId);
+    }
+    if (!media) {
       res.status(404).json({ ok: false, error: "Recording is no longer available." });
       return;
     }
     res.setHeader("Content-Type", "audio/wav");
-    res.setHeader("Content-Length", String(recording.media.length));
+    res.setHeader("Content-Length", String(media.length));
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     res.setHeader(
       "Content-Disposition",
       `${req.query.download === "1" ? "attachment" : "inline"}; filename="voicecall-answering-${recordingId}.wav"`,
     );
-    res.send(recording.media);
+    res.send(media);
   } catch (error) {
     log("error", "Failed to stream bridge recording", {
       recordingId: req.params.recordingId,

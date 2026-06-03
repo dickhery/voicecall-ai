@@ -521,8 +521,14 @@ module {
         reservation.finishedAt := ?Time.now();
         reservation.usedSeconds := ?usedSeconds;
         reservation.billedSeconds := ?billedSeconds;
-        reservation.callSid := callSid;
-        reservation.transcript := transcript;
+        switch (callSid) {
+          case (?sid) { reservation.callSid := ?sid };
+          case null {};
+        };
+        switch (transcript) {
+          case (?text) { reservation.transcript := ?text };
+          case null {};
+        };
         #ok(true);
       };
     };

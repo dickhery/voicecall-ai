@@ -103,9 +103,18 @@ module {
       case null { false };
       case (?record) {
         record.status := status;
-        record.callSid := callSid;
-        record.endTime := endTime;
-        record.transcript := transcript;
+        switch (callSid) {
+          case (?value) { record.callSid := ?value };
+          case null {};
+        };
+        switch (endTime) {
+          case (?value) { record.endTime := ?value };
+          case null {};
+        };
+        switch (transcript) {
+          case (?value) { record.transcript := ?value };
+          case null {};
+        };
         true;
       };
     };
