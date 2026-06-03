@@ -272,6 +272,11 @@ export const idlService = IDL.Service({
       [BillingMutationResult],
       [],
     ),
+  'cancelCallReservationByCallSidForServer' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [BillingMutationResult],
+      [],
+    ),
   'createAnsweringPreset' : IDL.Func(
       [AnsweringPresetInput],
       [AnsweringPresetMutationResult],
@@ -298,6 +303,11 @@ export const idlService = IDL.Service({
     ),
   'finishCallAndDebit' : IDL.Func(
       [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
+      [BillingMutationResult],
+      [],
+    ),
+  'finishCallByCallSidForServer' : IDL.Func(
+      [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text)],
       [BillingMutationResult],
       [],
     ),
@@ -358,6 +368,11 @@ export const idlService = IDL.Service({
     ),
   'listMyCalls' : IDL.Func([], [IDL.Vec(CallRecordPublic)], ['query']),
   'listMyPresets' : IDL.Func([], [IDL.Vec(CallPreset)], ['query']),
+  'listOpenCallReservationsForServer' : IDL.Func(
+      [IDL.Nat],
+      [IDL.Vec(CallReservationPublic)],
+      ['query'],
+    ),
   'markReservationStarted' : IDL.Func(
       [IDL.Text, IDL.Text],
       [BillingMutationResult],
@@ -700,6 +715,11 @@ export const idlFactory = ({ IDL }) => {
         [BillingMutationResult],
         [],
       ),
+    'cancelCallReservationByCallSidForServer' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [BillingMutationResult],
+        [],
+      ),
     'createAnsweringPreset' : IDL.Func(
         [AnsweringPresetInput],
         [AnsweringPresetMutationResult],
@@ -726,6 +746,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'finishCallAndDebit' : IDL.Func(
         [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
+        [BillingMutationResult],
+        [],
+      ),
+    'finishCallByCallSidForServer' : IDL.Func(
+        [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text)],
         [BillingMutationResult],
         [],
       ),
@@ -790,6 +815,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'listMyCalls' : IDL.Func([], [IDL.Vec(CallRecordPublic)], ['query']),
     'listMyPresets' : IDL.Func([], [IDL.Vec(CallPreset)], ['query']),
+    'listOpenCallReservationsForServer' : IDL.Func(
+        [IDL.Nat],
+        [IDL.Vec(CallReservationPublic)],
+        ['query'],
+      ),
     'markReservationStarted' : IDL.Func(
         [IDL.Text, IDL.Text],
         [BillingMutationResult],

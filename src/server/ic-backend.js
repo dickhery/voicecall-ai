@@ -226,12 +226,27 @@ const idlFactory = ({ IDL }) =>
       [ReserveCallResult],
       [],
     ),
+    listOpenCallReservationsForServer: IDL.Func(
+      [IDL.Nat],
+      [IDL.Vec(CallReservationPublic)],
+      ["query"],
+    ),
     finishCallAndDebit: IDL.Func(
       [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text), IDL.Opt(IDL.Text)],
       [BillingMutationResult],
       [],
     ),
+    finishCallByCallSidForServer: IDL.Func(
+      [IDL.Text, IDL.Nat, IDL.Opt(IDL.Text)],
+      [BillingMutationResult],
+      [],
+    ),
     cancelCallReservation: IDL.Func(
+      [IDL.Text, IDL.Text],
+      [BillingMutationResult],
+      [],
+    ),
+    cancelCallReservationByCallSidForServer: IDL.Func(
       [IDL.Text, IDL.Text],
       [BillingMutationResult],
       [],
@@ -328,6 +343,33 @@ export function unwrapOptional(value) {
   return Array.isArray(value) && value.length > 0 ? value[0] : null;
 }
 
+function bigintToNumber(value, fallback = 0) {
+  if (value === null || value === undefined) return fallback;
+  try {
+    return Number(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function icTimeNsToMs(value) {
+  if (value === null || value === undefined) return null;
+  try {
+    return Number(BigInt(value) / 1_000_000n);
+  } catch {
+    return null;
+  }
+}
+
+function optionalNatToNumber(value) {
+  const unwrapped = unwrapOptional(value);
+  return unwrapped === null ? null : bigintToNumber(unwrapped, null);
+}
+
+function optionalIcTimeNsToMs(value) {
+  return icTimeNsToMs(unwrapOptional(value));
+}
+
 export function normalizePurchaseIntent(intent) {
   if (!intent) return null;
   return {
@@ -352,8 +394,20 @@ export function normalizeReservation(reservation) {
     recipientPhone: reservation.recipientPhone,
     presetId: reservation.presetId.toString(),
     allowedSeconds: Number(reservation.allowedSeconds),
+    createdAt: reservation.createdAt,
+    createdAtMs: icTimeNsToMs(reservation.createdAt),
+    expiresAt: reservation.expiresAt,
+    expiresAtMs: icTimeNsToMs(reservation.expiresAt),
+    startedAt: unwrapOptional(reservation.startedAt),
+    startedAtMs: optionalIcTimeNsToMs(reservation.startedAt),
+    finishedAt: unwrapOptional(reservation.finishedAt),
+    finishedAtMs: optionalIcTimeNsToMs(reservation.finishedAt),
+    usedSeconds: optionalNatToNumber(reservation.usedSeconds),
+    billedSeconds: optionalNatToNumber(reservation.billedSeconds),
     status: variantKey(reservation.status),
     callSid: unwrapOptional(reservation.callSid),
+    transcript: unwrapOptional(reservation.transcript),
+    canceledReason: unwrapOptional(reservation.canceledReason),
   };
 }
 

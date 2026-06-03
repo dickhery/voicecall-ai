@@ -287,6 +287,8 @@ service : {
   assignCallerUserRole: (user: principal, role: UserRole) -> ();
   cancelCallReservation: (reservationId: text, reason: text) ->
    (BillingMutationResult);
+  cancelCallReservationByCallSidForServer: (callSid: text, reason: text) ->
+   (BillingMutationResult);
   createAnsweringPreset: (input: AnsweringPresetInput) ->
    (AnsweringPresetMutationResult);
   createPreset: (input: CallPresetInput) -> (CallPreset);
@@ -301,6 +303,8 @@ service : {
   finishAnsweringLiveSessionForServer: (sessionId: text) -> (bool);
   finishCallAndDebit: (reservationId: text, usedSeconds: nat, callSid:
    opt text, transcript: opt text) -> (BillingMutationResult);
+  finishCallByCallSidForServer: (callSid: text, usedSeconds: nat, transcript:
+   opt text) -> (BillingMutationResult);
   getAdminConfig: () ->
    (record {
       hasTwilioAuth: bool;
@@ -327,6 +331,8 @@ service : {
   listMyAnsweringPresets: () -> (vec AnsweringPreset) query;
   listMyCalls: () -> (vec CallRecordPublic) query;
   listMyPresets: () -> (vec CallPreset) query;
+  listOpenCallReservationsForServer: (limit: nat) ->
+   (vec CallReservationPublic) query;
   markReservationStarted: (reservationId: text, callSid: text) ->
    (BillingMutationResult);
   registerAnsweringLiveSessionForServer: (session: AnsweringLiveSession) ->

@@ -39,6 +39,15 @@ const CALL_MEDIA_IDLE_END_MS = Number(
 const SESSION_CLEANUP_INTERVAL_MS = Number(
   process.env.SESSION_CLEANUP_INTERVAL_MS || 15_000,
 );
+const BACKEND_CALL_RECONCILE_INTERVAL_MS = Number(
+  process.env.BACKEND_CALL_RECONCILE_INTERVAL_MS || 60_000,
+);
+const BACKEND_CALL_RECONCILE_LIMIT = Number(
+  process.env.BACKEND_CALL_RECONCILE_LIMIT || 50,
+);
+const ORPHANED_TWILIO_CALL_END_MS = Number(
+  process.env.ORPHANED_TWILIO_CALL_END_MS || 120_000,
+);
 const BRIDGE_RECORDING_TTL_MS = Number(
   process.env.BRIDGE_RECORDING_TTL_MS || 7 * 24 * 60 * 60 * 1000,
 );
@@ -57,7 +66,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-06-03-end-call-fallback";
+const SERVER_VERSION = "2026-06-03-callsid-finalization";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -337,6 +346,8 @@ const voicePreviewRateLimits = new Map();
 const callQueue = [];
 let queueProcessing = false;
 let sessionCleanupProcessing = false;
+let backendReconcileProcessing = false;
+let lastBackendReconcileAt = 0;
 let lineConfigCache = {
   numbers: null,
   fetchedAt: 0,
@@ -1874,39 +1885,195 @@ function clearBillingCheckpoint(session) {
   session.cutoffTimer = null;
 }
 
-async function finishPaidSession(session, reason = "completed") {
-  if (!session || session.finished) return;
-  if (session.state === "queued" && !session.callSid) {
-    await cancelQueuedSession(session, reason);
-    return;
+function closeMonitorClients(session, reason = "Call ended") {
+  if (!session?.monitorClients) return;
+  for (const client of session.monitorClients) {
+    if (client.readyState === WebSocket.OPEN) client.close(1000, reason);
   }
+}
+
+function markSessionLocallyEnded(session, reason, state = "completed") {
+  if (!session) return;
   session.finished = true;
-  session.billingFinishedAt = resolveBillingFinishedAt(session);
+  session.state = state;
   removeQueuedSession(session.id);
   clearBillingCheckpoint(session);
   if (session.finishTimer) {
     clearTimeout(session.finishTimer);
     session.finishTimer = null;
   }
+  if (!session.endedBroadcasted) {
+    broadcastMonitorEvent(session, { type: "ended", reason });
+    closeMonitorClients(session);
+    session.endedBroadcasted = true;
+  }
+  releaseSessionLine(session);
+}
 
-  const usedSeconds = session.billingStartedAt
+function clearBackendFinalizeRetry(session) {
+  if (!session?.finalizeRetryTimer) return;
+  clearTimeout(session.finalizeRetryTimer);
+  session.finalizeRetryTimer = null;
+}
+
+function forgetFinalizedSession(session) {
+  if (!session) return;
+  clearBackendFinalizeRetry(session);
+  callSessions.delete(session.id);
+  if (session.callSid) callsBySid.delete(session.callSid);
+}
+
+function scheduleBackendFinalizeRetry(session, reason) {
+  if (!session || session.backendFinalized || session.finalizeRetryTimer) return;
+  const attempts = Math.max(1, Number(session.backendFinalizeAttempts || 1));
+  const delayMs = Math.min(60_000, 2_000 * attempts);
+  session.finalizeRetryTimer = setTimeout(() => {
+    session.finalizeRetryTimer = null;
+    finishPaidSession(session, reason).catch((error) => {
+      log("error", "Backend finalization retry failed", {
+        sessionId: session.id,
+        reservationId: session.reservationId,
+        callSid: session.callSid,
+        error: error.message,
+      });
+    });
+  }, delayMs);
+  session.finalizeRetryTimer.unref?.();
+}
+
+async function finishBackendReservationByCallSid({
+  callSid,
+  usedSeconds = 0,
+  transcript = null,
+  reason = "callsid_recovery",
+}) {
+  if (!getValidCallSid(callSid)) return false;
+  const actor = await getBackendActor();
+  okOrThrow(
+    await actor.finishCallByCallSidForServer(
+      callSid,
+      BigInt(Math.max(0, Number(usedSeconds || 0))),
+      transcript ? [transcript] : [],
+    ),
+    "Unable to finish paid call by CallSid.",
+  );
+  log("info", "Finished backend call reservation by CallSid", {
+    callSid,
+    usedSeconds,
+    reason,
+  });
+  return true;
+}
+
+async function cancelBackendReservationByCallSid({
+  callSid,
+  reason = "twilio_call_not_completed",
+}) {
+  if (!getValidCallSid(callSid)) return false;
+  const actor = await getBackendActor();
+  okOrThrow(
+    await actor.cancelCallReservationByCallSidForServer(callSid, reason),
+    "Unable to cancel paid call reservation by CallSid.",
+  );
+  log("info", "Canceled backend call reservation by CallSid", {
+    callSid,
+    reason,
+  });
+  return true;
+}
+
+async function settleBackendReservationByTwilioStatus({
+  callSid,
+  callStatus,
+  usedSeconds = null,
+  transcript = null,
+  reason = "twilio_terminal_status",
+}) {
+  const normalizedCallSid = getValidCallSid(callSid);
+  const normalizedStatus = String(callStatus || "").toLowerCase();
+  if (!normalizedCallSid || !isTerminalTwilioStatus(normalizedStatus)) {
+    return false;
+  }
+
+  if (isCompletedTwilioStatus(normalizedStatus)) {
+    await finishBackendReservationByCallSid({
+      callSid: normalizedCallSid,
+      usedSeconds: Math.max(0, Number(usedSeconds ?? 0)),
+      transcript,
+      reason,
+    });
+    return true;
+  }
+
+  await cancelBackendReservationByCallSid({
+    callSid: normalizedCallSid,
+    reason: `${reason}: Twilio status ${normalizedStatus}`,
+  });
+  return true;
+}
+
+async function settleBackendReservationFromTwilioFetch(callSid, reason) {
+  const normalizedCallSid = getValidCallSid(callSid);
+  if (!normalizedCallSid || !twilioClient) return false;
+  const call = await twilioClient.calls(normalizedCallSid).fetch();
+  const callStatus = getTwilioCallStatus(call);
+  if (!isTerminalTwilioStatus(callStatus)) {
+    log("info", "Twilio call is not terminal during backend reconciliation", {
+      callSid: normalizedCallSid,
+      callStatus,
+      reason,
+    });
+    return false;
+  }
+  return settleBackendReservationByTwilioStatus({
+    callSid: normalizedCallSid,
+    callStatus,
+    usedSeconds: getTwilioCallDurationSeconds(call) ?? 0,
+    reason,
+  });
+}
+
+async function finishPaidSession(session, reason = "completed") {
+  if (!session || session.backendFinalized || session.finalizeInFlight) return;
+  if (session.state === "queued" && !session.callSid) {
+    await cancelQueuedSession(session, reason);
+    return;
+  }
+  session.finalizeInFlight = true;
+  session.pendingBackendFinalize = false;
+  session.billingFinishedAt ||= resolveBillingFinishedAt(session);
+  markSessionLocallyEnded(session, reason, "completed");
+
+  const computedSeconds = session.billingStartedAt
     ? Math.ceil((session.billingFinishedAt - session.billingStartedAt) / 1000)
     : 0;
+  const usedSeconds =
+    parseTwilioCallDurationSeconds(session.twilioDurationSeconds) ?? computedSeconds;
   finalizeBridgeRecording(session);
   const artifactsText = callArtifactsToText(session);
 
   if (session.reservationId) {
     try {
       const actor = await getBackendActor();
-      okOrThrow(
-        await actor.finishCallAndDebit(
-          session.reservationId,
-          BigInt(Math.max(0, usedSeconds)),
-          session.callSid ? [session.callSid] : [],
-          artifactsText ? [artifactsText] : [],
-        ),
-        "Unable to finish and debit paid call.",
-      );
+      try {
+        okOrThrow(
+          await actor.finishCallAndDebit(
+            session.reservationId,
+            BigInt(Math.max(0, usedSeconds)),
+            session.callSid ? [session.callSid] : [],
+            artifactsText ? [artifactsText] : [],
+          ),
+          "Unable to finish and debit paid call.",
+        );
+      } catch (error) {
+        if (!session.callSid) throw error;
+        await finishBackendReservationByCallSid({
+          callSid: session.callSid,
+          usedSeconds,
+          transcript: artifactsText,
+          reason: `${reason}_reservation_id_fallback`,
+        });
+      }
       log("info", "Finished paid call session", {
         sessionId: session.id,
         reservationId: session.reservationId,
@@ -1918,11 +2085,18 @@ async function finishPaidSession(session, reason = "completed") {
         naturalness: buildNaturalnessMetricSummary(session),
       });
     } catch (error) {
+      session.finalizeInFlight = false;
+      session.pendingBackendFinalize = true;
+      session.backendFinalizeAttempts = (session.backendFinalizeAttempts || 0) + 1;
       log("error", "Failed to finish paid call session", {
         sessionId: session.id,
         reservationId: session.reservationId,
+        callSid: session.callSid,
+        attempts: session.backendFinalizeAttempts,
         error: error.message,
       });
+      scheduleBackendFinalizeRetry(session, reason);
+      return;
     }
   }
 
@@ -1938,17 +2112,14 @@ async function finishPaidSession(session, reason = "completed") {
     }
   }
 
-  broadcastMonitorEvent(session, { type: "ended", reason });
-  for (const client of session.monitorClients || []) {
-    if (client.readyState === WebSocket.OPEN) client.close(1000, "Call ended");
-  }
-  releaseSessionLine(session);
-  callSessions.delete(session.id);
-  if (session.callSid) callsBySid.delete(session.callSid);
+  session.backendFinalized = true;
+  session.pendingBackendFinalize = false;
+  session.finalizeInFlight = false;
+  forgetFinalizedSession(session);
 }
 
 function scheduleFinishPaidSession(session, reason = "completed") {
-  if (!session || session.finished) return;
+  if (!session || session.backendFinalized || session.finalizeInFlight) return;
   session.billingStoppedAt ||= Date.now();
   clearBillingCheckpoint(session);
   const recordingStatus = String(session.recording?.status || "").toLowerCase();
@@ -2089,6 +2260,29 @@ function isTerminalTwilioStatus(status) {
   return ["completed", "failed", "busy", "no-answer", "canceled"].includes(
     String(status || "").toLowerCase(),
   );
+}
+
+function isCompletedTwilioStatus(status) {
+  return String(status || "").toLowerCase() === "completed";
+}
+
+function getValidCallSid(value) {
+  const callSid = String(value || "").trim();
+  return /^CA[a-fA-F0-9]{32}$/.test(callSid) ? callSid : "";
+}
+
+function parseTwilioCallDurationSeconds(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const seconds = Number.parseInt(String(value), 10);
+  return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
+}
+
+function getTwilioCallStatus(call) {
+  return String(call?.status || call?.callStatus || "").toLowerCase();
+}
+
+function getTwilioCallDurationSeconds(call) {
+  return parseTwilioCallDurationSeconds(call?.duration ?? call?.callDuration);
 }
 
 function isTerminalTwilioStreamEvent(event) {
@@ -2713,6 +2907,13 @@ app.post("/initiate-call", async (req, res) => {
       cutoffTimer: null,
       finishTimer: null,
       finished: false,
+      backendFinalized: false,
+      finalizeInFlight: false,
+      finalizeRetryTimer: null,
+      pendingBackendFinalize: false,
+      backendFinalizeAttempts: 0,
+      endedBroadcasted: false,
+      twilioDurationSeconds: null,
       callSid: null,
       lineNumber: null,
       streamSid: null,
@@ -2901,6 +3102,13 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
       cutoffTimer: null,
       finishTimer: null,
       finished: false,
+      backendFinalized: false,
+      finalizeInFlight: false,
+      finalizeRetryTimer: null,
+      pendingBackendFinalize: false,
+      backendFinalizeAttempts: 0,
+      endedBroadcasted: false,
+      twilioDurationSeconds: null,
       callSid,
       lineNumber: twilioToNumber,
       streamSid: null,
@@ -3081,6 +3289,26 @@ async function endCallFromRequest(req, res, reason = "user_requested_end_fallbac
     const activeSessionId = sessionId || (callSid ? callsBySid.get(callSid) : "");
     const session = activeSessionId ? callSessions.get(activeSessionId) : null;
     if (!session) {
+      const normalizedCallSid = getValidCallSid(callSid);
+      if (normalizedCallSid && twilioClient) {
+        try {
+          await twilioClient.calls(normalizedCallSid).update({ status: "completed" });
+          settleBackendReservationFromTwilioFetch(
+            normalizedCallSid,
+            `${reason}_without_memory_session`,
+          ).catch((error) => {
+            log("error", "Unable to settle backend reservation after untracked end-call", {
+              callSid: normalizedCallSid,
+              error: error.message,
+            });
+          });
+        } catch (error) {
+          log("warn", "Unable to end untracked Twilio call", {
+            callSid: normalizedCallSid,
+            error: error.message,
+          });
+        }
+      }
       res.json({ ok: true });
       return;
     }
@@ -3190,19 +3418,41 @@ app.post("/call-status", async (req, res) => {
   }
 
   const { sessionId, session } = getSessionFromRequest(req);
+  const callSid = getValidCallSid(req.body.CallSid);
+  const callStatus = String(req.body.CallStatus || "").toLowerCase();
+  const twilioDurationSeconds = parseTwilioCallDurationSeconds(
+    req.body.CallDuration,
+  );
   if (session) {
     session.lastStatus = req.body.CallStatus;
     const statusAt = markBillingActivity(session, "lastStatusAt");
     updateSessionRecordingFromBody(session, req.body);
-    if (isTerminalTwilioStatus(req.body.CallStatus)) {
-      session.billingStoppedAt ||= statusAt;
-      scheduleFinishPaidSession(session, `twilio_${req.body.CallStatus}`);
+    if (twilioDurationSeconds !== null) {
+      session.twilioDurationSeconds = twilioDurationSeconds;
     }
+    if (isTerminalTwilioStatus(callStatus)) {
+      session.billingStoppedAt ||= statusAt;
+      scheduleFinishPaidSession(session, `twilio_${callStatus}`);
+    }
+  } else if (callSid && isTerminalTwilioStatus(callStatus)) {
+    settleBackendReservationByTwilioStatus({
+      callSid,
+      callStatus,
+      usedSeconds: twilioDurationSeconds ?? 0,
+      reason: `twilio_${callStatus}_without_memory_session`,
+    }).catch((error) => {
+      log("error", "Unable to settle backend reservation from status callback", {
+        callSid,
+        callStatus,
+        error: error.message,
+      });
+    });
   }
   log("info", "Twilio status callback", {
     sessionId,
     callSid: req.body.CallSid,
     status: req.body.CallStatus,
+    callDuration: req.body.CallDuration,
   });
   res.sendStatus(204);
 });
@@ -3215,6 +3465,7 @@ app.post("/stream-status", async (req, res) => {
   }
 
   const { sessionId, session } = getSessionFromRequest(req);
+  const callSid = getValidCallSid(req.body.CallSid);
   const streamEvent = String(req.body.StreamEvent || "").toLowerCase();
   if (session) {
     session.streamSid ||= String(req.body.StreamSid || "");
@@ -3224,6 +3475,17 @@ app.post("/stream-status", async (req, res) => {
       session.billingStoppedAt ||= streamEventAt;
       scheduleFinishPaidSession(session, `twilio_${streamEvent || "stream_done"}`);
     }
+  } else if (callSid && isTerminalTwilioStreamEvent(streamEvent)) {
+    settleBackendReservationFromTwilioFetch(
+      callSid,
+      `twilio_${streamEvent || "stream_done"}_without_memory_session`,
+    ).catch((error) => {
+      log("error", "Unable to settle backend reservation from stream callback", {
+        callSid,
+        streamEvent,
+        error: error.message,
+      });
+    });
   }
   log("info", "Twilio stream callback", {
     sessionId,
@@ -3927,6 +4189,98 @@ async function endStaleMediaSession(session, now) {
   return true;
 }
 
+async function reconcileOpenBackendCallReservations() {
+  if (backendReconcileProcessing) return;
+  if (!twilioClient || !process.env.BACKEND_CANISTER_ID) return;
+  backendReconcileProcessing = true;
+  try {
+    const actor = await getBackendActor();
+    const limit = Math.max(
+      1,
+      Math.min(200, Math.floor(BACKEND_CALL_RECONCILE_LIMIT || 50)),
+    );
+    const reservations = (await actor.listOpenCallReservationsForServer(BigInt(limit)))
+      .map(normalizeReservation);
+    const now = Date.now();
+
+    for (const reservation of reservations) {
+      const callSid = getValidCallSid(reservation.callSid);
+      if (!callSid) {
+        if (
+          reservation.status === "reserved" &&
+          reservation.expiresAtMs &&
+          now > reservation.expiresAtMs
+        ) {
+          try {
+            okOrThrow(
+              await actor.cancelCallReservation(
+                reservation.id,
+                "Reservation expired before a Twilio call started.",
+              ),
+              "Unable to cancel expired call reservation.",
+            );
+            log("info", "Canceled expired backend call reservation", {
+              reservationId: reservation.id,
+              callId: reservation.callId,
+            });
+          } catch (error) {
+            log("warn", "Unable to cancel expired backend call reservation", {
+              reservationId: reservation.id,
+              error: error.message,
+            });
+          }
+        }
+        continue;
+      }
+
+      const localSessionId = callsBySid.get(callSid);
+      if (localSessionId && callSessions.has(localSessionId)) {
+        continue;
+      }
+
+      try {
+        const call = await twilioClient.calls(callSid).fetch();
+        const callStatus = getTwilioCallStatus(call);
+        if (isTerminalTwilioStatus(callStatus)) {
+          await settleBackendReservationByTwilioStatus({
+            callSid,
+            callStatus,
+            usedSeconds: getTwilioCallDurationSeconds(call) ?? 0,
+            reason: "backend_open_reservation_reconcile",
+          });
+          continue;
+        }
+
+        const startedAtMs = reservation.startedAtMs || reservation.createdAtMs || now;
+        if (now - startedAtMs > ORPHANED_TWILIO_CALL_END_MS) {
+          await twilioClient.calls(callSid).update({ status: "completed" });
+          log("warn", "Ended orphaned Twilio call during backend reconciliation", {
+            reservationId: reservation.id,
+            callId: reservation.callId,
+            callSid,
+            callStatus,
+            orphanedMs: now - startedAtMs,
+          });
+        }
+      } catch (error) {
+        log("warn", "Unable to reconcile backend call reservation", {
+          reservationId: reservation.id,
+          callId: reservation.callId,
+          callSid,
+          error: error.message,
+        });
+      }
+    }
+  } catch (error) {
+    log("error", "Backend call reservation reconciliation failed", {
+      error: error.message,
+    });
+  } finally {
+    lastBackendReconcileAt = Date.now();
+    backendReconcileProcessing = false;
+  }
+}
+
 async function runSessionCleanup() {
   if (sessionCleanupProcessing) return;
   sessionCleanupProcessing = true;
@@ -3955,6 +4309,9 @@ async function runSessionCleanup() {
       if (recording.expiresAt < now) {
         bridgeRecordings.delete(recordingId);
       }
+    }
+    if (now - lastBackendReconcileAt >= BACKEND_CALL_RECONCILE_INTERVAL_MS) {
+      await reconcileOpenBackendCallReservations();
     }
     await dispatchQueuedSessions();
   } catch (error) {

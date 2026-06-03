@@ -33258,6 +33258,11 @@ Service({
     [BillingMutationResult],
     []
   ),
+  "cancelCallReservationByCallSidForServer": Func(
+    [Text, Text],
+    [BillingMutationResult],
+    []
+  ),
   "createAnsweringPreset": Func(
     [AnsweringPresetInput],
     [AnsweringPresetMutationResult],
@@ -33284,6 +33289,11 @@ Service({
   ),
   "finishCallAndDebit": Func(
     [Text, Nat, Opt(Text), Opt(Text)],
+    [BillingMutationResult],
+    []
+  ),
+  "finishCallByCallSidForServer": Func(
+    [Text, Nat, Opt(Text)],
     [BillingMutationResult],
     []
   ),
@@ -33344,6 +33354,11 @@ Service({
   ),
   "listMyCalls": Func([], [Vec(CallRecordPublic)], ["query"]),
   "listMyPresets": Func([], [Vec(CallPreset)], ["query"]),
+  "listOpenCallReservationsForServer": Func(
+    [Nat],
+    [Vec(CallReservationPublic)],
+    ["query"]
+  ),
   "markReservationStarted": Func(
     [Text, Text],
     [BillingMutationResult],
@@ -33682,6 +33697,11 @@ const idlFactory = ({ IDL: IDL2 }) => {
       [BillingMutationResult2],
       []
     ),
+    "cancelCallReservationByCallSidForServer": IDL2.Func(
+      [IDL2.Text, IDL2.Text],
+      [BillingMutationResult2],
+      []
+    ),
     "createAnsweringPreset": IDL2.Func(
       [AnsweringPresetInput2],
       [AnsweringPresetMutationResult2],
@@ -33708,6 +33728,11 @@ const idlFactory = ({ IDL: IDL2 }) => {
     ),
     "finishCallAndDebit": IDL2.Func(
       [IDL2.Text, IDL2.Nat, IDL2.Opt(IDL2.Text), IDL2.Opt(IDL2.Text)],
+      [BillingMutationResult2],
+      []
+    ),
+    "finishCallByCallSidForServer": IDL2.Func(
+      [IDL2.Text, IDL2.Nat, IDL2.Opt(IDL2.Text)],
       [BillingMutationResult2],
       []
     ),
@@ -33772,6 +33797,11 @@ const idlFactory = ({ IDL: IDL2 }) => {
     ),
     "listMyCalls": IDL2.Func([], [IDL2.Vec(CallRecordPublic2)], ["query"]),
     "listMyPresets": IDL2.Func([], [IDL2.Vec(CallPreset2)], ["query"]),
+    "listOpenCallReservationsForServer": IDL2.Func(
+      [IDL2.Nat],
+      [IDL2.Vec(CallReservationPublic2)],
+      ["query"]
+    ),
     "markReservationStarted": IDL2.Func(
       [IDL2.Text, IDL2.Text],
       [BillingMutationResult2],

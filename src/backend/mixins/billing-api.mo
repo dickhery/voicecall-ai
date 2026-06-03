@@ -318,6 +318,15 @@ mixin (
     result;
   };
 
+  public query ({ caller }) func listOpenCallReservationsForServer(
+    limit : Nat,
+  ) : async [BillingTypes.CallReservationPublic] {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
+    BillingLib.listOpenReservations(billingState, limit);
+  };
+
   public shared ({ caller }) func cancelCallReservation(
     reservationId : Text,
     reason : Text,
@@ -347,6 +356,48 @@ mixin (
     result;
   };
 
+  public shared ({ caller }) func cancelCallReservationByCallSidForServer(
+    callSid : Text,
+    reason : Text,
+  ) : async BillingTypes.BillingMutationResult {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
+    let result = BillingLib.cancelReservationByCallSid(billingState, callSid, reason);
+    switch (result) {
+      case (#ok(_)) {
+        switch (BillingLib.getReservationByCallSid(billingState, callSid)) {
+          case null {};
+          case (?reservation) {
+            ignore CallsLib.updateCallRecord(
+              callsState,
+              reservation.callId,
+              #failed,
+              ?callSid,
+              ?Time.now(),
+              ?reason,
+            );
+            CallsLib.addSystemLog(
+              callsState,
+              #info,
+              "Canceled paid call reservation for " # callSid # ": " # reason,
+              ?reservation.callId,
+            );
+          };
+        };
+      };
+      case (#err(message)) {
+        CallsLib.addSystemLog(
+          callsState,
+          #warn,
+          "CallSid reservation cancel rejected: " # message,
+          null,
+        );
+      };
+    };
+    result;
+  };
+
   public shared ({ caller }) func finishCallAndDebit(
     reservationId : Text,
     usedSeconds : Nat,
@@ -368,11 +419,15 @@ mixin (
         switch (BillingLib.getReservation(billingState, reservationId)) {
           case null {};
           case (?reservation) {
+            let finalCallSid = switch (callSid) {
+              case (?sid) { ?sid };
+              case null { reservation.callSid };
+            };
             ignore CallsLib.updateCallRecord(
               callsState,
               reservation.callId,
               #completed,
-              callSid,
+              finalCallSid,
               ?Time.now(),
               transcript,
             );
@@ -392,6 +447,65 @@ mixin (
       };
       case (#err(message)) {
         CallsLib.addSystemLog(callsState, #warn, "Call debit rejected: " # message, null);
+      };
+    };
+    result;
+  };
+
+  public shared ({ caller }) func finishCallByCallSidForServer(
+    callSid : Text,
+    usedSeconds : Nat,
+    transcript : ?Text,
+  ) : async BillingTypes.BillingMutationResult {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: server admin only");
+    };
+    let result = BillingLib.finishCallByCallSidAndDebit(
+      billingState,
+      callSid,
+      usedSeconds,
+      transcript,
+    );
+    switch (result) {
+      case (#ok(_)) {
+        switch (BillingLib.getReservationByCallSid(billingState, callSid)) {
+          case null {};
+          case (?reservation) {
+            switch (reservation.status) {
+              case (#finished) {
+                ignore CallsLib.updateCallRecord(
+                  callsState,
+                  reservation.callId,
+                  #completed,
+                  ?callSid,
+                  ?Time.now(),
+                  transcript,
+                );
+              };
+              case (#canceled) {
+                ignore CallsLib.updateCallRecord(
+                  callsState,
+                  reservation.callId,
+                  #failed,
+                  ?callSid,
+                  reservation.finishedAt,
+                  reservation.canceledReason,
+                );
+              };
+              case (#reserved) {};
+              case (#active) {};
+            };
+            CallsLib.addSystemLog(
+              callsState,
+              #info,
+              "Finished paid call by CallSid " # callSid # " after " # debug_show(usedSeconds) # " seconds",
+              ?reservation.callId,
+            );
+          };
+        };
+      };
+      case (#err(message)) {
+        CallsLib.addSystemLog(callsState, #warn, "CallSid debit rejected: " # message, null);
       };
     };
     result;

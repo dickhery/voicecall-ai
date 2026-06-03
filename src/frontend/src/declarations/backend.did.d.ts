@@ -230,6 +230,10 @@ export interface _SERVICE {
   'adminListUserCalls' : ActorMethod<[Principal], Array<CallRecordPublic>>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'cancelCallReservation' : ActorMethod<[string, string], BillingMutationResult>,
+  'cancelCallReservationByCallSidForServer' : ActorMethod<
+    [string, string],
+    BillingMutationResult
+  >,
   'createAnsweringPreset' : ActorMethod<
     [AnsweringPresetInput],
     AnsweringPresetMutationResult
@@ -249,6 +253,10 @@ export interface _SERVICE {
   >,
   'finishCallAndDebit' : ActorMethod<
     [string, bigint, [] | [string], [] | [string]],
+    BillingMutationResult
+  >,
+  'finishCallByCallSidForServer' : ActorMethod<
+    [string, bigint, [] | [string]],
     BillingMutationResult
   >,
   'getAdminConfig' : ActorMethod<
@@ -286,6 +294,10 @@ export interface _SERVICE {
   'listMyAnsweringPresets' : ActorMethod<[], Array<AnsweringPreset>>,
   'listMyCalls' : ActorMethod<[], Array<CallRecordPublic>>,
   'listMyPresets' : ActorMethod<[], Array<CallPreset>>,
+  'listOpenCallReservationsForServer' : ActorMethod<
+    [bigint],
+    Array<CallReservationPublic>
+  >,
   'markReservationStarted' : ActorMethod<[string, string], BillingMutationResult>,
   'removeTwilioLine' : ActorMethod<[string], TwilioLineMutationResult>,
   'reserveCall' : ActorMethod<[InitiateCallInput], ReserveCallResult>,

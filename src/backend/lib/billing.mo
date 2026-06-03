@@ -1,4 +1,5 @@
 import Map "mo:core/Map";
+import List "mo:core/List";
 import Nat "mo:core/Nat";
 import Int "mo:core/Int";
 import Principal "mo:core/Principal";
@@ -181,6 +182,46 @@ module {
     id : Text,
   ) : ?Types.CallReservation {
     state.callReservations.get(id);
+  };
+
+  public func getReservationByCallSid(
+    state : State,
+    callSid : Text,
+  ) : ?Types.CallReservation {
+    for (reservation in state.callReservations.values()) {
+      switch (reservation.callSid) {
+        case (?existingCallSid) {
+          if (existingCallSid == callSid) {
+            return ?reservation;
+          };
+        };
+        case null {};
+      };
+    };
+    null;
+  };
+
+  public func listOpenReservations(
+    state : State,
+    limit : Nat,
+  ) : [Types.CallReservationPublic] {
+    let results = List.empty<Types.CallReservationPublic>();
+    for (reservation in state.callReservations.values()) {
+      if (results.size() >= limit) {
+        return results.toArray();
+      };
+      switch (reservation.status) {
+        case (#reserved) {
+          results.add(toReservationPublic(reservation, false));
+        };
+        case (#active) {
+          results.add(toReservationPublic(reservation, false));
+        };
+        case (#finished) {};
+        case (#canceled) {};
+      };
+    };
+    results.toArray();
   };
 
   public func creditPaidSeconds(
@@ -419,6 +460,19 @@ module {
     };
   };
 
+  public func cancelReservationByCallSid(
+    state : State,
+    callSid : Text,
+    reason : Text,
+  ) : Types.BillingMutationResult {
+    switch (getReservationByCallSid(state, callSid)) {
+      case null { #err("Reservation not found for CallSid") };
+      case (?reservation) {
+        cancelReservationInternal(state, reservation, reason);
+      };
+    };
+  };
+
   public func finishCallAndDebit(
     state : State,
     reservationId : Text,
@@ -454,6 +508,20 @@ module {
         reservation.callSid := callSid;
         reservation.transcript := transcript;
         #ok(true);
+      };
+    };
+  };
+
+  public func finishCallByCallSidAndDebit(
+    state : State,
+    callSid : Text,
+    usedSeconds : Nat,
+    transcript : ?Text,
+  ) : Types.BillingMutationResult {
+    switch (getReservationByCallSid(state, callSid)) {
+      case null { #err("Reservation not found for CallSid") };
+      case (?reservation) {
+        finishCallAndDebit(state, reservation.id, usedSeconds, ?callSid, transcript);
       };
     };
   };
