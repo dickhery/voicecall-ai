@@ -436,12 +436,28 @@ module {
     switch (state.callReservations.get(reservationId)) {
       case null { #err("Reservation not found") };
       case (?reservation) {
+        let now = Time.now();
         switch (reservation.status) {
-          case (#active) {
+          case (#reserved) {
+            if (now > reservation.expiresAt) {
+              ignore cancelReservationInternal(state, reservation, "Reservation expired");
+              return #err("Reservation expired");
+            };
+            reservation.status := #active;
+            reservation.startedAt := ?now;
             reservation.callSid := ?callSid;
             #ok(true);
           };
-          case _ { #err("Reservation is not active") };
+          case (#active) {
+            switch (reservation.startedAt) {
+              case null { reservation.startedAt := ?now };
+              case (?_) {};
+            };
+            reservation.callSid := ?callSid;
+            #ok(true);
+          };
+          case (#finished) { #err("Reservation is already finished") };
+          case (#canceled) { #err("Reservation was canceled") };
         };
       };
     };

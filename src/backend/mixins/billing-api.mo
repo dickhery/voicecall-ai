@@ -223,22 +223,51 @@ mixin (
         );
         switch (reservation) {
           case (#ok(reserved)) {
-            ignore BillingLib.markReservationStarted(billingState, reserved.id, callSid);
-            ignore CallsLib.updateCallRecord(
-              callsState,
-              callRecord.id,
-              #inProgress,
-              ?callSid,
-              null,
-              null,
-            );
-            ConfigLib.markAnsweringPresetIncoming(answeringState, preset.id);
-            CallsLib.addSystemLog(
-              callsState,
-              #info,
-              "Reserved " # debug_show(reserved.allowedSeconds) # " paid seconds for incoming answering call " # callSid,
-              ?callRecord.id,
-            );
+            switch (BillingLib.markReservationStarted(billingState, reserved.id, callSid)) {
+              case (#ok(_)) {
+                ignore CallsLib.updateCallRecord(
+                  callsState,
+                  callRecord.id,
+                  #inProgress,
+                  ?callSid,
+                  null,
+                  null,
+                );
+                ConfigLib.markAnsweringPresetIncoming(answeringState, preset.id);
+                CallsLib.addSystemLog(
+                  callsState,
+                  #info,
+                  "Started " # debug_show(reserved.allowedSeconds) # " paid seconds for incoming answering call " # callSid,
+                  ?callRecord.id,
+                );
+                switch (BillingLib.getReservation(billingState, reserved.id)) {
+                  case (?startedReservation) {
+                    return #ok(BillingLib.toReservationPublic(startedReservation, false));
+                  };
+                  case null {
+                    return #err("Reservation not found after starting incoming call");
+                  };
+                };
+              };
+              case (#err(message)) {
+                ignore BillingLib.cancelReservation(billingState, reserved.id, message);
+                ignore CallsLib.updateCallRecord(
+                  callsState,
+                  callRecord.id,
+                  #failed,
+                  ?callSid,
+                  ?Time.now(),
+                  ?message,
+                );
+                CallsLib.addSystemLog(
+                  callsState,
+                  #warn,
+                  "Incoming answering reservation could not be started: " # message,
+                  ?callRecord.id,
+                );
+                return #err(message);
+              };
+            };
           };
           case (#err(message)) {
             ignore CallsLib.updateCallRecord(

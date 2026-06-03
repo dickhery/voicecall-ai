@@ -66,7 +66,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-06-03-callsid-finalization";
+const SERVER_VERSION = "2026-06-03-answering-callsid-finalization";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -630,6 +630,14 @@ function getPublicRecordingStatusUrl(sessionId) {
   const publicBaseUrl = getPublicBaseUrl();
   if (!publicBaseUrl) return "";
   const url = new URL("/recording-status", publicBaseUrl);
+  url.searchParams.set("sessionId", sessionId);
+  return url.toString();
+}
+
+function getPublicCallStatusUrl(sessionId) {
+  const publicBaseUrl = getPublicBaseUrl();
+  if (!publicBaseUrl) return "";
+  const url = new URL("/call-status", publicBaseUrl);
   url.searchParams.set("sessionId", sessionId);
   return url.toString();
 }
@@ -2531,6 +2539,29 @@ async function createTwilioCallForSession(session, lineNumber, actor) {
   }
 }
 
+function registerInboundCallStatusCallback(session) {
+  if (!session?.callSid || !session.statusCallbackUrl || !twilioClient) return;
+  twilioClient
+    .calls(session.callSid)
+    .update({
+      statusCallback: session.statusCallbackUrl,
+      statusCallbackMethod: "POST",
+    })
+    .then(() => {
+      log("info", "Registered inbound Twilio call status callback", {
+        sessionId: session.id,
+        callSid: session.callSid,
+      });
+    })
+    .catch((error) => {
+      log("warn", "Unable to register inbound Twilio call status callback", {
+        sessionId: session.id,
+        callSid: session.callSid,
+        error: error.message,
+      });
+    });
+}
+
 async function dispatchQueuedSessions() {
   if (queueProcessing) return;
   queueProcessing = true;
@@ -3026,6 +3057,9 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
     if (!webhookSecret) {
       throw new Error("Missing answering webhook secret.");
     }
+    if (!callSid) {
+      throw new Error("Missing Twilio CallSid.");
+    }
 
     const actor = await getBackendActor();
     const verifiedResult = await actor.verifyAnsweringPresetForServer(
@@ -3124,7 +3158,7 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
       steeringCount: 0,
       lastSteeringAt: null,
       twimlUrl: "",
-      statusCallbackUrl: "",
+      statusCallbackUrl: getPublicCallStatusUrl(sessionId),
       streamStatusCallbackUrl: getPublicStreamStatusUrl(sessionId),
       recordingStatusUrl: "",
       transcript: [],
@@ -3136,6 +3170,7 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
     };
     callSessions.set(sessionId, session);
     callsBySid.set(callSid, sessionId);
+    registerInboundCallStatusCallback(session);
 
     await actor.registerAnsweringLiveSessionForServer({
       sessionId,
@@ -4117,13 +4152,25 @@ mediaWss.on("connection", (twilioWs, request) => {
     }
 
     if (data.event === "stop") {
+      const stopCallSid = getValidCallSid(data.stop?.callSid || data.stop?.call_sid);
       log("info", "Twilio media stream stopped", {
         sessionId: session?.id,
         streamSid,
+        callSid: session?.callSid || stopCallSid || null,
       });
       if (session) {
         const stoppedAt = markBillingActivity(session, "lastStreamEventAt");
         session.billingStoppedAt ||= stoppedAt;
+      } else if (stopCallSid) {
+        settleBackendReservationFromTwilioFetch(
+          stopCallSid,
+          "twilio_media_stop_without_memory_session",
+        ).catch((error) => {
+          log("error", "Unable to settle backend reservation from media stop", {
+            callSid: stopCallSid,
+            error: error.message,
+          });
+        });
       }
       finishCallerTranscription();
       closeBoth();
@@ -4206,22 +4253,19 @@ async function reconcileOpenBackendCallReservations() {
     for (const reservation of reservations) {
       const callSid = getValidCallSid(reservation.callSid);
       if (!callSid) {
-        if (
-          reservation.status === "reserved" &&
-          reservation.expiresAtMs &&
-          now > reservation.expiresAtMs
-        ) {
+        if (reservation.expiresAtMs && now > reservation.expiresAtMs) {
           try {
             okOrThrow(
               await actor.cancelCallReservation(
                 reservation.id,
-                "Reservation expired before a Twilio call started.",
+                "Open reservation expired before a Twilio CallSid was persisted.",
               ),
               "Unable to cancel expired call reservation.",
             );
             log("info", "Canceled expired backend call reservation", {
               reservationId: reservation.id,
               callId: reservation.callId,
+              status: reservation.status,
             });
           } catch (error) {
             log("warn", "Unable to cancel expired backend call reservation", {
