@@ -39770,6 +39770,7 @@ function useAdminAddPromoMinutes() {
   });
 }
 let runtimeEnvPromise = null;
+const VOICE_SERVER_REQUEST_TIMEOUT_MS = 8e3;
 async function loadRuntimeEnv() {
   if (!runtimeEnvPromise) {
     runtimeEnvPromise = fetch("/env.json", { cache: "no-store" }).then((response) => response.ok ? response.json() : {}).catch(() => ({}));
@@ -39783,6 +39784,14 @@ function normalizeServerUrl(url) {
     return `http://${trimmed}`;
   }
   return `https://${trimmed}`;
+}
+function createRequestTimeout(ms = VOICE_SERVER_REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeout2 = window.setTimeout(() => controller.abort(), ms);
+  return {
+    signal: controller.signal,
+    clear: () => window.clearTimeout(timeout2)
+  };
 }
 async function getVoiceServerUrl() {
   const runtimeEnv = await loadRuntimeEnv();
@@ -39825,11 +39834,18 @@ async function getJson(path) {
 }
 async function postJson(path, body) {
   const baseUrl = await getVoiceServerUrl();
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
+  const timeout2 = createRequestTimeout();
+  let response;
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: timeout2.signal
+    });
+  } finally {
+    timeout2.clear();
+  }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || payload.ok === false) {
     throw new Error(
@@ -39837,6 +39853,55 @@ async function postJson(path, body) {
     );
   }
   return payload;
+}
+async function getEndCallFallback({
+  callSid,
+  sessionId,
+  monitorToken
+}) {
+  const baseUrl = await getVoiceServerUrl();
+  if (!sessionId) {
+    throw new Error("Call session ID is required for end-call fallback.");
+  }
+  const url = new URL(`/end-call/${encodeURIComponent(sessionId)}`, baseUrl);
+  if (callSid) url.searchParams.set("callSid", callSid);
+  if (monitorToken) url.searchParams.set("monitorToken", monitorToken);
+  const timeout2 = createRequestTimeout();
+  let response;
+  try {
+    response = await fetch(url.toString(), {
+      cache: "no-store",
+      signal: timeout2.signal
+    });
+  } finally {
+    timeout2.clear();
+  }
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload.error || `End-call fallback failed (${response.status})`);
+  }
+}
+async function dispatchEndCallBeacon({
+  callSid,
+  sessionId,
+  monitorToken
+}) {
+  const baseUrl = await getVoiceServerUrl();
+  const payload = JSON.stringify({ callSid, sessionId, monitorToken });
+  if (typeof navigator !== "undefined" && "sendBeacon" in navigator) {
+    return navigator.sendBeacon(
+      `${baseUrl}/end-call-beacon`,
+      new Blob([payload], { type: "text/plain" })
+    );
+  }
+  await fetch(`${baseUrl}/end-call-beacon`, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: payload,
+    keepalive: true
+  });
+  return true;
 }
 async function listXaiVoiceLibrary() {
   return getJson("/xai/voices");
@@ -39872,7 +39937,23 @@ async function endVoiceServerCall({
   sessionId,
   monitorToken
 }) {
-  await postJson("/end-call", { callSid, sessionId, monitorToken });
+  try {
+    await postJson("/end-call", { callSid, sessionId, monitorToken });
+    return;
+  } catch (postError) {
+    try {
+      await getEndCallFallback({ callSid, sessionId, monitorToken });
+      return;
+    } catch {
+      const beaconQueued = await dispatchEndCallBeacon({
+        callSid,
+        sessionId,
+        monitorToken
+      });
+      if (beaconQueued) return;
+      throw postError;
+    }
+  }
 }
 async function steerVoiceServerCall({
   sessionId,
@@ -51537,13 +51618,16 @@ function useXaiVoice() {
     const callSid = activeCallSidRef.current;
     const sessionId = activeSessionIdRef.current;
     const monitorToken = monitorTokenRef.current;
-    completeLocalCall();
-    if (callSid || sessionId) {
-      endVoiceServerCall({ callSid, sessionId, monitorToken }).catch((err) => {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        ue.error(`Unable to end Twilio call: ${message}`);
-      });
+    if (!callSid && !sessionId) {
+      completeLocalCall();
+      return;
     }
+    endVoiceServerCall({ callSid, sessionId, monitorToken }).then(() => {
+      completeLocalCall();
+    }).catch((err) => {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      ue.error(`Unable to end Twilio call: ${message}`);
+    });
   }, [completeLocalCall]);
   const toggleMute = reactExports.useCallback(() => {
     setIsMuted((value) => !value);

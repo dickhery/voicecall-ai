@@ -601,14 +601,20 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     const callSid = activeCallSidRef.current;
     const sessionId = activeSessionIdRef.current;
     const monitorToken = monitorTokenRef.current;
-    completeLocalCall();
 
-    if (callSid || sessionId) {
-      endVoiceServerCall({ callSid, sessionId, monitorToken }).catch((err) => {
+    if (!callSid && !sessionId) {
+      completeLocalCall();
+      return;
+    }
+
+    endVoiceServerCall({ callSid, sessionId, monitorToken })
+      .then(() => {
+        completeLocalCall();
+      })
+      .catch((err) => {
         const message = err instanceof Error ? err.message : "Unknown error";
         toast.error(`Unable to end Twilio call: ${message}`);
       });
-    }
   }, [completeLocalCall]);
 
   const toggleMute = useCallback(() => {

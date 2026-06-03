@@ -33,6 +33,12 @@ const BILLING_EXTENSION_LEAD_MS = Number(
 const BILLING_STALE_ACTIVITY_GRACE_MS = Number(
   process.env.BILLING_STALE_ACTIVITY_GRACE_MS || 30_000,
 );
+const CALL_MEDIA_IDLE_END_MS = Number(
+  process.env.CALL_MEDIA_IDLE_END_MS || 60_000,
+);
+const SESSION_CLEANUP_INTERVAL_MS = Number(
+  process.env.SESSION_CLEANUP_INTERVAL_MS || 15_000,
+);
 const BRIDGE_RECORDING_TTL_MS = Number(
   process.env.BRIDGE_RECORDING_TTL_MS || 7 * 24 * 60 * 60 * 1000,
 );
@@ -51,7 +57,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-06-03-rolling-billing";
+const SERVER_VERSION = "2026-06-03-end-call-fallback";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -330,6 +336,7 @@ const bridgeRecordings = new Map();
 const voicePreviewRateLimits = new Map();
 const callQueue = [];
 let queueProcessing = false;
+let sessionCleanupProcessing = false;
 let lineConfigCache = {
   numbers: null,
   fetchedAt: 0,
@@ -3025,12 +3032,52 @@ app.post("/steer-call", (req, res) => {
   }
 });
 
-app.post("/end-call", async (req, res) => {
+function parseLooseRequestBody(body) {
+  if (!body || typeof body !== "string") return body || {};
+  const text = body.trim();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    try {
+      return Object.fromEntries(new URLSearchParams(text));
+    } catch {
+      return {};
+    }
+  }
+}
+
+function getEndCallRequestFields(req) {
+  const body = parseLooseRequestBody(req.body);
+  return {
+    callSid: String(req.query.callSid || body.callSid || ""),
+    sessionId: String(
+      req.params.sessionId || req.query.sessionId || body.sessionId || "",
+    ),
+    token: String(
+      req.query.monitorToken ||
+        req.query.token ||
+        body.monitorToken ||
+        body.controlToken ||
+        "",
+    ),
+  };
+}
+
+function closeSessionSockets(session, reason = "Call ended") {
+  if (!session) return;
+  if (session.twilioWs && session.twilioWs.readyState === WebSocket.OPEN) {
+    session.twilioWs.close(1000, reason);
+  }
+  if (session.xaiWs && session.xaiWs.readyState === WebSocket.OPEN) {
+    session.xaiWs.close(1000, reason);
+  }
+}
+
+async function endCallFromRequest(req, res, reason = "user_requested_end_fallback") {
   try {
     requireServerConfig();
-    let callSid = String(req.body.callSid || "");
-    const sessionId = String(req.body.sessionId || "");
-    const token = getRequestControlToken(req);
+    let { callSid, sessionId, token } = getEndCallRequestFields(req);
     const activeSessionId = sessionId || (callSid ? callsBySid.get(callSid) : "");
     const session = activeSessionId ? callSessions.get(activeSessionId) : null;
     if (!session) {
@@ -3057,12 +3104,29 @@ app.post("/end-call", async (req, res) => {
     session.endedAt = Date.now();
     markBillingActivity(session, "lastStatusAt", session.endedAt);
     session.billingStoppedAt ||= session.endedAt;
-    scheduleFinishPaidSession(session, "user_requested_end_fallback");
+    closeSessionSockets(session, reason);
+    scheduleFinishPaidSession(session, reason);
     res.json({ ok: true });
   } catch (error) {
     log("error", "Failed to end call", { error: error.message });
     res.status(400).json({ ok: false, error: error.message });
   }
+}
+
+app.post("/end-call", async (req, res) => {
+  await endCallFromRequest(req, res);
+});
+
+app.post(
+  "/end-call-beacon",
+  express.text({ type: ["text/plain", "application/x-www-form-urlencoded"] }),
+  async (req, res) => {
+    await endCallFromRequest(req, res, "user_requested_end_beacon");
+  },
+);
+
+app.get("/end-call/:sessionId", async (req, res) => {
+  await endCallFromRequest(req, res, "user_requested_end_get_fallback");
 });
 
 app.get("/call-session/:sessionId", (req, res) => {
@@ -3822,35 +3886,91 @@ mediaWss.on("connection", (twilioWs, request) => {
   });
 });
 
-setInterval(() => {
-  const cutoff = Date.now() - SESSION_TTL_MS;
-  const now = Date.now();
-  for (const [sessionId, session] of callSessions.entries()) {
-    if (
-      session.state === "queued" &&
-      Date.now() - session.queueEnteredAt > CALL_QUEUE_MAX_WAIT_MS
-    ) {
-      cancelQueuedSession(
-        session,
-        "No Twilio line became available before the queue timeout.",
-      );
-      continue;
-    }
-    if (session.createdAt < cutoff) {
-      finishPaidSession(session, "session_ttl_cleanup");
-    }
+async function endStaleMediaSession(session, now) {
+  if (
+    !session ||
+    session.finished ||
+    session.billingStoppedAt ||
+    !session.billingStartedAt ||
+    session.state === "queued"
+  ) {
+    return false;
   }
-  for (const [recordingId, recording] of bridgeRecordings.entries()) {
-    if (recording.expiresAt < now) {
-      bridgeRecordings.delete(recordingId);
-    }
+  const lastMediaAt = Number(session.lastMediaAt || session.lastStreamEventAt || 0);
+  if (!lastMediaAt || now - lastMediaAt < CALL_MEDIA_IDLE_END_MS) {
+    return false;
   }
-  dispatchQueuedSessions().catch((error) => {
-    log("error", "Queued call dispatch failed during cleanup", {
+
+  log("warn", "Ending call after stale Twilio media activity", {
+    sessionId: session.id,
+    reservationId: session.reservationId,
+    callSid: session.callSid,
+    lastMediaAt,
+    idleMs: now - lastMediaAt,
+  });
+
+  try {
+    if (session.callSid && twilioClient) {
+      await twilioClient.calls(session.callSid).update({ status: "completed" });
+    }
+  } catch (error) {
+    log("warn", "Unable to end stale Twilio call via API", {
+      sessionId: session.id,
+      callSid: session.callSid,
       error: error.message,
     });
+  }
+
+  session.billingStoppedAt ||= lastMediaAt;
+  closeSessionSockets(session, "Stale media activity");
+  scheduleFinishPaidSession(session, "stale_media_activity");
+  return true;
+}
+
+async function runSessionCleanup() {
+  if (sessionCleanupProcessing) return;
+  sessionCleanupProcessing = true;
+  const cutoff = Date.now() - SESSION_TTL_MS;
+  const now = Date.now();
+  try {
+    for (const [_sessionId, session] of callSessions.entries()) {
+      if (
+        session.state === "queued" &&
+        Date.now() - session.queueEnteredAt > CALL_QUEUE_MAX_WAIT_MS
+      ) {
+        await cancelQueuedSession(
+          session,
+          "No Twilio line became available before the queue timeout.",
+        );
+        continue;
+      }
+      if (await endStaleMediaSession(session, now)) {
+        continue;
+      }
+      if (session.createdAt < cutoff) {
+        await finishPaidSession(session, "session_ttl_cleanup");
+      }
+    }
+    for (const [recordingId, recording] of bridgeRecordings.entries()) {
+      if (recording.expiresAt < now) {
+        bridgeRecordings.delete(recordingId);
+      }
+    }
+    await dispatchQueuedSessions();
+  } catch (error) {
+    log("error", "Session cleanup failed", {
+      error: error.message,
+    });
+  } finally {
+    sessionCleanupProcessing = false;
+  }
+}
+
+setInterval(() => {
+  runSessionCleanup().catch((error) => {
+    log("error", "Session cleanup loop failed", { error: error.message });
   });
-}, 15 * 60 * 1000).unref();
+}, SESSION_CLEANUP_INTERVAL_MS).unref();
 
 server.listen(PORT, () => {
   const missing = requiredEnv.filter((key) => !process.env[key]);

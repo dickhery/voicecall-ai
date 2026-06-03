@@ -81,6 +81,7 @@ export interface RecordingAccessResponse {
 }
 
 let runtimeEnvPromise: Promise<RuntimeEnv> | null = null;
+const VOICE_SERVER_REQUEST_TIMEOUT_MS = 8_000;
 
 async function loadRuntimeEnv(): Promise<RuntimeEnv> {
   if (!runtimeEnvPromise) {
@@ -98,6 +99,18 @@ function normalizeServerUrl(url: string): string {
     return `http://${trimmed}`;
   }
   return `https://${trimmed}`;
+}
+
+function createRequestTimeout(ms = VOICE_SERVER_REQUEST_TIMEOUT_MS): {
+  signal: AbortSignal;
+  clear: () => void;
+} {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), ms);
+  return {
+    signal: controller.signal,
+    clear: () => window.clearTimeout(timeout),
+  };
 }
 
 export async function getVoiceServerUrl(): Promise<string> {
@@ -157,11 +170,18 @@ async function postJson<T>(
   body: Record<string, unknown>,
 ): Promise<T> {
   const baseUrl = await getVoiceServerUrl();
-  const response = await fetch(`${baseUrl}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const timeout = createRequestTimeout();
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: timeout.signal,
+    });
+  } finally {
+    timeout.clear();
+  }
   const payload = (await response.json().catch(() => ({}))) as {
     ok?: boolean;
     error?: string;
@@ -174,6 +194,70 @@ async function postJson<T>(
   }
 
   return payload as T;
+}
+
+async function getEndCallFallback({
+  callSid,
+  sessionId,
+  monitorToken,
+}: {
+  callSid?: string | null;
+  sessionId?: string | null;
+  monitorToken?: string | null;
+}): Promise<void> {
+  const baseUrl = await getVoiceServerUrl();
+  if (!sessionId) {
+    throw new Error("Call session ID is required for end-call fallback.");
+  }
+  const url = new URL(`/end-call/${encodeURIComponent(sessionId)}`, baseUrl);
+  if (callSid) url.searchParams.set("callSid", callSid);
+  if (monitorToken) url.searchParams.set("monitorToken", monitorToken);
+
+  const timeout = createRequestTimeout();
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      cache: "no-store",
+      signal: timeout.signal,
+    });
+  } finally {
+    timeout.clear();
+  }
+  const payload = (await response.json().catch(() => ({}))) as {
+    ok?: boolean;
+    error?: string;
+  };
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload.error || `End-call fallback failed (${response.status})`);
+  }
+}
+
+async function dispatchEndCallBeacon({
+  callSid,
+  sessionId,
+  monitorToken,
+}: {
+  callSid?: string | null;
+  sessionId?: string | null;
+  monitorToken?: string | null;
+}): Promise<boolean> {
+  const baseUrl = await getVoiceServerUrl();
+  const payload = JSON.stringify({ callSid, sessionId, monitorToken });
+  if (typeof navigator !== "undefined" && "sendBeacon" in navigator) {
+    return navigator.sendBeacon(
+      `${baseUrl}/end-call-beacon`,
+      new Blob([payload], { type: "text/plain" }),
+    );
+  }
+
+  await fetch(`${baseUrl}/end-call-beacon`, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type": "text/plain" },
+    body: payload,
+    keepalive: true,
+  });
+  return true;
 }
 
 export async function listXaiVoiceLibrary(): Promise<XaiVoiceLibraryResponse> {
@@ -227,7 +311,23 @@ export async function endVoiceServerCall({
   sessionId?: string | null;
   monitorToken?: string | null;
 }): Promise<void> {
-  await postJson<{ ok: true }>("/end-call", { callSid, sessionId, monitorToken });
+  try {
+    await postJson<{ ok: true }>("/end-call", { callSid, sessionId, monitorToken });
+    return;
+  } catch (postError) {
+    try {
+      await getEndCallFallback({ callSid, sessionId, monitorToken });
+      return;
+    } catch {
+      const beaconQueued = await dispatchEndCallBeacon({
+        callSid,
+        sessionId,
+        monitorToken,
+      });
+      if (beaconQueued) return;
+      throw postError;
+    }
+  }
 }
 
 export async function steerVoiceServerCall({
