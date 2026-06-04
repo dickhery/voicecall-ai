@@ -142,6 +142,12 @@ function withDownloadParam(url: string): string {
   try {
     const parsed = new URL(url);
     parsed.searchParams.set("download", "1");
+    if (
+      parsed.pathname.includes("/recordings/") &&
+      !parsed.pathname.includes("/bridge-recordings/")
+    ) {
+      parsed.searchParams.set("format", "wav");
+    }
     return parsed.toString();
   } catch {
     return url;
@@ -683,7 +689,7 @@ function RecordingArtifact({
 
   const downloadUrl = playbackUrl ? withDownloadParam(playbackUrl) : null;
   const downloadExtension =
-    getRecordingMimeType(playbackUrl ?? recordingUrl) === "audio/wav"
+    getRecordingMimeType(downloadUrl ?? playbackUrl ?? recordingUrl) === "audio/wav"
       ? "wav"
       : "mp3";
 

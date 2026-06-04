@@ -25,6 +25,8 @@ const XAI_MODEL = process.env.XAI_MODEL || "grok-voice-think-fast-1.0";
 const XAI_TTS_VOICES_URL = "https://api.x.ai/v1/tts/voices";
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
+const PHONE_SAMPLE_RATE = 8000;
+const PHONE_MULAW_BYTES_PER_MS = PHONE_SAMPLE_RATE / 1000;
 const TRANSCRIPT_FINISH_GRACE_MS = 2_500;
 const RECORDING_FINISH_GRACE_MS = 10_000;
 const CALL_ARTIFACT_FINALIZE_MAX_WAIT_MS = Number(
@@ -1258,23 +1260,29 @@ function decodeMuLawByte(value) {
   return sign ? -magnitude : magnitude;
 }
 
-function buildPcmWavFromMuLaw(chunks) {
-  const totalSamples = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-  const dataSize = totalSamples * 2;
-  const buffer = Buffer.alloc(44 + dataSize);
+function writePcmWavHeader(buffer, sampleCount, channelCount = 1) {
+  const bytesPerSample = 2;
+  const dataSize = sampleCount * channelCount * bytesPerSample;
   buffer.write("RIFF", 0);
   buffer.writeUInt32LE(36 + dataSize, 4);
   buffer.write("WAVE", 8);
   buffer.write("fmt ", 12);
   buffer.writeUInt32LE(16, 16);
   buffer.writeUInt16LE(1, 20);
-  buffer.writeUInt16LE(1, 22);
-  buffer.writeUInt32LE(8000, 24);
-  buffer.writeUInt32LE(8000 * 2, 28);
-  buffer.writeUInt16LE(2, 32);
+  buffer.writeUInt16LE(channelCount, 22);
+  buffer.writeUInt32LE(PHONE_SAMPLE_RATE, 24);
+  buffer.writeUInt32LE(PHONE_SAMPLE_RATE * channelCount * bytesPerSample, 28);
+  buffer.writeUInt16LE(channelCount * bytesPerSample, 32);
   buffer.writeUInt16LE(16, 34);
   buffer.write("data", 36);
   buffer.writeUInt32LE(dataSize, 40);
+}
+
+function buildPcmWavFromMuLaw(chunks) {
+  const totalSamples = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  const dataSize = totalSamples * 2;
+  const buffer = Buffer.alloc(44 + dataSize);
+  writePcmWavHeader(buffer, totalSamples, 1);
 
   let offset = 44;
   for (const chunk of chunks) {
@@ -1283,6 +1291,90 @@ function buildPcmWavFromMuLaw(chunks) {
       buffer.writeInt16LE(sample, offset);
       offset += 2;
     }
+  }
+  return buffer;
+}
+
+function clampPcmSample(value) {
+  return Math.max(-32768, Math.min(32767, Math.round(value)));
+}
+
+function parseTwilioMediaTimestamp(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : null;
+}
+
+function getBridgeRecorder(session) {
+  if (!session.bridgeRecordingTimeline) {
+    const startedAtMs =
+      Number(session.bridgeRecordingStartedAtMs || 0) || Date.now();
+    session.bridgeRecordingStartedAtMs = startedAtMs;
+    session.bridgeRecordingTimeline = {
+      startedAtMs,
+      caller: [],
+      assistant: [],
+      assistantCursorMs: Math.max(0, Date.now() - startedAtMs),
+      durationMs: 0,
+    };
+  }
+  return session.bridgeRecordingTimeline;
+}
+
+function startBridgeRecording(session) {
+  if (
+    !session?.recordAudio ||
+    !session.permissionConfirmed ||
+    session.recordingMode !== "bridge"
+  ) {
+    return;
+  }
+  getBridgeRecorder(session);
+}
+
+function getMuLawDurationMs(chunk) {
+  return chunk.length / PHONE_MULAW_BYTES_PER_MS;
+}
+
+function addTimedMuLawChunk(recorder, track, chunk, offsetMs) {
+  const safeOffsetMs = Math.max(0, Number(offsetMs) || 0);
+  const durationMs = getMuLawDurationMs(chunk);
+  recorder[track].push({ offsetMs: safeOffsetMs, chunk });
+  recorder.durationMs = Math.max(recorder.durationMs, safeOffsetMs + durationMs);
+}
+
+function writeTimedMuLawTrack(samples, channelCount, track, channel) {
+  for (const entry of track) {
+    const startSample = Math.max(
+      0,
+      Math.round(entry.offsetMs * PHONE_MULAW_BYTES_PER_MS),
+    );
+    for (let i = 0; i < entry.chunk.length; i += 1) {
+      const sampleIndex = startSample + i;
+      if (sampleIndex >= samples.length / channelCount) break;
+      const outputIndex = sampleIndex * channelCount + channel;
+      samples[outputIndex] = clampPcmSample(decodeMuLawByte(entry.chunk[i]));
+    }
+  }
+}
+
+function buildBridgeRecordingWav(recorder) {
+  const channelCount = 2;
+  const sampleCount = Math.max(
+    1,
+    Math.ceil(recorder.durationMs * PHONE_MULAW_BYTES_PER_MS),
+  );
+  const samples = new Int16Array(sampleCount * channelCount);
+  writeTimedMuLawTrack(samples, channelCount, recorder.caller, 0);
+  writeTimedMuLawTrack(samples, channelCount, recorder.assistant, 1);
+
+  const dataSize = samples.length * 2;
+  const buffer = Buffer.alloc(44 + dataSize);
+  writePcmWavHeader(buffer, sampleCount, channelCount);
+  let offset = 44;
+  for (const sample of samples) {
+    buffer.writeInt16LE(sample, offset);
+    offset += 2;
   }
   return buffer;
 }
@@ -1502,7 +1594,7 @@ function buildPublicBridgeRecordingUrl(recordingId) {
   return url.toString();
 }
 
-function appendBridgeRecordingAudio(session, payload) {
+function appendBridgeRecordingAudio(session, payload, track, timestampMs = null) {
   if (
     !session?.recordAudio ||
     !session.permissionConfirmed ||
@@ -1511,8 +1603,23 @@ function appendBridgeRecordingAudio(session, payload) {
   ) {
     return;
   }
-  if (!session.bridgeRecordingChunks) session.bridgeRecordingChunks = [];
-  session.bridgeRecordingChunks.push(Buffer.from(payload, "base64"));
+  const chunk = Buffer.from(payload, "base64");
+  if (chunk.length === 0) return;
+
+  const recorder = getBridgeRecorder(session);
+  if (track === "caller") {
+    const offsetMs =
+      timestampMs !== null ? timestampMs : Date.now() - recorder.startedAtMs;
+    addTimedMuLawChunk(recorder, "caller", chunk, offsetMs);
+    return;
+  }
+
+  if (track === "assistant") {
+    const elapsedMs = Math.max(0, Date.now() - recorder.startedAtMs);
+    const offsetMs = Math.max(elapsedMs, recorder.assistantCursorMs);
+    addTimedMuLawChunk(recorder, "assistant", chunk, offsetMs);
+    recorder.assistantCursorMs = offsetMs + getMuLawDurationMs(chunk);
+  }
 }
 
 function finalizeBridgeRecording(session) {
@@ -1524,8 +1631,10 @@ function finalizeBridgeRecording(session) {
   ) {
     return;
   }
-  const chunks = session.bridgeRecordingChunks || [];
-  if (chunks.length === 0) {
+  const recorder = session.bridgeRecordingTimeline;
+  const chunkCount =
+    (recorder?.caller?.length || 0) + (recorder?.assistant?.length || 0);
+  if (chunkCount === 0) {
     session.recording = {
       sid: null,
       callSid: session.callSid || null,
@@ -1538,7 +1647,7 @@ function finalizeBridgeRecording(session) {
   }
 
   const recordingId = `br_${session.id}`;
-  const media = buildPcmWavFromMuLaw(chunks);
+  const media = buildBridgeRecordingWav(recorder);
   bridgeRecordings.set(recordingId, {
     media,
     callSid: session.callSid || "",
@@ -1565,6 +1674,8 @@ function finalizeBridgeRecording(session) {
       : null,
   };
   session.bridgeRecordingChunks = [];
+  session.bridgeRecordingTimeline = null;
+  session.bridgeRecordingStartedAtMs = null;
 }
 
 function getRecordingAccessSecret() {
@@ -3056,6 +3167,8 @@ app.post("/initiate-call", async (req, res) => {
       awaitingCallerTranscript: false,
       recording: null,
       bridgeRecordingChunks: null,
+      bridgeRecordingTimeline: null,
+      bridgeRecordingStartedAtMs: null,
       metrics: createNaturalnessMetrics(),
       monitorClients: new Set(),
     };
@@ -3254,6 +3367,8 @@ app.post("/answering/incoming/:webhookSecret", async (req, res) => {
       awaitingCallerTranscript: false,
       recording: null,
       bridgeRecordingChunks: [],
+      bridgeRecordingTimeline: null,
+      bridgeRecordingStartedAtMs: null,
       metrics: createNaturalnessMetrics(),
       monitorClients: new Set(),
     };
@@ -4031,7 +4146,7 @@ mediaWss.on("connection", (twilioWs, request) => {
           media: { payload: event.delta },
         });
         broadcastMonitorAudio(session, "assistant", event.delta);
-        appendBridgeRecordingAudio(session, event.delta);
+        appendBridgeRecordingAudio(session, event.delta, "assistant");
         markCounter += 1;
         sendToTwilio({
           event: "mark",
@@ -4212,6 +4327,7 @@ mediaWss.on("connection", (twilioWs, request) => {
       session.streamSid = streamSid;
       markBillingActivity(session, "lastStreamEventAt");
       if (session.metrics) session.metrics.streamStartedAt ||= Date.now();
+      startBridgeRecording(session);
       startBillingTimer(session, closeBoth);
       connectToStt();
       connectToXai();
@@ -4222,7 +4338,12 @@ mediaWss.on("connection", (twilioWs, request) => {
       if (session) markBillingActivity(session, "lastMediaAt");
       if (data.media?.payload) {
         broadcastMonitorAudio(session, "caller", data.media.payload);
-        appendBridgeRecordingAudio(session, data.media.payload);
+        appendBridgeRecordingAudio(
+          session,
+          data.media.payload,
+          "caller",
+          parseTwilioMediaTimestamp(data.media.timestamp),
+        );
         sendCallerAudioToStt(data.media.payload);
       }
       if (xaiWs && xaiWs.readyState === WebSocket.OPEN && data.media?.payload) {

@@ -60720,6 +60720,9 @@ function withDownloadParam(url) {
   try {
     const parsed = new URL(url);
     parsed.searchParams.set("download", "1");
+    if (parsed.pathname.includes("/recordings/") && !parsed.pathname.includes("/bridge-recordings/")) {
+      parsed.searchParams.set("format", "wav");
+    }
     return parsed.toString();
   } catch {
     return url;
@@ -61164,7 +61167,7 @@ function RecordingArtifact({
     };
   }, [callSid, recordingSid, recordingUrl]);
   const downloadUrl = playbackUrl ? withDownloadParam(playbackUrl) : null;
-  const downloadExtension = getRecordingMimeType(playbackUrl ?? recordingUrl) === "audio/wav" ? "wav" : "mp3";
+  const downloadExtension = getRecordingMimeType(downloadUrl ?? playbackUrl ?? recordingUrl) === "audio/wav" ? "wav" : "mp3";
   function handleDownload() {
     if (!downloadUrl) return;
     const anchor = document.createElement("a");
