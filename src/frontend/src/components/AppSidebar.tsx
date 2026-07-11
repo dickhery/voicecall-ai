@@ -34,9 +34,11 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
   const { isAdmin, logout } = useAuth();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
-  const { activeCallId, callStatus, recipient } = useCallStore();
+  const { activeCallId, callStatus, recipient, remainingSeconds, sessionId } =
+    useCallStore();
 
   const isActive = (href: string) => currentPath === href;
+  const showActiveCall = Boolean(activeCallId || sessionId);
 
   return (
     <aside className="flex flex-col h-full bg-sidebar border-r border-sidebar-border">
@@ -53,9 +55,11 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
       <Separator className="bg-sidebar-border" />
 
       {/* Active call indicator */}
-      {activeCallId && (
-        <div
-          className="mx-3 my-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-2"
+      {showActiveCall && (
+        <Link
+          to="/user/dashboard"
+          onClick={onClose}
+          className="mx-3 my-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-2 hover:border-primary/40 transition-colors"
           data-ocid="active-call.status"
         >
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse-soft" />
@@ -64,16 +68,25 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
               Active Call
             </p>
             <p className="text-xs text-muted-foreground truncate">
-              {recipient}
+              {recipient || "In progress"}
             </p>
+            {remainingSeconds != null && remainingSeconds >= 0 && (
+              <p className="text-[10px] font-mono text-primary/80">
+                {Math.floor(remainingSeconds / 60)
+                  .toString()
+                  .padStart(2, "0")}
+                :
+                {(remainingSeconds % 60).toString().padStart(2, "0")} left
+              </p>
+            )}
           </div>
           <Badge
             variant="outline"
             className="ml-auto text-xs border-primary/30 text-primary shrink-0"
           >
-            {callStatus}
+            {callStatus || "live"}
           </Badge>
-        </div>
+        </Link>
       )}
 
       {/* User navigation */}

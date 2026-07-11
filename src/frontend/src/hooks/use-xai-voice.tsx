@@ -1,16 +1,16 @@
 /**
- * useXaiVoice now controls the server-side telephony bridge.
+ * useXaiVoice controls the server-side telephony bridge.
  *
  * Browser responsibilities:
- * 1. Create/update the IC call-history record.
- * 2. Ask the Windows-hosted voice server to place the Twilio call.
- * 3. Ask that same server to end the Twilio call when requested.
- *
- * Twilio Media Streams and xAI Realtime audio stay on the server.
+ * 1. Create/update the IC call-history record via paid reservation.
+ * 2. Ask the voice server to place / end the Twilio call.
+ * 3. Poll session status for queue, remaining paid time, and live transcript.
+ * 4. Reattach to an in-progress session after refresh (sessionStorage).
  */
 
 import { CallStatus } from "@/backend";
 import { useReserveCall, useUpdateCallStatus } from "@/hooks/use-backend";
+import { rememberRecentPhone } from "@/lib/phone";
 import {
   endVoiceServerCall,
   getLiveAudioMonitorUrl,
@@ -18,7 +18,10 @@ import {
   startVoiceServerCall,
   steerVoiceServerCall,
 } from "@/lib/voice-server";
-import type { CallCaptureOptions } from "@/lib/voice-server";
+import type {
+  CallCaptureOptions,
+  VoiceServerTranscriptEntry,
+} from "@/lib/voice-server";
 import { useCallStore } from "@/stores/call-store";
 import type { CallPreset } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,11 +37,19 @@ export type XaiCallStatus =
   | "completed"
   | "error";
 
+export interface LiveTranscriptLine {
+  speaker: string;
+  text: string;
+}
+
 export interface XaiVoiceState {
   status: XaiCallStatus;
   recipient: string;
   presetName: string;
   durationSecs: number;
+  remainingSeconds: number | null;
+  allowedSeconds: number | null;
+  queuePosition: number | null;
   isMuted: boolean;
   errorMessage: string | null;
   audioLevels: number[];
@@ -47,6 +58,8 @@ export interface XaiVoiceState {
   liveAudioError: string | null;
   isSendingSteeringPrompt: boolean;
   steeringError: string | null;
+  liveTranscript: LiveTranscriptLine[];
+  isReattaching: boolean;
 }
 
 export interface XaiVoiceControls {
@@ -60,19 +73,22 @@ export interface XaiVoiceControls {
   toggleLiveAudio: () => Promise<void>;
   stopLiveAudio: () => void;
   steerConversation: (prompt: string) => Promise<void>;
+  dismissStatus: () => void;
 }
 
 const WAVEFORM_BARS = 20;
 const MONITOR_SAMPLE_RATE = 8000;
 const MONITOR_JITTER_SECONDS = 0.12;
 const MONITOR_FADE_SAMPLES = 8;
-const CALL_SESSION_POLL_MS = 2500;
+const CALL_SESSION_POLL_MS = 2000;
+const LOW_TIME_WARN_SECONDS = 60;
 const TERMINAL_SERVER_STATUSES = new Set([
   "completed",
   "failed",
   "busy",
   "no-answer",
   "canceled",
+  "cancelled",
 ]);
 
 type MonitorChannel = "caller" | "assistant";
@@ -125,11 +141,26 @@ function writeDecodedMuLawSamples(bytes: Uint8Array, samples: Float32Array) {
   return Math.sqrt(sumSquares / Math.max(1, bytes.length));
 }
 
+function mapTranscript(
+  entries?: VoiceServerTranscriptEntry[],
+): LiveTranscriptLine[] {
+  if (!entries?.length) return [];
+  return entries
+    .filter((e) => e?.text?.trim())
+    .map((e) => ({
+      speaker: e.speaker || "unknown",
+      text: e.text,
+    }));
+}
+
 export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const [status, setStatus] = useState<XaiCallStatus>("idle");
   const [recipient, setRecipient] = useState("");
   const [presetName, setPresetName] = useState("");
   const [durationSecs, setDurationSecs] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [allowedSeconds, setAllowedSeconds] = useState<number | null>(null);
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [audioLevels, setAudioLevels] = useState<number[]>(
@@ -140,15 +171,22 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const [liveAudioError, setLiveAudioError] = useState<string | null>(null);
   const [isSendingSteeringPrompt, setIsSendingSteeringPrompt] = useState(false);
   const [steeringError, setSteeringError] = useState<string | null>(null);
+  const [liveTranscript, setLiveTranscript] = useState<LiveTranscriptLine[]>(
+    [],
+  );
+  const [isReattaching, setIsReattaching] = useState(false);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const queuePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
   const activeCallIdRef = useRef<bigint | null>(null);
   const activeCallSidRef = useRef<string | null>(null);
   const activeSessionIdRef = useRef<string | null>(null);
   const monitorTokenRef = useRef<string | null>(null);
+  const allowedSecondsRef = useRef<number | null>(null);
+  const billingStartedAtRef = useRef<number | null>(null);
+  const lowTimeWarnedRef = useRef(false);
+  const reattachAttemptedRef = useRef(false);
   const monitorWsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const monitorInputNodeRef = useRef<AudioNode | null>(null);
@@ -161,7 +199,14 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
   const reserveCall = useReserveCall();
   const updateCallStatus = useUpdateCallStatus();
   const queryClient = useQueryClient();
-  const { setActiveCall, clearCall } = useCallStore();
+  const {
+    setActiveCall,
+    clearCall,
+    setSessionMeta,
+    hydrateFromStorage,
+  } = useCallStore();
+  // Keep store remainingSeconds in sync for the sidebar indicator
+  const setStoreRemaining = useCallStore((s) => s.setSessionMeta);
 
   const cleanupTimer = useCallback(() => {
     if (timerRef.current) {
@@ -169,13 +214,6 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       timerRef.current = null;
     }
     setAudioLevels(Array(WAVEFORM_BARS).fill(0));
-  }, []);
-
-  const cleanupQueuePolling = useCallback(() => {
-    if (queuePollRef.current) {
-      clearInterval(queuePollRef.current);
-      queuePollRef.current = null;
-    }
   }, []);
 
   const cleanupSessionPolling = useCallback(() => {
@@ -342,27 +380,64 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       setLiveAudioError(null);
       setIsSendingSteeringPrompt(false);
       setSteeringError(null);
+      setRemainingSeconds(null);
+      setAllowedSeconds(null);
+      setQueuePosition(null);
+      setLiveTranscript([]);
+      billingStartedAtRef.current = null;
+      allowedSecondsRef.current = null;
+      lowTimeWarnedRef.current = false;
     }, 3000);
   }, []);
 
-  const startDurationTimer = useCallback(() => {
-    cleanupTimer();
-    startTimeRef.current = Date.now();
-    setDurationSecs(0);
-    timerRef.current = setInterval(() => {
-      setDurationSecs(Math.floor((Date.now() - startTimeRef.current) / 1000));
-    }, 1000);
-  }, [cleanupTimer]);
+  const startDurationTimer = useCallback(
+    (fromMs?: number) => {
+      cleanupTimer();
+      startTimeRef.current = fromMs || Date.now();
+      setDurationSecs(
+        Math.max(0, Math.floor((Date.now() - startTimeRef.current) / 1000)),
+      );
+      timerRef.current = setInterval(() => {
+        const elapsed = Math.floor(
+          (Date.now() - startTimeRef.current) / 1000,
+        );
+        setDurationSecs(elapsed);
+
+        // Client-side remaining estimate between server polls
+        if (
+          allowedSecondsRef.current != null &&
+          billingStartedAtRef.current
+        ) {
+          const used = Math.floor(
+            (Date.now() - billingStartedAtRef.current) / 1000,
+          );
+          const left = Math.max(0, allowedSecondsRef.current - used);
+          setRemainingSeconds(left);
+          setStoreRemaining({ remainingSeconds: left });
+          if (
+            left > 0 &&
+            left <= LOW_TIME_WARN_SECONDS &&
+            !lowTimeWarnedRef.current
+          ) {
+            lowTimeWarnedRef.current = true;
+            toast.warning("Less than 1 minute of paid time remaining");
+          }
+        }
+      }, 1000);
+    },
+    [cleanupTimer, setStoreRemaining],
+  );
 
   const completeLocalCall = useCallback(() => {
     setStatus("completed");
     cleanupTimer();
-    cleanupQueuePolling();
     cleanupSessionPolling();
     stopLiveAudio();
     setLiveAudioAvailable(false);
     setIsSendingSteeringPrompt(false);
     setSteeringError(null);
+    setQueuePosition(null);
+    setRemainingSeconds(0);
     activeCallIdRef.current = null;
     activeCallSidRef.current = null;
     activeSessionIdRef.current = null;
@@ -372,7 +447,6 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     resetAfterDelay();
   }, [
     cleanupTimer,
-    cleanupQueuePolling,
     cleanupSessionPolling,
     stopLiveAudio,
     clearCall,
@@ -380,7 +454,85 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     resetAfterDelay,
   ]);
 
-  const startConnectedSessionPolling = useCallback(
+  const applySessionSnapshot = useCallback(
+    (serverCall: {
+      callSid?: string;
+      sessionId: string;
+      monitorToken?: string;
+      allowedSeconds?: number;
+      remainingSeconds?: number;
+      billingStartedAt?: number | null;
+      queuePosition?: number | null;
+      queued?: boolean;
+      status?: string;
+      recipientPhone?: string;
+      presetName?: string;
+      transcript?: VoiceServerTranscriptEntry[];
+    }) => {
+      if (serverCall.callSid) {
+        activeCallSidRef.current = serverCall.callSid;
+      }
+      activeSessionIdRef.current = serverCall.sessionId;
+      if (serverCall.monitorToken) {
+        monitorTokenRef.current = serverCall.monitorToken;
+      }
+      if (serverCall.allowedSeconds != null) {
+        allowedSecondsRef.current = Number(serverCall.allowedSeconds);
+        setAllowedSeconds(Number(serverCall.allowedSeconds));
+      }
+      if (serverCall.remainingSeconds != null) {
+        const left = Math.max(0, Number(serverCall.remainingSeconds));
+        setRemainingSeconds(left);
+        if (
+          left > 0 &&
+          left <= LOW_TIME_WARN_SECONDS &&
+          !lowTimeWarnedRef.current
+        ) {
+          lowTimeWarnedRef.current = true;
+          toast.warning("Less than 1 minute of paid time remaining");
+        }
+      }
+      if (serverCall.billingStartedAt) {
+        billingStartedAtRef.current = Number(serverCall.billingStartedAt);
+      }
+      if (serverCall.recipientPhone) {
+        setRecipient(serverCall.recipientPhone);
+      }
+      if (serverCall.presetName) {
+        setPresetName(serverCall.presetName);
+      }
+      if (serverCall.transcript) {
+        setLiveTranscript(mapTranscript(serverCall.transcript));
+      }
+      if (serverCall.queued || !serverCall.callSid) {
+        setQueuePosition(
+          serverCall.queuePosition != null
+            ? Number(serverCall.queuePosition)
+            : null,
+        );
+      } else {
+        setQueuePosition(null);
+      }
+
+      setSessionMeta({
+        sessionId: serverCall.sessionId,
+        monitorToken: serverCall.monitorToken || monitorTokenRef.current,
+        callSid: serverCall.callSid || activeCallSidRef.current,
+        presetName: serverCall.presetName,
+        allowedSeconds:
+          serverCall.allowedSeconds != null
+            ? Number(serverCall.allowedSeconds)
+            : undefined,
+        remainingSeconds:
+          serverCall.remainingSeconds != null
+            ? Number(serverCall.remainingSeconds)
+            : undefined,
+      });
+    },
+    [setSessionMeta],
+  );
+
+  const startSessionPolling = useCallback(
     (sessionId: string, monitorToken: string) => {
       cleanupSessionPolling();
 
@@ -390,8 +542,27 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
             sessionId,
             monitorToken,
           );
+          applySessionSnapshot(serverCall);
+
           if (isTerminalVoiceServerStatus(serverCall.status)) {
             completeLocalCall();
+            return;
+          }
+
+          if (serverCall.callSid) {
+            setStatus("in_call");
+            setLiveAudioAvailable(
+              Boolean(serverCall.monitorToken || monitorToken),
+            );
+            if (!timerRef.current) {
+              startDurationTimer(
+                serverCall.billingStartedAt
+                  ? Number(serverCall.billingStartedAt)
+                  : undefined,
+              );
+            }
+          } else if (serverCall.queued || !serverCall.callSid) {
+            setStatus("queued");
           }
         } catch (err) {
           if (isMissingSessionError(err)) {
@@ -406,7 +577,12 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       );
       void poll();
     },
-    [cleanupSessionPolling, completeLocalCall],
+    [
+      cleanupSessionPolling,
+      applySessionSnapshot,
+      completeLocalCall,
+      startDurationTimer,
+    ],
   );
 
   const markServerCallConnected = useCallback(
@@ -414,74 +590,34 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       callSid: string;
       sessionId: string;
       monitorToken?: string;
-      liveAudio?: unknown;
+      allowedSeconds?: number;
+      remainingSeconds?: number;
+      billingStartedAt?: number | null;
+      recipientPhone?: string;
+      presetName?: string;
+      transcript?: VoiceServerTranscriptEntry[];
     }) => {
-      activeCallSidRef.current = serverCall.callSid;
-      activeSessionIdRef.current = serverCall.sessionId;
-      monitorTokenRef.current = serverCall.monitorToken || null;
+      applySessionSnapshot(serverCall);
       setLiveAudioAvailable(Boolean(serverCall.monitorToken));
       setStatus("in_call");
-      startDurationTimer();
+      setQueuePosition(null);
+      if (!billingStartedAtRef.current) {
+        billingStartedAtRef.current = Date.now();
+      }
+      startDurationTimer(billingStartedAtRef.current || undefined);
       if (serverCall.monitorToken) {
-        startConnectedSessionPolling(
-          serverCall.sessionId,
-          serverCall.monitorToken,
-        );
+        startSessionPolling(serverCall.sessionId, serverCall.monitorToken);
       }
     },
-    [startDurationTimer, startConnectedSessionPolling],
+    [applySessionSnapshot, startDurationTimer, startSessionPolling],
   );
 
-  const startQueuePolling = useCallback(
-    (sessionId: string, monitorToken: string) => {
-      cleanupQueuePolling();
-
-      const poll = async () => {
-        try {
-          const serverCall = await getVoiceServerCallSession(
-            sessionId,
-            monitorToken,
-          );
-          if (serverCall.callSid) {
-            cleanupQueuePolling();
-            markServerCallConnected({
-              callSid: serverCall.callSid,
-              sessionId: serverCall.sessionId,
-              monitorToken: serverCall.monitorToken,
-              liveAudio: serverCall.liveAudio,
-            });
-            toast.success("Queued call placed");
-            return;
-          }
-          if (serverCall.queuePosition) {
-            setErrorMessage(
-              `Waiting for a free line. Position ${serverCall.queuePosition}.`,
-            );
-          }
-        } catch (err) {
-          cleanupQueuePolling();
-          const message =
-            err instanceof Error ? err.message : "Queued call status failed";
-          setStatus("error");
-          setErrorMessage(message);
-          toast.error(`Queued call failed: ${message}`);
-          cleanupTimer();
-          stopLiveAudio();
-          clearCall();
-        }
-      };
-
-      queuePollRef.current = setInterval(() => void poll(), 2000);
-      void poll();
-    },
-    [
-      cleanupQueuePolling,
-      markServerCallConnected,
-      cleanupTimer,
-      stopLiveAudio,
-      clearCall,
-    ],
-  );
+  const dismissStatus = useCallback(() => {
+    setStatus("idle");
+    setErrorMessage(null);
+    setDurationSecs(0);
+    setLiveTranscript([]);
+  }, []);
 
   const startCall = useCallback(
     async (
@@ -498,10 +634,15 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
       setLiveAudioAvailable(false);
       setLiveAudioError(null);
       setSteeringError(null);
+      setLiveTranscript([]);
+      setQueuePosition(null);
+      setRemainingSeconds(null);
+      lowTimeWarnedRef.current = false;
       activeCallIdRef.current = null;
       activeCallSidRef.current = null;
       activeSessionIdRef.current = null;
       monitorTokenRef.current = null;
+      billingStartedAtRef.current = null;
 
       try {
         const reservationResult = await reserveCall.mutateAsync({
@@ -516,13 +657,22 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
           callId,
           id: reservationId,
           callToken,
-          allowedSeconds,
+          allowedSeconds: reservedSeconds,
         } = reservationResult.ok;
         if (!callToken) {
           throw new Error("Reservation token was not returned by the backend.");
         }
         activeCallIdRef.current = callId;
+        allowedSecondsRef.current = Number(reservedSeconds);
+        setAllowedSeconds(Number(reservedSeconds));
+        setRemainingSeconds(Number(reservedSeconds));
         setActiveCall(callId, recipientPhone, preset.id);
+        setSessionMeta({
+          presetName: preset.name,
+          allowedSeconds: Number(reservedSeconds),
+          remainingSeconds: Number(reservedSeconds),
+        });
+        rememberRecentPhone(recipientPhone);
 
         setStatus("connecting");
         const serverCall = await startVoiceServerCall({
@@ -536,19 +686,16 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
 
         activeSessionIdRef.current = serverCall.sessionId;
         monitorTokenRef.current = serverCall.monitorToken || null;
+        applySessionSnapshot(serverCall);
+
         if (serverCall.queued || !serverCall.callSid) {
           setStatus("queued");
-          setErrorMessage(
-            serverCall.queuePosition
-              ? `Waiting for a free line. Position ${serverCall.queuePosition}.`
-              : "Waiting for a free line.",
-          );
           if (!serverCall.monitorToken) {
             throw new Error(
               "Queued call token was not returned by the voice server.",
             );
           }
-          startQueuePolling(serverCall.sessionId, serverCall.monitorToken);
+          startSessionPolling(serverCall.sessionId, serverCall.monitorToken);
           toast.info("All lines are busy. Your call is queued.", {
             description: serverCall.queuePosition
               ? `Queue position ${serverCall.queuePosition}`
@@ -559,7 +706,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
 
         markServerCallConnected(serverCall);
         toast.success("Call placed", {
-          description: `Initial ${Math.floor(Number(allowedSeconds) / 60)} paid minutes reserved`,
+          description: `Initial ${Math.floor(Number(reservedSeconds) / 60)} paid minutes reserved`,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
@@ -576,7 +723,7 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
         }
 
         cleanupTimer();
-        cleanupQueuePolling();
+        cleanupSessionPolling();
         stopLiveAudio();
         setLiveAudioAvailable(false);
         setSteeringError(null);
@@ -586,11 +733,12 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     [
       reserveCall,
       setActiveCall,
+      setSessionMeta,
+      applySessionSnapshot,
       markServerCallConnected,
-      startQueuePolling,
+      startSessionPolling,
       updateCallStatus,
       cleanupTimer,
-      cleanupQueuePolling,
       cleanupSessionPolling,
       stopLiveAudio,
       clearCall,
@@ -619,7 +767,9 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
 
   const toggleMute = useCallback(() => {
     setIsMuted((value) => !value);
-    toast.info("Use the phone keypad or handset mute for live call audio.");
+    toast.info(
+      "Live phone mute is controlled on the handset. Use End Call to stop the AI session.",
+    );
   }, []);
 
   const toggleLiveAudio = useCallback(async () => {
@@ -670,20 +820,97 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     [status],
   );
 
+  // Reattach to an active session after page refresh
+  useEffect(() => {
+    if (reattachAttemptedRef.current) return;
+    reattachAttemptedRef.current = true;
+
+    const persisted = hydrateFromStorage();
+    if (!persisted) return;
+
+    let cancelled = false;
+    setIsReattaching(true);
+
+    void (async () => {
+      try {
+        const serverCall = await getVoiceServerCallSession(
+          persisted.sessionId,
+          persisted.monitorToken,
+        );
+        if (cancelled) return;
+
+        if (isTerminalVoiceServerStatus(serverCall.status)) {
+          clearCall();
+          setIsReattaching(false);
+          return;
+        }
+
+        activeCallIdRef.current = BigInt(persisted.callId);
+        activeSessionIdRef.current = persisted.sessionId;
+        monitorTokenRef.current = persisted.monitorToken;
+        setRecipient(persisted.recipient || serverCall.recipientPhone || "");
+        setPresetName(persisted.presetName || serverCall.presetName || "");
+        setActiveCall(
+          BigInt(persisted.callId),
+          persisted.recipient || serverCall.recipientPhone || "",
+          persisted.presetId ? BigInt(persisted.presetId) : 0n,
+        );
+        applySessionSnapshot({
+          ...serverCall,
+          sessionId: persisted.sessionId,
+          monitorToken: persisted.monitorToken,
+        });
+
+        if (serverCall.callSid) {
+          setStatus("in_call");
+          setLiveAudioAvailable(true);
+          startDurationTimer(
+            serverCall.billingStartedAt
+              ? Number(serverCall.billingStartedAt)
+              : persisted.startedAt,
+          );
+        } else {
+          setStatus("queued");
+        }
+        startSessionPolling(persisted.sessionId, persisted.monitorToken);
+        toast.info("Reconnected to active call");
+      } catch {
+        if (!cancelled) {
+          clearCall();
+        }
+      } finally {
+        if (!cancelled) setIsReattaching(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    hydrateFromStorage,
+    clearCall,
+    setActiveCall,
+    applySessionSnapshot,
+    startDurationTimer,
+    startSessionPolling,
+  ]);
+
   useEffect(() => {
     return () => {
       cleanupTimer();
-      cleanupQueuePolling();
       cleanupSessionPolling();
       stopLiveAudio();
     };
-  }, [cleanupTimer, cleanupQueuePolling, cleanupSessionPolling, stopLiveAudio]);
+  }, [cleanupTimer, cleanupSessionPolling, stopLiveAudio]);
 
   return {
     status,
     recipient,
     presetName,
     durationSecs,
+    remainingSeconds,
+    allowedSeconds,
+    queuePosition,
     isMuted,
     errorMessage,
     audioLevels,
@@ -692,11 +919,14 @@ export function useXaiVoice(): XaiVoiceState & XaiVoiceControls {
     liveAudioError,
     isSendingSteeringPrompt,
     steeringError,
+    liveTranscript,
+    isReattaching,
     startCall,
     endCall,
     toggleMute,
     toggleLiveAudio,
     stopLiveAudio,
     steerConversation,
+    dismissStatus,
   };
 }

@@ -72,7 +72,7 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-06-03-call-artifact-persistence";
+const SERVER_VERSION = "2026-07-11-session-ux-enrichment";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -2584,6 +2584,23 @@ function getSessionStatus(session) {
   return session?.state || (session?.callSid ? "active" : "queued");
 }
 
+function getRemainingPaidSeconds(session) {
+  const allowed = Math.max(0, Number(session?.allowedSeconds || 0));
+  if (!session) return allowed;
+  if (session.finished || session.billingFinishedAt) return 0;
+  if (!session.billingStartedAt) return allowed;
+  const elapsed = Math.floor((Date.now() - Number(session.billingStartedAt)) / 1000);
+  return Math.max(0, allowed - elapsed);
+}
+
+function buildLiveTranscriptPayload(session, limit = 40) {
+  const entries = Array.isArray(session?.transcript) ? session.transcript : [];
+  return entries.slice(-Math.max(1, limit)).map((entry) => ({
+    speaker: String(entry?.speaker || "unknown"),
+    text: String(entry?.text || "").slice(0, 2_000),
+  }));
+}
+
 function buildCallSessionPayload(session, { includeMonitorToken = false } = {}) {
   return {
     ok: true,
@@ -2594,6 +2611,13 @@ function buildCallSessionPayload(session, { includeMonitorToken = false } = {}) 
     queued: session.state === "queued",
     queuePosition: getQueuePosition(session.id),
     allowedSeconds: session.allowedSeconds,
+    remainingSeconds: getRemainingPaidSeconds(session),
+    billingStartedAt: session.billingStartedAt || null,
+    recipientPhone: session.recipientPhone || "",
+    presetName: session.preset?.name || "",
+    callId: session.callId || "",
+    direction: session.direction || "",
+    transcript: buildLiveTranscriptPayload(session),
     liveAudio: session.callSid
       ? {
           codec: "audio/pcmu",

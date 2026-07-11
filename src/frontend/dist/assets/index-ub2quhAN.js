@@ -37760,11 +37760,43 @@ const createImpl = (createState2) => {
   return useBoundStore;
 };
 const create = (createState2) => createState2 ? createImpl(createState2) : createImpl;
-const useCallStore = create((set2) => ({
+const PERSIST_KEY = "voicecall.activeSession";
+function readPersisted() {
+  try {
+    const raw = sessionStorage.getItem(PERSIST_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!(parsed == null ? void 0 : parsed.sessionId) || !(parsed == null ? void 0 : parsed.monitorToken)) return null;
+    if (Date.now() - Number(parsed.startedAt || 0) > 3 * 60 * 60 * 1e3) {
+      sessionStorage.removeItem(PERSIST_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+function writePersisted(session) {
+  try {
+    if (!session) {
+      sessionStorage.removeItem(PERSIST_KEY);
+      return;
+    }
+    sessionStorage.setItem(PERSIST_KEY, JSON.stringify(session));
+  } catch {
+  }
+}
+const useCallStore = create((set2, get2) => ({
   activeCallId: null,
   callStatus: null,
   recipient: "",
   presetId: null,
+  sessionId: null,
+  monitorToken: null,
+  callSid: null,
+  presetName: "",
+  allowedSeconds: 0,
+  remainingSeconds: null,
   setActiveCall: (callId, recipient, presetId) => set2({
     activeCallId: callId,
     callStatus: "inProgress",
@@ -37772,12 +37804,53 @@ const useCallStore = create((set2) => ({
     presetId
   }),
   setCallStatus: (status) => set2({ callStatus: status }),
-  clearCall: () => set2({
-    activeCallId: null,
-    callStatus: null,
-    recipient: "",
-    presetId: null
-  })
+  setSessionMeta: (meta) => {
+    set2((state) => ({
+      sessionId: meta.sessionId !== void 0 ? meta.sessionId : state.sessionId,
+      monitorToken: meta.monitorToken !== void 0 ? meta.monitorToken : state.monitorToken,
+      callSid: meta.callSid !== void 0 ? meta.callSid : state.callSid,
+      presetName: meta.presetName !== void 0 ? meta.presetName : state.presetName,
+      allowedSeconds: meta.allowedSeconds !== void 0 ? meta.allowedSeconds : state.allowedSeconds,
+      remainingSeconds: meta.remainingSeconds !== void 0 ? meta.remainingSeconds : state.remainingSeconds
+    }));
+    get2().persistActiveSession();
+  },
+  persistActiveSession: () => {
+    var _a3;
+    const state = get2();
+    if (!state.sessionId || !state.monitorToken || !state.activeCallId) {
+      return;
+    }
+    const voiceStatus = state.callSid || state.callStatus === "inProgress" ? "in_call" : "queued";
+    writePersisted({
+      callId: state.activeCallId.toString(),
+      sessionId: state.sessionId,
+      monitorToken: state.monitorToken,
+      callSid: state.callSid || "",
+      recipient: state.recipient,
+      presetId: ((_a3 = state.presetId) == null ? void 0 : _a3.toString()) ?? "",
+      presetName: state.presetName,
+      allowedSeconds: state.allowedSeconds,
+      status: voiceStatus,
+      startedAt: Date.now()
+    });
+  },
+  clearCall: () => {
+    writePersisted(null);
+    set2({
+      activeCallId: null,
+      callStatus: null,
+      recipient: "",
+      presetId: null,
+      sessionId: null,
+      monitorToken: null,
+      callSid: null,
+      presetName: "",
+      allowedSeconds: 0,
+      remainingSeconds: null
+    });
+  },
+  hydrateFromStorage: () => readPersisted()
 }));
 /**
  * @license lucide-react v0.511.0 - ISC
@@ -37884,51 +37957,62 @@ const createLucideIcon = (iconName, iconNode) => {
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$Q = [
+const __iconNode$R = [
   ["path", { d: "m12 19-7-7 7-7", key: "1l729n" }],
   ["path", { d: "M19 12H5", key: "x3x0zl" }]
 ];
-const ArrowLeft = createLucideIcon("arrow-left", __iconNode$Q);
+const ArrowLeft = createLucideIcon("arrow-left", __iconNode$R);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$P = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
-const Check = createLucideIcon("check", __iconNode$P);
+const __iconNode$Q = [["path", { d: "M20 6 9 17l-5-5", key: "1gmf2c" }]];
+const Check = createLucideIcon("check", __iconNode$Q);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$O = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
-const ChevronDown = createLucideIcon("chevron-down", __iconNode$O);
+const __iconNode$P = [["path", { d: "m6 9 6 6 6-6", key: "qrunsl" }]];
+const ChevronDown = createLucideIcon("chevron-down", __iconNode$P);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$N = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
-const ChevronLeft = createLucideIcon("chevron-left", __iconNode$N);
+const __iconNode$O = [["path", { d: "m15 18-6-6 6-6", key: "1wnfg3" }]];
+const ChevronLeft = createLucideIcon("chevron-left", __iconNode$O);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$M = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
-const ChevronRight = createLucideIcon("chevron-right", __iconNode$M);
+const __iconNode$N = [["path", { d: "m9 18 6-6-6-6", key: "mthhwq" }]];
+const ChevronRight = createLucideIcon("chevron-right", __iconNode$N);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$L = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
-const ChevronUp = createLucideIcon("chevron-up", __iconNode$L);
+const __iconNode$M = [["path", { d: "m18 15-6-6-6 6", key: "153udz" }]];
+const ChevronUp = createLucideIcon("chevron-up", __iconNode$M);
+/**
+ * @license lucide-react v0.511.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */
+const __iconNode$L = [
+  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
+  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+];
+const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$L);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37936,10 +38020,10 @@ const ChevronUp = createLucideIcon("chevron-up", __iconNode$L);
  * See the LICENSE file in the root directory of this source tree.
  */
 const __iconNode$K = [
-  ["path", { d: "M21.801 10A10 10 0 1 1 17 3.335", key: "yps3ct" }],
-  ["path", { d: "m9 11 3 3L22 4", key: "1pflzl" }]
+  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
+  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
 ];
-const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$K);
+const CircleCheck = createLucideIcon("circle-check", __iconNode$K);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -37948,21 +38032,18 @@ const CircleCheckBig = createLucideIcon("circle-check-big", __iconNode$K);
  */
 const __iconNode$J = [
   ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m9 12 2 2 4-4", key: "dzmm74" }]
+  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
+  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
 ];
-const CircleCheck = createLucideIcon("circle-check", __iconNode$J);
+const CircleX = createLucideIcon("circle-x", __iconNode$J);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
  * This source code is licensed under the ISC license.
  * See the LICENSE file in the root directory of this source tree.
  */
-const __iconNode$I = [
-  ["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }],
-  ["path", { d: "m15 9-6 6", key: "1uzhvr" }],
-  ["path", { d: "m9 9 6 6", key: "z0biqf" }]
-];
-const CircleX = createLucideIcon("circle-x", __iconNode$I);
+const __iconNode$I = [["circle", { cx: "12", cy: "12", r: "10", key: "1mglay" }]];
+const Circle = createLucideIcon("circle", __iconNode$I);
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -38637,31 +38718,40 @@ function AppSidebar({ onClose }) {
   const { isAdmin, logout } = useAuth();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
-  const { activeCallId, callStatus, recipient } = useCallStore();
+  const { activeCallId, callStatus, recipient, remainingSeconds, sessionId } = useCallStore();
   const isActive = (href) => currentPath === href;
+  const showActiveCall = Boolean(activeCallId || sessionId);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("aside", { className: "flex flex-col h-full bg-sidebar border-r border-sidebar-border", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3 px-5 py-5", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center justify-center w-9 h-9 rounded-lg bg-primary/10 border border-primary/30", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Mic, { className: "w-5 h-5 text-primary" }) }),
       /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-display font-semibold text-lg text-sidebar-foreground tracking-tight", children: "VoiceCall AI" })
     ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Separator, { className: "bg-sidebar-border" }),
-    activeCallId && /* @__PURE__ */ jsxRuntimeExports.jsxs(
-      "div",
+    showActiveCall && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+      Link,
       {
-        className: "mx-3 my-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-2",
+        to: "/user/dashboard",
+        onClick: onClose,
+        className: "mx-3 my-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-2 hover:border-primary/40 transition-colors",
         "data-ocid": "active-call.status",
         children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "w-2 h-2 rounded-full bg-primary animate-pulse-soft" }),
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-medium text-primary truncate", children: "Active Call" }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground truncate", children: recipient })
+            /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground truncate", children: recipient || "In progress" }),
+            remainingSeconds != null && remainingSeconds >= 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-[10px] font-mono text-primary/80", children: [
+              Math.floor(remainingSeconds / 60).toString().padStart(2, "0"),
+              ":",
+              (remainingSeconds % 60).toString().padStart(2, "0"),
+              " left"
+            ] })
           ] }),
           /* @__PURE__ */ jsxRuntimeExports.jsx(
             Badge,
             {
               variant: "outline",
               className: "ml-auto text-xs border-primary/30 text-primary shrink-0",
-              children: callStatus
+              children: callStatus || "live"
             }
           )
         ]
@@ -49769,7 +49859,7 @@ const defaultTimingText$1 = {
 const TURN_DETECTION_HELP$1 = "Choose how quickly the AI responds after the caller pauses. Use Patient listener if callers often pause mid-sentence.";
 const MONITOR_SAMPLE_RATE$1 = 8e3;
 const MONITOR_JITTER_SECONDS$1 = 0.12;
-function validateE164$1(phone) {
+function validateE164(phone) {
   return /^\+[1-9]\d{1,14}$/.test(phone.replace(/\s/g, ""));
 }
 function generateWebhookSecret() {
@@ -50171,7 +50261,7 @@ function AnsweringPresetCard({
       ue.error("AI instructions must be 8000 characters or fewer");
       return;
     }
-    if (!validateE164$1(cleanInput.phoneNumber)) {
+    if (!validateE164(cleanInput.phoneNumber)) {
       ue.error("Enter the Twilio number in E.164 format");
       return;
     }
@@ -50591,7 +50681,7 @@ function AnsweringServicePage() {
       ue.error("AI instructions must be 8000 characters or fewer");
       return;
     }
-    if (!validateE164$1(cleanInput.phoneNumber)) {
+    if (!validateE164(cleanInput.phoneNumber)) {
       ue.error("Enter the Twilio number in E.164 format");
       return;
     }
@@ -51184,17 +51274,89 @@ function AlertDialogCancel({
     }
   );
 }
+const DEFAULT_COUNTRY_DIAL = "1";
+function stripPhoneInput(value) {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const hasPlus = trimmed.startsWith("+");
+  const digits = trimmed.replace(/\D/g, "");
+  return hasPlus ? `+${digits}` : digits;
+}
+function normalizeToE164(value, defaultCountryDial = DEFAULT_COUNTRY_DIAL) {
+  const stripped = stripPhoneInput(value);
+  if (!stripped) return "";
+  if (stripped.startsWith("+")) {
+    return stripped;
+  }
+  const digits = stripped;
+  if (digits.length === 10 && defaultCountryDial === "1") {
+    return `+1${digits}`;
+  }
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `+${digits}`;
+  }
+  if (digits.length >= 8 && digits.length <= 15) {
+    return `+${digits}`;
+  }
+  return digits;
+}
+function isValidE164(phone) {
+  return /^\+[1-9]\d{1,14}$/.test(phone.replace(/\s/g, ""));
+}
+function formatPhoneDisplay(phone) {
+  const cleaned = phone.replace(/\s/g, "");
+  const us = cleaned.match(/^\+1(\d{3})(\d{3})(\d{4})$/);
+  if (us) {
+    return `+1 (${us[1]}) ${us[2]}-${us[3]}`;
+  }
+  return cleaned;
+}
+function phoneInputHint(value) {
+  const cleaned = value.replace(/\s/g, "");
+  if (!cleaned) return null;
+  if (isValidE164(cleaned) || isValidE164(normalizeToE164(cleaned))) {
+    return null;
+  }
+  if (/^\d{10}$/.test(cleaned)) {
+    return "Looks like a US number — will dial as +1…";
+  }
+  return "Use international format, e.g. +15551234567";
+}
+const RECENT_PHONES_KEY = "voicecall.recentPhones";
+const MAX_RECENT_PHONES = 8;
+function loadRecentPhones() {
+  try {
+    const raw = sessionStorage.getItem(RECENT_PHONES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => typeof item === "string").filter(isValidE164).slice(0, MAX_RECENT_PHONES);
+  } catch {
+    return [];
+  }
+}
+function rememberRecentPhone(phone) {
+  if (!isValidE164(phone)) return;
+  try {
+    const existing = loadRecentPhones().filter((p2) => p2 !== phone);
+    const next = [phone, ...existing].slice(0, MAX_RECENT_PHONES);
+    sessionStorage.setItem(RECENT_PHONES_KEY, JSON.stringify(next));
+  } catch {
+  }
+}
 const WAVEFORM_BARS = 20;
 const MONITOR_SAMPLE_RATE = 8e3;
 const MONITOR_JITTER_SECONDS = 0.12;
 const MONITOR_FADE_SAMPLES = 8;
-const CALL_SESSION_POLL_MS = 2500;
+const CALL_SESSION_POLL_MS = 2e3;
+const LOW_TIME_WARN_SECONDS = 60;
 const TERMINAL_SERVER_STATUSES = /* @__PURE__ */ new Set([
   "completed",
   "failed",
   "busy",
   "no-answer",
-  "canceled"
+  "canceled",
+  "cancelled"
 ]);
 function isTerminalVoiceServerStatus(status) {
   return TERMINAL_SERVER_STATUSES.has(String(status || "").toLowerCase());
@@ -51231,11 +51393,24 @@ function writeDecodedMuLawSamples(bytes, samples) {
   }
   return Math.sqrt(sumSquares / Math.max(1, bytes.length));
 }
+function mapTranscript(entries) {
+  if (!(entries == null ? void 0 : entries.length)) return [];
+  return entries.filter((e) => {
+    var _a3;
+    return (_a3 = e == null ? void 0 : e.text) == null ? void 0 : _a3.trim();
+  }).map((e) => ({
+    speaker: e.speaker || "unknown",
+    text: e.text
+  }));
+}
 function useXaiVoice() {
   const [status, setStatus] = reactExports.useState("idle");
   const [recipient, setRecipient] = reactExports.useState("");
   const [presetName, setPresetName] = reactExports.useState("");
   const [durationSecs, setDurationSecs] = reactExports.useState(0);
+  const [remainingSeconds, setRemainingSeconds] = reactExports.useState(null);
+  const [allowedSeconds, setAllowedSeconds] = reactExports.useState(null);
+  const [queuePosition, setQueuePosition] = reactExports.useState(null);
   const [isMuted, setIsMuted] = reactExports.useState(false);
   const [errorMessage, setErrorMessage] = reactExports.useState(null);
   const [audioLevels, setAudioLevels] = reactExports.useState(
@@ -51246,14 +51421,21 @@ function useXaiVoice() {
   const [liveAudioError, setLiveAudioError] = reactExports.useState(null);
   const [isSendingSteeringPrompt, setIsSendingSteeringPrompt] = reactExports.useState(false);
   const [steeringError, setSteeringError] = reactExports.useState(null);
+  const [liveTranscript, setLiveTranscript] = reactExports.useState(
+    []
+  );
+  const [isReattaching, setIsReattaching] = reactExports.useState(false);
   const timerRef = reactExports.useRef(null);
-  const queuePollRef = reactExports.useRef(null);
   const sessionPollRef = reactExports.useRef(null);
   const startTimeRef = reactExports.useRef(0);
   const activeCallIdRef = reactExports.useRef(null);
   const activeCallSidRef = reactExports.useRef(null);
   const activeSessionIdRef = reactExports.useRef(null);
   const monitorTokenRef = reactExports.useRef(null);
+  const allowedSecondsRef = reactExports.useRef(null);
+  const billingStartedAtRef = reactExports.useRef(null);
+  const lowTimeWarnedRef = reactExports.useRef(false);
+  const reattachAttemptedRef = reactExports.useRef(false);
   const monitorWsRef = reactExports.useRef(null);
   const audioContextRef = reactExports.useRef(null);
   const monitorInputNodeRef = reactExports.useRef(null);
@@ -51265,19 +51447,19 @@ function useXaiVoice() {
   const reserveCall = useReserveCall();
   const updateCallStatus = useUpdateCallStatus();
   const queryClient2 = useQueryClient();
-  const { setActiveCall, clearCall } = useCallStore();
+  const {
+    setActiveCall,
+    clearCall,
+    setSessionMeta,
+    hydrateFromStorage
+  } = useCallStore();
+  const setStoreRemaining = useCallStore((s2) => s2.setSessionMeta);
   const cleanupTimer = reactExports.useCallback(() => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
     setAudioLevels(Array(WAVEFORM_BARS).fill(0));
-  }, []);
-  const cleanupQueuePolling = reactExports.useCallback(() => {
-    if (queuePollRef.current) {
-      clearInterval(queuePollRef.current);
-      queuePollRef.current = null;
-    }
   }, []);
   const cleanupSessionPolling = reactExports.useCallback(() => {
     if (sessionPollRef.current) {
@@ -51421,25 +51603,53 @@ function useXaiVoice() {
       setLiveAudioError(null);
       setIsSendingSteeringPrompt(false);
       setSteeringError(null);
+      setRemainingSeconds(null);
+      setAllowedSeconds(null);
+      setQueuePosition(null);
+      setLiveTranscript([]);
+      billingStartedAtRef.current = null;
+      allowedSecondsRef.current = null;
+      lowTimeWarnedRef.current = false;
     }, 3e3);
   }, []);
-  const startDurationTimer = reactExports.useCallback(() => {
-    cleanupTimer();
-    startTimeRef.current = Date.now();
-    setDurationSecs(0);
-    timerRef.current = setInterval(() => {
-      setDurationSecs(Math.floor((Date.now() - startTimeRef.current) / 1e3));
-    }, 1e3);
-  }, [cleanupTimer]);
+  const startDurationTimer = reactExports.useCallback(
+    (fromMs) => {
+      cleanupTimer();
+      startTimeRef.current = fromMs || Date.now();
+      setDurationSecs(
+        Math.max(0, Math.floor((Date.now() - startTimeRef.current) / 1e3))
+      );
+      timerRef.current = setInterval(() => {
+        const elapsed = Math.floor(
+          (Date.now() - startTimeRef.current) / 1e3
+        );
+        setDurationSecs(elapsed);
+        if (allowedSecondsRef.current != null && billingStartedAtRef.current) {
+          const used = Math.floor(
+            (Date.now() - billingStartedAtRef.current) / 1e3
+          );
+          const left = Math.max(0, allowedSecondsRef.current - used);
+          setRemainingSeconds(left);
+          setStoreRemaining({ remainingSeconds: left });
+          if (left > 0 && left <= LOW_TIME_WARN_SECONDS && !lowTimeWarnedRef.current) {
+            lowTimeWarnedRef.current = true;
+            ue.warning("Less than 1 minute of paid time remaining");
+          }
+        }
+      }, 1e3);
+    },
+    [cleanupTimer, setStoreRemaining]
+  );
   const completeLocalCall = reactExports.useCallback(() => {
     setStatus("completed");
     cleanupTimer();
-    cleanupQueuePolling();
     cleanupSessionPolling();
     stopLiveAudio();
     setLiveAudioAvailable(false);
     setIsSendingSteeringPrompt(false);
     setSteeringError(null);
+    setQueuePosition(null);
+    setRemainingSeconds(0);
     activeCallIdRef.current = null;
     activeCallSidRef.current = null;
     activeSessionIdRef.current = null;
@@ -51449,14 +51659,64 @@ function useXaiVoice() {
     resetAfterDelay();
   }, [
     cleanupTimer,
-    cleanupQueuePolling,
     cleanupSessionPolling,
     stopLiveAudio,
     clearCall,
     invalidateCallData,
     resetAfterDelay
   ]);
-  const startConnectedSessionPolling = reactExports.useCallback(
+  const applySessionSnapshot = reactExports.useCallback(
+    (serverCall) => {
+      if (serverCall.callSid) {
+        activeCallSidRef.current = serverCall.callSid;
+      }
+      activeSessionIdRef.current = serverCall.sessionId;
+      if (serverCall.monitorToken) {
+        monitorTokenRef.current = serverCall.monitorToken;
+      }
+      if (serverCall.allowedSeconds != null) {
+        allowedSecondsRef.current = Number(serverCall.allowedSeconds);
+        setAllowedSeconds(Number(serverCall.allowedSeconds));
+      }
+      if (serverCall.remainingSeconds != null) {
+        const left = Math.max(0, Number(serverCall.remainingSeconds));
+        setRemainingSeconds(left);
+        if (left > 0 && left <= LOW_TIME_WARN_SECONDS && !lowTimeWarnedRef.current) {
+          lowTimeWarnedRef.current = true;
+          ue.warning("Less than 1 minute of paid time remaining");
+        }
+      }
+      if (serverCall.billingStartedAt) {
+        billingStartedAtRef.current = Number(serverCall.billingStartedAt);
+      }
+      if (serverCall.recipientPhone) {
+        setRecipient(serverCall.recipientPhone);
+      }
+      if (serverCall.presetName) {
+        setPresetName(serverCall.presetName);
+      }
+      if (serverCall.transcript) {
+        setLiveTranscript(mapTranscript(serverCall.transcript));
+      }
+      if (serverCall.queued || !serverCall.callSid) {
+        setQueuePosition(
+          serverCall.queuePosition != null ? Number(serverCall.queuePosition) : null
+        );
+      } else {
+        setQueuePosition(null);
+      }
+      setSessionMeta({
+        sessionId: serverCall.sessionId,
+        monitorToken: serverCall.monitorToken || monitorTokenRef.current,
+        callSid: serverCall.callSid || activeCallSidRef.current,
+        presetName: serverCall.presetName,
+        allowedSeconds: serverCall.allowedSeconds != null ? Number(serverCall.allowedSeconds) : void 0,
+        remainingSeconds: serverCall.remainingSeconds != null ? Number(serverCall.remainingSeconds) : void 0
+      });
+    },
+    [setSessionMeta]
+  );
+  const startSessionPolling = reactExports.useCallback(
     (sessionId, monitorToken) => {
       cleanupSessionPolling();
       const poll = async () => {
@@ -51465,8 +51725,23 @@ function useXaiVoice() {
             sessionId,
             monitorToken
           );
+          applySessionSnapshot(serverCall);
           if (isTerminalVoiceServerStatus(serverCall.status)) {
             completeLocalCall();
+            return;
+          }
+          if (serverCall.callSid) {
+            setStatus("in_call");
+            setLiveAudioAvailable(
+              Boolean(serverCall.monitorToken || monitorToken)
+            );
+            if (!timerRef.current) {
+              startDurationTimer(
+                serverCall.billingStartedAt ? Number(serverCall.billingStartedAt) : void 0
+              );
+            }
+          } else if (serverCall.queued || !serverCall.callSid) {
+            setStatus("queued");
           }
         } catch (err) {
           if (isMissingSessionError(err)) {
@@ -51480,72 +51755,35 @@ function useXaiVoice() {
       );
       void poll();
     },
-    [cleanupSessionPolling, completeLocalCall]
+    [
+      cleanupSessionPolling,
+      applySessionSnapshot,
+      completeLocalCall,
+      startDurationTimer
+    ]
   );
   const markServerCallConnected = reactExports.useCallback(
     (serverCall) => {
-      activeCallSidRef.current = serverCall.callSid;
-      activeSessionIdRef.current = serverCall.sessionId;
-      monitorTokenRef.current = serverCall.monitorToken || null;
+      applySessionSnapshot(serverCall);
       setLiveAudioAvailable(Boolean(serverCall.monitorToken));
       setStatus("in_call");
-      startDurationTimer();
+      setQueuePosition(null);
+      if (!billingStartedAtRef.current) {
+        billingStartedAtRef.current = Date.now();
+      }
+      startDurationTimer(billingStartedAtRef.current || void 0);
       if (serverCall.monitorToken) {
-        startConnectedSessionPolling(
-          serverCall.sessionId,
-          serverCall.monitorToken
-        );
+        startSessionPolling(serverCall.sessionId, serverCall.monitorToken);
       }
     },
-    [startDurationTimer, startConnectedSessionPolling]
+    [applySessionSnapshot, startDurationTimer, startSessionPolling]
   );
-  const startQueuePolling = reactExports.useCallback(
-    (sessionId, monitorToken) => {
-      cleanupQueuePolling();
-      const poll = async () => {
-        try {
-          const serverCall = await getVoiceServerCallSession(
-            sessionId,
-            monitorToken
-          );
-          if (serverCall.callSid) {
-            cleanupQueuePolling();
-            markServerCallConnected({
-              callSid: serverCall.callSid,
-              sessionId: serverCall.sessionId,
-              monitorToken: serverCall.monitorToken,
-              liveAudio: serverCall.liveAudio
-            });
-            ue.success("Queued call placed");
-            return;
-          }
-          if (serverCall.queuePosition) {
-            setErrorMessage(
-              `Waiting for a free line. Position ${serverCall.queuePosition}.`
-            );
-          }
-        } catch (err) {
-          cleanupQueuePolling();
-          const message = err instanceof Error ? err.message : "Queued call status failed";
-          setStatus("error");
-          setErrorMessage(message);
-          ue.error(`Queued call failed: ${message}`);
-          cleanupTimer();
-          stopLiveAudio();
-          clearCall();
-        }
-      };
-      queuePollRef.current = setInterval(() => void poll(), 2e3);
-      void poll();
-    },
-    [
-      cleanupQueuePolling,
-      markServerCallConnected,
-      cleanupTimer,
-      stopLiveAudio,
-      clearCall
-    ]
-  );
+  const dismissStatus = reactExports.useCallback(() => {
+    setStatus("idle");
+    setErrorMessage(null);
+    setDurationSecs(0);
+    setLiveTranscript([]);
+  }, []);
   const startCall = reactExports.useCallback(
     async (preset, recipientPhone, captureOptions) => {
       stopLiveAudio();
@@ -51557,10 +51795,15 @@ function useXaiVoice() {
       setLiveAudioAvailable(false);
       setLiveAudioError(null);
       setSteeringError(null);
+      setLiveTranscript([]);
+      setQueuePosition(null);
+      setRemainingSeconds(null);
+      lowTimeWarnedRef.current = false;
       activeCallIdRef.current = null;
       activeCallSidRef.current = null;
       activeSessionIdRef.current = null;
       monitorTokenRef.current = null;
+      billingStartedAtRef.current = null;
       try {
         const reservationResult = await reserveCall.mutateAsync({
           recipientPhone,
@@ -51573,13 +51816,22 @@ function useXaiVoice() {
           callId,
           id: reservationId,
           callToken,
-          allowedSeconds
+          allowedSeconds: reservedSeconds
         } = reservationResult.ok;
         if (!callToken) {
           throw new Error("Reservation token was not returned by the backend.");
         }
         activeCallIdRef.current = callId;
+        allowedSecondsRef.current = Number(reservedSeconds);
+        setAllowedSeconds(Number(reservedSeconds));
+        setRemainingSeconds(Number(reservedSeconds));
         setActiveCall(callId, recipientPhone, preset.id);
+        setSessionMeta({
+          presetName: preset.name,
+          allowedSeconds: Number(reservedSeconds),
+          remainingSeconds: Number(reservedSeconds)
+        });
+        rememberRecentPhone(recipientPhone);
         setStatus("connecting");
         const serverCall = await startVoiceServerCall({
           recipientPhone,
@@ -51591,17 +51843,15 @@ function useXaiVoice() {
         });
         activeSessionIdRef.current = serverCall.sessionId;
         monitorTokenRef.current = serverCall.monitorToken || null;
+        applySessionSnapshot(serverCall);
         if (serverCall.queued || !serverCall.callSid) {
           setStatus("queued");
-          setErrorMessage(
-            serverCall.queuePosition ? `Waiting for a free line. Position ${serverCall.queuePosition}.` : "Waiting for a free line."
-          );
           if (!serverCall.monitorToken) {
             throw new Error(
               "Queued call token was not returned by the voice server."
             );
           }
-          startQueuePolling(serverCall.sessionId, serverCall.monitorToken);
+          startSessionPolling(serverCall.sessionId, serverCall.monitorToken);
           ue.info("All lines are busy. Your call is queued.", {
             description: serverCall.queuePosition ? `Queue position ${serverCall.queuePosition}` : void 0
           });
@@ -51609,7 +51859,7 @@ function useXaiVoice() {
         }
         markServerCallConnected(serverCall);
         ue.success("Call placed", {
-          description: `Initial ${Math.floor(Number(allowedSeconds) / 60)} paid minutes reserved`
+          description: `Initial ${Math.floor(Number(reservedSeconds) / 60)} paid minutes reserved`
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Unknown error";
@@ -51624,7 +51874,7 @@ function useXaiVoice() {
           });
         }
         cleanupTimer();
-        cleanupQueuePolling();
+        cleanupSessionPolling();
         stopLiveAudio();
         setLiveAudioAvailable(false);
         setSteeringError(null);
@@ -51634,11 +51884,12 @@ function useXaiVoice() {
     [
       reserveCall,
       setActiveCall,
+      setSessionMeta,
+      applySessionSnapshot,
       markServerCallConnected,
-      startQueuePolling,
+      startSessionPolling,
       updateCallStatus,
       cleanupTimer,
-      cleanupQueuePolling,
       cleanupSessionPolling,
       stopLiveAudio,
       clearCall
@@ -51661,7 +51912,9 @@ function useXaiVoice() {
   }, [completeLocalCall]);
   const toggleMute = reactExports.useCallback(() => {
     setIsMuted((value) => !value);
-    ue.info("Use the phone keypad or handset mute for live call audio.");
+    ue.info(
+      "Live phone mute is controlled on the handset. Use End Call to stop the AI session."
+    );
   }, []);
   const toggleLiveAudio = reactExports.useCallback(async () => {
     if (isListeningLive) {
@@ -51707,18 +51960,84 @@ function useXaiVoice() {
     [status]
   );
   reactExports.useEffect(() => {
+    if (reattachAttemptedRef.current) return;
+    reattachAttemptedRef.current = true;
+    const persisted = hydrateFromStorage();
+    if (!persisted) return;
+    let cancelled = false;
+    setIsReattaching(true);
+    void (async () => {
+      try {
+        const serverCall = await getVoiceServerCallSession(
+          persisted.sessionId,
+          persisted.monitorToken
+        );
+        if (cancelled) return;
+        if (isTerminalVoiceServerStatus(serverCall.status)) {
+          clearCall();
+          setIsReattaching(false);
+          return;
+        }
+        activeCallIdRef.current = BigInt(persisted.callId);
+        activeSessionIdRef.current = persisted.sessionId;
+        monitorTokenRef.current = persisted.monitorToken;
+        setRecipient(persisted.recipient || serverCall.recipientPhone || "");
+        setPresetName(persisted.presetName || serverCall.presetName || "");
+        setActiveCall(
+          BigInt(persisted.callId),
+          persisted.recipient || serverCall.recipientPhone || "",
+          persisted.presetId ? BigInt(persisted.presetId) : 0n
+        );
+        applySessionSnapshot({
+          ...serverCall,
+          sessionId: persisted.sessionId,
+          monitorToken: persisted.monitorToken
+        });
+        if (serverCall.callSid) {
+          setStatus("in_call");
+          setLiveAudioAvailable(true);
+          startDurationTimer(
+            serverCall.billingStartedAt ? Number(serverCall.billingStartedAt) : persisted.startedAt
+          );
+        } else {
+          setStatus("queued");
+        }
+        startSessionPolling(persisted.sessionId, persisted.monitorToken);
+        ue.info("Reconnected to active call");
+      } catch {
+        if (!cancelled) {
+          clearCall();
+        }
+      } finally {
+        if (!cancelled) setIsReattaching(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    hydrateFromStorage,
+    clearCall,
+    setActiveCall,
+    applySessionSnapshot,
+    startDurationTimer,
+    startSessionPolling
+  ]);
+  reactExports.useEffect(() => {
     return () => {
       cleanupTimer();
-      cleanupQueuePolling();
       cleanupSessionPolling();
       stopLiveAudio();
     };
-  }, [cleanupTimer, cleanupQueuePolling, cleanupSessionPolling, stopLiveAudio]);
+  }, [cleanupTimer, cleanupSessionPolling, stopLiveAudio]);
   return {
     status,
     recipient,
     presetName,
     durationSecs,
+    remainingSeconds,
+    allowedSeconds,
+    queuePosition,
     isMuted,
     errorMessage,
     audioLevels,
@@ -51727,12 +52046,15 @@ function useXaiVoice() {
     liveAudioError,
     isSendingSteeringPrompt,
     steeringError,
+    liveTranscript,
+    isReattaching,
     startCall,
     endCall,
     toggleMute,
     toggleLiveAudio,
     stopLiveAudio,
-    steerConversation
+    steerConversation,
+    dismissStatus
   };
 }
 const LayoutGroupContext = reactExports.createContext({});
@@ -59588,9 +59910,6 @@ function formatCallDuration(start, end) {
   const secs = Number((end - start) / 1000000000n);
   return formatDuration$1(secs);
 }
-function validateE164(phone) {
-  return /^\+[1-9]\d{1,14}$/.test(phone.replace(/\s/g, ""));
-}
 const STATUS_COLORS = {
   idle: "text-muted-foreground",
   initiating: "text-yellow-400",
@@ -59611,6 +59930,7 @@ const STATUS_LABELS = {
 };
 const MAX_AI_INSTRUCTIONS_CHARS$1 = 8e3;
 const MAX_STEERING_PROMPT_CHARS = 800;
+const LOW_BALANCE_SECONDS = 5 * 60;
 function StatCard({
   icon,
   label,
@@ -59633,26 +59953,33 @@ function StatCard({
   ] }) }) });
 }
 function ActiveCallPanel({
-  voice
+  voice,
+  onRequestEnd
 }) {
   const {
     status,
     recipient,
     presetName,
     durationSecs,
+    remainingSeconds,
+    queuePosition,
     errorMessage,
     liveAudioAvailable,
     isListeningLive,
     liveAudioError,
     isSendingSteeringPrompt,
     steeringError,
-    endCall,
+    liveTranscript,
+    isReattaching,
     steerConversation,
-    toggleLiveAudio
+    toggleLiveAudio,
+    dismissStatus
   } = voice;
   const [steeringPrompt, setSteeringPrompt] = reactExports.useState("");
+  const transcriptEndRef = reactExports.useRef(null);
   const isActive = status === "in_call" || status === "connecting" || status === "initiating" || status === "queued";
   const canSendSteeringPrompt = status === "in_call" && !isSendingSteeringPrompt && steeringPrompt.trim().length > 0;
+  const lowPaidTime = remainingSeconds != null && remainingSeconds > 0 && remainingSeconds <= 60;
   const handleSteeringSubmit = async (event) => {
     event.preventDefault();
     const prompt = steeringPrompt.trim();
@@ -59663,6 +59990,10 @@ function ActiveCallPanel({
     } catch {
     }
   };
+  reactExports.useEffect(() => {
+    var _a3;
+    (_a3 = transcriptEndRef.current) == null ? void 0 : _a3.scrollIntoView({ behavior: "smooth" });
+  }, [liveTranscript.length]);
   if (status === "idle") return null;
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
     motion.div,
@@ -59686,7 +60017,7 @@ function ActiveCallPanel({
                     {
                       className: `relative flex items-center justify-center w-9 h-9 rounded-full ${status === "in_call" ? "bg-primary/20" : status === "error" ? "bg-destructive/20" : status === "completed" ? "bg-green-500/20" : "bg-muted/50"}`,
                       children: [
-                        (status === "initiating" || status === "connecting" || status === "queued") && /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin text-primary" }),
+                        (status === "initiating" || status === "connecting" || status === "queued" || isReattaching) && /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin text-primary" }),
                         status === "in_call" && /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
                           /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-4 h-4 text-primary" }),
                           /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-primary animate-pulse" })
@@ -59702,7 +60033,7 @@ function ActiveCallPanel({
                         "span",
                         {
                           className: `text-sm font-semibold ${STATUS_COLORS[status]}`,
-                          children: STATUS_LABELS[status]
+                          children: isReattaching ? "Reconnecting..." : STATUS_LABELS[status]
                         }
                       ),
                       status === "in_call" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59712,9 +60043,21 @@ function ActiveCallPanel({
                           className: "text-xs h-4 px-1 border-primary/40 text-primary font-mono",
                           children: formatDuration$1(durationSecs)
                         }
+                      ),
+                      status === "in_call" && remainingSeconds != null && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                        Badge,
+                        {
+                          variant: "outline",
+                          className: `text-xs h-4 px-1 font-mono ${lowPaidTime ? "border-amber-500/50 text-amber-400" : "border-border text-muted-foreground"}`,
+                          "data-ocid": "dashboard.active_call.remaining_time",
+                          children: [
+                            formatDuration$1(remainingSeconds),
+                            " left"
+                          ]
+                        }
                       )
                     ] }),
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground font-mono", children: recipient })
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground font-mono", children: recipient ? formatPhoneDisplay(recipient) : "—" })
                   ] })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground", children: [
@@ -59726,7 +60069,8 @@ function ActiveCallPanel({
                   {
                     variant: "outline",
                     className: "text-xs border-yellow-500/40 text-yellow-400",
-                    children: "Waiting for line"
+                    "data-ocid": "dashboard.active_call.queue_badge",
+                    children: queuePosition ? `Queue position ${queuePosition}` : "Waiting for free line"
                   }
                 ),
                 status === "in_call" && /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59746,8 +60090,21 @@ function ActiveCallPanel({
                   }
                 ),
                 status === "error" && errorMessage && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-destructive flex-1", children: errorMessage }),
+                status === "queued" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-yellow-500/90 flex-1", children: "Your paid reservation is held while waiting. You can cancel anytime." }),
                 liveAudioError && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-yellow-500 flex-1", children: liveAudioError }),
+                lowPaidTime && status === "in_call" && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-amber-400 flex-1", children: "Paid time is almost out — the call will end when the balance hits zero." }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 ml-auto shrink-0", children: [
+                  (status === "completed" || status === "error") && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    Button,
+                    {
+                      variant: "outline",
+                      size: "sm",
+                      onClick: dismissStatus,
+                      className: "h-8 text-xs",
+                      "data-ocid": "dashboard.active_call.dismiss_button",
+                      children: "Dismiss"
+                    }
+                  ),
                   isActive && liveAudioAvailable && /* @__PURE__ */ jsxRuntimeExports.jsxs(
                     Button,
                     {
@@ -59767,17 +60124,47 @@ function ActiveCallPanel({
                     {
                       variant: "destructive",
                       size: "sm",
-                      onClick: endCall,
+                      onClick: onRequestEnd,
                       "data-ocid": "dashboard.active_call.end_button",
                       className: "gap-1.5 h-8 text-xs",
                       children: [
                         /* @__PURE__ */ jsxRuntimeExports.jsx(PhoneOff, { className: "w-3.5 h-3.5" }),
-                        "End Call"
+                        status === "queued" ? "Cancel Queue" : "End Call"
                       ]
                     }
                   )
                 ] })
               ] }),
+              status === "in_call" && liveTranscript.length > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                "div",
+                {
+                  className: "mt-4 border-t border-border pt-4",
+                  "data-ocid": "dashboard.active_call.transcript",
+                  children: [
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("p", { className: "text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5", children: [
+                      /* @__PURE__ */ jsxRuntimeExports.jsx(FileText, { className: "w-3.5 h-3.5 text-primary" }),
+                      "Live transcript"
+                    ] }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "max-h-40 overflow-y-auto rounded-lg bg-muted/30 border border-border p-3 space-y-2 font-mono text-xs", children: [
+                      liveTranscript.map((line, idx) => /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "leading-relaxed", children: [
+                        /* @__PURE__ */ jsxRuntimeExports.jsxs(
+                          "span",
+                          {
+                            className: line.speaker.toLowerCase().includes("assistant") || line.speaker.toLowerCase().includes("ai") ? "text-primary font-semibold" : "text-muted-foreground font-semibold",
+                            children: [
+                              line.speaker,
+                              ":",
+                              " "
+                            ]
+                          }
+                        ),
+                        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-foreground/90", children: line.text })
+                      ] }, `${idx}-${line.speaker}`)),
+                      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { ref: transcriptEndRef })
+                    ] })
+                  ]
+                }
+              ),
               status === "in_call" && /* @__PURE__ */ jsxRuntimeExports.jsx(
                 "form",
                 {
@@ -59852,10 +60239,77 @@ function ActiveCallPanel({
     }
   );
 }
+function OnboardingChecklist({
+  hasBalance,
+  hasPreset,
+  hasCall,
+  onBuy,
+  onCreatePreset
+}) {
+  if (hasBalance && hasPreset && hasCall) return null;
+  const steps = [
+    {
+      done: hasBalance,
+      label: "Add prepaid phone time",
+      action: !hasBalance ? /* @__PURE__ */ jsxRuntimeExports.jsx(Button, { size: "sm", variant: "outline", className: "h-7 text-xs", onClick: onBuy, children: "Buy time" }) : null
+    },
+    {
+      done: hasPreset,
+      label: "Create an AI call preset",
+      action: !hasPreset ? /* @__PURE__ */ jsxRuntimeExports.jsx(
+        Button,
+        {
+          size: "sm",
+          variant: "outline",
+          className: "h-7 text-xs",
+          onClick: onCreatePreset,
+          children: "Create preset"
+        }
+      ) : null
+    },
+    {
+      done: hasCall,
+      label: "Place your first call",
+      action: null
+    }
+  ];
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs(
+    Card,
+    {
+      className: "bg-card border-primary/30",
+      "data-ocid": "dashboard.onboarding.card",
+      children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(CardHeader, { className: "pb-3", children: /* @__PURE__ */ jsxRuntimeExports.jsx(CardTitle, { className: "text-base font-semibold", children: "Get started" }) }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(CardContent, { className: "space-y-2", children: steps.map((step) => /* @__PURE__ */ jsxRuntimeExports.jsxs(
+          "div",
+          {
+            className: "flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2",
+            children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2 min-w-0", children: [
+                step.done ? /* @__PURE__ */ jsxRuntimeExports.jsx(CircleCheck, { className: "w-4 h-4 text-primary shrink-0" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Circle, { className: "w-4 h-4 text-muted-foreground shrink-0" }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: `text-sm ${step.done ? "text-muted-foreground line-through" : "text-foreground"}`,
+                    children: step.label
+                  }
+                )
+              ] }),
+              step.action
+            ]
+          },
+          step.label
+        )) })
+      ]
+    }
+  );
+}
 function DashboardPage() {
+  var _a3, _b3, _c2, _d2, _e2, _f2, _g2, _h2, _i2;
   const navigate = useNavigate();
   const [recipient, setRecipient] = reactExports.useState("");
   const [recipientError, setRecipientError] = reactExports.useState("");
+  const [recipientHint, setRecipientHint] = reactExports.useState(null);
   const [selectedPresetId, setSelectedPresetId] = reactExports.useState("");
   const [deletePresetId, setDeletePresetId] = reactExports.useState(null);
   const [instructionEditorPreset, setInstructionEditorPreset] = reactExports.useState(null);
@@ -59863,6 +60317,10 @@ function DashboardPage() {
   const [saveTranscript, setSaveTranscript] = reactExports.useState(false);
   const [recordAudio, setRecordAudio] = reactExports.useState(false);
   const [capturePermissionConfirmed, setCapturePermissionConfirmed] = reactExports.useState(false);
+  const [confirmEndOpen, setConfirmEndOpen] = reactExports.useState(false);
+  const [recentPhones, setRecentPhones] = reactExports.useState([]);
+  const billingPollRef = reactExports.useRef(null);
+  const billingBaselineRef = reactExports.useRef(null);
   const { data: presets, isLoading: presetsLoading } = useListMyPresets();
   const {
     data: calls,
@@ -59880,6 +60338,12 @@ function DashboardPage() {
   const createPurchaseIntent = useCreatePurchaseIntent();
   const voice = useXaiVoice();
   const [buyingPackageId, setBuyingPackageId] = reactExports.useState(null);
+  const healthQuery = useQuery({
+    queryKey: ["voiceServerHealth", "dashboard"],
+    queryFn: getVoiceServerHealth,
+    refetchInterval: 3e4,
+    retry: 1
+  });
   const recentCalls = (calls ?? []).slice(0, 5);
   const totalCalls = (calls ?? []).length;
   const callsToday = (calls ?? []).filter((c2) => {
@@ -59891,26 +60355,98 @@ function DashboardPage() {
   const totalBalanceSeconds = Number((billingStatus == null ? void 0 : billingStatus.balanceSeconds) ?? 0n);
   const availableSeconds = Number((billingStatus == null ? void 0 : billingStatus.availableSeconds) ?? 0n);
   const reservedSeconds = Number((billingStatus == null ? void 0 : billingStatus.reservedSeconds) ?? 0n);
+  const lowBalance = availableSeconds > 0 && availableSeconds < LOW_BALANCE_SECONDS;
   const selectedPreset = (presets ?? []).find((p2) => p2.id.toString() === selectedPresetId) ?? null;
   const isCallActive = voice.status !== "idle" && voice.status !== "completed" && voice.status !== "error";
   const savesCallArtifacts = saveTranscript || recordAudio;
   const trimmedInstructionDraft = instructionDraft.trim();
   const canSaveInstructions = instructionEditorPreset !== null && trimmedInstructionDraft.length > 0 && trimmedInstructionDraft.length <= MAX_AI_INSTRUCTIONS_CHARS$1 && trimmedInstructionDraft !== instructionEditorPreset.systemPrompt.trim();
+  const bridgeOk = ((_a3 = healthQuery.data) == null ? void 0 : _a3.ok) === true;
+  const bridgeDown = healthQuery.isError || ((_b3 = healthQuery.data) == null ? void 0 : _b3.ok) === false;
+  reactExports.useEffect(() => {
+    setRecentPhones(loadRecentPhones());
+  }, []);
+  reactExports.useEffect(() => {
+    if (!selectedPresetId && (presets ?? []).length > 0) {
+      setSelectedPresetId(presets[0].id.toString());
+    }
+  }, [presets, selectedPresetId]);
   reactExports.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const billing = params.get("billing");
-    if (billing === "success") {
-      ue.success("Phone time purchase received");
-      refetchBilling();
-    } else if (billing === "canceled") {
+    if (!billing) return;
+    const clearBillingParams = () => {
+      params.delete("billing");
+      params.delete("session_id");
+      const next = params.toString();
+      const url = `${window.location.pathname}${next ? `?${next}` : ""}${window.location.hash}`;
+      window.history.replaceState({}, "", url);
+    };
+    if (billing === "canceled") {
       ue.info("Checkout canceled");
+      clearBillingParams();
+      return;
     }
-  }, [refetchBilling]);
+    if (billing === "success") {
+      ue.info("Confirming payment…", {
+        description: "Waiting for Stripe to credit your phone time."
+      });
+      billingBaselineRef.current = Number(
+        (billingStatus == null ? void 0 : billingStatus.balanceSeconds) ?? 0n
+      );
+      let attempts = 0;
+      if (billingPollRef.current) clearInterval(billingPollRef.current);
+      billingPollRef.current = setInterval(() => {
+        attempts += 1;
+        void refetchBilling().then((result) => {
+          var _a4;
+          const nextBalance = Number(((_a4 = result.data) == null ? void 0 : _a4.balanceSeconds) ?? 0n);
+          const baseline = billingBaselineRef.current ?? 0;
+          if (nextBalance > baseline) {
+            ue.success("Phone time credited", {
+              description: `${formatMinutes(nextBalance)} total balance`
+            });
+            if (billingPollRef.current) {
+              clearInterval(billingPollRef.current);
+              billingPollRef.current = null;
+            }
+            clearBillingParams();
+          } else if (attempts >= 15) {
+            ue.message("Payment received", {
+              description: "Credit is still processing. Refresh balance in a moment if it does not update."
+            });
+            if (billingPollRef.current) {
+              clearInterval(billingPollRef.current);
+              billingPollRef.current = null;
+            }
+            clearBillingParams();
+          }
+        });
+      }, 2e3);
+    }
+    return () => {
+      if (billingPollRef.current) {
+        clearInterval(billingPollRef.current);
+        billingPollRef.current = null;
+      }
+    };
+  }, []);
+  const handleRecipientChange = (value) => {
+    setRecipient(value);
+    setRecipientHint(phoneInputHint(value));
+    if (recipientError) setRecipientError("");
+  };
   const handleRecipientBlur = () => {
-    if (recipient && !validateE164(recipient.replace(/\s/g, ""))) {
-      setRecipientError("Enter a valid E.164 number, e.g. +15551234567");
+    const normalized = normalizeToE164(recipient);
+    if (normalized && normalized !== recipient) {
+      setRecipient(normalized);
+    }
+    const check = normalized || recipient;
+    if (check && !isValidE164(check.replace(/\s/g, ""))) {
+      setRecipientError("Enter a valid number, e.g. +15551234567");
     } else {
       setRecipientError("");
+      setRecipientHint(null);
     }
   };
   const handleCall = async () => {
@@ -59922,21 +60458,29 @@ function DashboardPage() {
       ue.error("Enter a recipient number and select a preset");
       return;
     }
-    const cleaned = recipient.replace(/\s/g, "");
-    if (!validateE164(cleaned)) {
-      setRecipientError("Enter a valid E.164 number, e.g. +15551234567");
+    const cleaned = normalizeToE164(recipient.replace(/\s/g, ""));
+    if (!isValidE164(cleaned)) {
+      setRecipientError("Enter a valid number, e.g. +15551234567");
       return;
     }
     if (savesCallArtifacts && !capturePermissionConfirmed) {
       ue.error("Confirm permission before saving call artifacts");
       return;
     }
+    if (bridgeDown) {
+      ue.error("Voice bridge is unavailable", {
+        description: "Check the system status banner and try again shortly."
+      });
+      return;
+    }
+    setRecipient(cleaned);
     setRecipientError("");
     await voice.startCall(selectedPreset, cleaned, {
       saveTranscript,
       recordAudio,
       permissionConfirmed: capturePermissionConfirmed
     });
+    setRecentPhones(loadRecentPhones());
     refetchBilling();
   };
   const openInstructionEditor = (preset) => {
@@ -59984,6 +60528,12 @@ function DashboardPage() {
       setBuyingPackageId(null);
     }
   };
+  const lineSummary = reactExports.useMemo(() => {
+    var _a4;
+    const lines = (_a4 = healthQuery.data) == null ? void 0 : _a4.twilioLines;
+    if (!lines) return null;
+    return `${lines.available ?? 0}/${lines.configured ?? 0} lines free`;
+  }, [(_c2 = healthQuery.data) == null ? void 0 : _c2.twilioLines]);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs(ProtectedRoute, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(AppLayout, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "p-6 space-y-5", "data-ocid": "dashboard.page", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between", children: [
@@ -60006,6 +60556,80 @@ function DashboardPage() {
           }
         )
       ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        "div",
+        {
+          className: `flex flex-wrap items-center gap-3 rounded-xl border px-4 py-2.5 text-xs ${bridgeDown ? "border-destructive/40 bg-destructive/10 text-destructive" : bridgeOk ? "border-border bg-muted/20 text-muted-foreground" : "border-border bg-muted/20 text-muted-foreground"}`,
+          "data-ocid": "dashboard.bridge_status",
+          children: healthQuery.isLoading ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-3.5 h-3.5 animate-spin" }),
+            "Checking voice bridge…"
+          ] }) : bridgeDown ? /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(WifiOff, { className: "w-3.5 h-3.5" }),
+            "Voice bridge is unreachable. Calls and checkout may fail until it recovers.",
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Button,
+              {
+                size: "sm",
+                variant: "outline",
+                className: "h-7 ml-auto",
+                onClick: () => void healthQuery.refetch(),
+                children: "Retry"
+              }
+            )
+          ] }) : /* @__PURE__ */ jsxRuntimeExports.jsxs(jsxRuntimeExports.Fragment, { children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(Wifi, { className: "w-3.5 h-3.5 text-primary" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-foreground/80", children: "Bridge online" }),
+            ((_d2 = healthQuery.data) == null ? void 0 : _d2.xaiConfigured) ? /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "h-5 text-[10px]", children: "xAI" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Badge,
+              {
+                variant: "outline",
+                className: "h-5 text-[10px] text-amber-400 border-amber-500/40",
+                children: "xAI not ready"
+              }
+            ),
+            ((_e2 = healthQuery.data) == null ? void 0 : _e2.twilioConfigured) ? /* @__PURE__ */ jsxRuntimeExports.jsx(Badge, { variant: "outline", className: "h-5 text-[10px]", children: "Twilio" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Badge,
+              {
+                variant: "outline",
+                className: "h-5 text-[10px] text-amber-400 border-amber-500/40",
+                children: "Twilio not ready"
+              }
+            ),
+            lineSummary && /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-muted-foreground", children: lineSummary }),
+            (((_g2 = (_f2 = healthQuery.data) == null ? void 0 : _f2.twilioLines) == null ? void 0 : _g2.queued) ?? 0) > 0 && /* @__PURE__ */ jsxRuntimeExports.jsxs("span", { className: "text-yellow-400", children: [
+              (_i2 = (_h2 = healthQuery.data) == null ? void 0 : _h2.twilioLines) == null ? void 0 : _i2.queued,
+              " queued"
+            ] })
+          ] })
+        }
+      ),
+      lowBalance && /* @__PURE__ */ jsxRuntimeExports.jsxs(
+        "div",
+        {
+          className: "flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-200",
+          "data-ocid": "dashboard.low_balance_banner",
+          children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(TriangleAlert, { className: "w-3.5 h-3.5 shrink-0" }),
+            "Low phone time: ",
+            formatMinutes(availableSeconds),
+            " available. Buy more before longer calls."
+          ]
+        }
+      ),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        OnboardingChecklist,
+        {
+          hasBalance: availableSeconds > 0 || totalBalanceSeconds > 0,
+          hasPreset: activePresets > 0,
+          hasCall: totalCalls > 0,
+          onBuy: () => {
+            var _a4;
+            (_a4 = document.querySelector('[data-ocid="dashboard.billing_card"]')) == null ? void 0 : _a4.scrollIntoView({ behavior: "smooth" });
+          },
+          onCreatePreset: () => navigate({ to: "/user/settings" })
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           StatCard,
@@ -60126,7 +60750,13 @@ function DashboardPage() {
           ]
         }
       ),
-      /* @__PURE__ */ jsxRuntimeExports.jsx(ActiveCallPanel, { voice }),
+      /* @__PURE__ */ jsxRuntimeExports.jsx(
+        ActiveCallPanel,
+        {
+          voice,
+          onRequestEnd: () => setConfirmEndOpen(true)
+        }
+      ),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-1 lg:grid-cols-3 gap-5", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs(
           Card,
@@ -60145,7 +60775,7 @@ function DashboardPage() {
                     {
                       htmlFor: "recipient",
                       className: "text-xs font-medium text-muted-foreground",
-                      children: "Recipient Phone (E.164)"
+                      children: "Recipient Phone"
                     }
                   ),
                   /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -60153,23 +60783,40 @@ function DashboardPage() {
                     {
                       id: "recipient",
                       type: "tel",
-                      placeholder: "+1 (555) 000-0000",
+                      inputMode: "tel",
+                      autoComplete: "tel",
+                      placeholder: "+15551234567",
                       value: recipient,
-                      onChange: (e) => setRecipient(e.target.value),
+                      onChange: (e) => handleRecipientChange(e.target.value),
                       onBlur: handleRecipientBlur,
                       "data-ocid": "dashboard.recipient.input",
                       className: "font-mono text-sm",
                       disabled: isCallActive
                     }
                   ),
-                  recipientError && /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  recipientError ? /* @__PURE__ */ jsxRuntimeExports.jsx(
                     "p",
                     {
                       className: "text-xs text-destructive",
                       "data-ocid": "dashboard.recipient.field_error",
                       children: recipientError
                     }
-                  )
+                  ) : recipientHint ? /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: recipientHint }) : /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[11px] text-muted-foreground", children: "US 10-digit numbers auto-convert to +1…" }),
+                  recentPhones.length > 0 && !isCallActive && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex flex-wrap gap-1.5 pt-1", children: recentPhones.map((phone) => /* @__PURE__ */ jsxRuntimeExports.jsx(
+                    "button",
+                    {
+                      type: "button",
+                      onClick: () => {
+                        setRecipient(phone);
+                        setRecipientError("");
+                        setRecipientHint(null);
+                      },
+                      className: "text-[11px] font-mono px-2 py-1 rounded-md border border-border bg-muted/30 hover:border-primary/40 text-muted-foreground hover:text-foreground transition-colors",
+                      "data-ocid": "dashboard.recipient.recent",
+                      children: formatPhoneDisplay(phone)
+                    },
+                    phone
+                  )) })
                 ] }),
                 /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1.5", children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs font-medium text-muted-foreground", children: "Call Preset" }),
@@ -60309,12 +60956,12 @@ function DashboardPage() {
                   Button,
                   {
                     onClick: handleCall,
-                    disabled: isCallActive || !recipient || !selectedPresetId || availableSeconds <= 0 || savesCallArtifacts && !capturePermissionConfirmed,
+                    disabled: isCallActive || !recipient || !selectedPresetId || availableSeconds <= 0 || bridgeDown || savesCallArtifacts && !capturePermissionConfirmed,
                     "data-ocid": "dashboard.call.submit_button",
                     className: "w-full gap-2",
                     children: [
                       voice.status === "initiating" || voice.status === "queued" || voice.status === "connecting" ? /* @__PURE__ */ jsxRuntimeExports.jsx(LoaderCircle, { className: "w-4 h-4 animate-spin" }) : /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-4 h-4" }),
-                      voice.status === "initiating" ? "Initiating..." : voice.status === "queued" ? "Queued..." : voice.status === "connecting" ? "Connecting..." : availableSeconds <= 0 ? "Add Phone Time" : "Start Call"
+                      voice.status === "initiating" ? "Initiating..." : voice.status === "queued" ? "Queued..." : voice.status === "connecting" ? "Connecting..." : availableSeconds <= 0 ? "Add Phone Time" : bridgeDown ? "Bridge Offline" : "Start Call"
                     ]
                   }
                 )
@@ -60510,7 +61157,7 @@ function DashboardPage() {
                 children: [
                   /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-4 h-4 text-muted-foreground shrink-0" }),
                   /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 min-w-0", children: [
-                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium truncate font-mono", children: call.recipientPhone }),
+                    /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium truncate font-mono", children: formatPhoneDisplay(call.recipientPhone) }),
                     /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground", children: new Date(
                       Number(call.startTime / 1000000n)
                     ).toLocaleString() })
@@ -60623,7 +61270,28 @@ function DashboardPage() {
           ] })
         ] })
       }
-    )
+    ),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(AlertDialog, { open: confirmEndOpen, onOpenChange: setConfirmEndOpen, children: /* @__PURE__ */ jsxRuntimeExports.jsxs(AlertDialogContent, { "data-ocid": "end-call.dialog", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(AlertDialogHeader, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(AlertDialogTitle, { children: voice.status === "queued" ? "Leave the queue?" : "End this call?" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(AlertDialogDescription, { children: voice.status === "queued" ? "Your reserved minutes will be released after the queue entry is canceled." : "This hangs up the Twilio call and stops the AI session." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs(AlertDialogFooter, { children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx(AlertDialogCancel, { children: "Keep going" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          AlertDialogAction,
+          {
+            className: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+            onClick: () => {
+              setConfirmEndOpen(false);
+              voice.endCall();
+            },
+            "data-ocid": "end-call.confirm_button",
+            children: voice.status === "queued" ? "Cancel queue" : "End call"
+          }
+        )
+      ] })
+    ] }) })
   ] });
 }
 const Route$2 = createFileRoute("/user/dashboard")({
@@ -60790,16 +61458,23 @@ function HistoryPage() {
   const filtered = reactExports.useMemo(() => {
     const fromMs = dateFrom ? new Date(dateFrom).getTime() : null;
     const toMs = dateTo ? (/* @__PURE__ */ new Date(`${dateTo}T23:59:59`)).getTime() : null;
+    const q2 = search.trim().toLowerCase();
     return (calls ?? []).filter((c2) => {
-      if (search && !c2.recipientPhone.toLowerCase().includes(search.toLowerCase()))
-        return false;
+      if (q2) {
+        const presetName = (presetMap.get(c2.presetId.toString()) ?? "").toLowerCase();
+        const transcript = (c2.transcript ?? "").toLowerCase();
+        const phone = c2.recipientPhone.toLowerCase();
+        if (!phone.includes(q2) && !presetName.includes(q2) && !transcript.includes(q2)) {
+          return false;
+        }
+      }
       if (statusFilter !== "all" && c2.status !== statusFilter) return false;
       const callMs = Number(c2.startTime / 1000000n);
       if (fromMs && callMs < fromMs) return false;
       if (toMs && callMs > toMs) return false;
       return true;
     });
-  }, [calls, search, statusFilter, dateFrom, dateTo]);
+  }, [calls, search, statusFilter, dateFrom, dateTo, presetMap]);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice(
@@ -60818,7 +61493,7 @@ function HistoryPage() {
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
         /* @__PURE__ */ jsxRuntimeExports.jsx("h1", { className: "font-display text-2xl font-bold text-foreground", children: "Call History" }),
-        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground mt-0.5", children: "All your outbound AI calls" })
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm text-muted-foreground mt-0.5", children: "Outbound calls and AI answering sessions" })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs(
         Button,
@@ -60842,7 +61517,7 @@ function HistoryPage() {
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           Input,
           {
-            placeholder: "Search by phone number…",
+            placeholder: "Search phone, preset, or transcript…",
             value: search,
             onChange: (e) => {
               setSearch(e.target.value);
@@ -61027,6 +61702,9 @@ function HistoryPage() {
     ] })
   ] }) }) });
 }
+function isAnsweringCall(presetId) {
+  return presetId >= ANSWERING_PRESET_ID_OFFSET;
+}
 function CallRow({
   call,
   idx,
@@ -61035,6 +61713,7 @@ function CallRow({
   onToggle
 }) {
   const artifacts = parseCallArtifacts(call.transcript);
+  const inbound = isAnsweringCall(call.presetId);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { "data-ocid": `history.call.item.${idx}`, children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs(
       "button",
@@ -61046,7 +61725,16 @@ function CallRow({
           /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-2.5 min-w-0", children: [
             /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "flex-shrink-0 w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center", children: /* @__PURE__ */ jsxRuntimeExports.jsx(Phone, { className: "w-3.5 h-3.5 text-primary" }) }),
             /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-w-0", children: [
-              /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-foreground font-mono truncate", children: call.recipientPhone }),
+              /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-1.5 min-w-0", children: [
+                /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-sm font-medium text-foreground font-mono truncate", children: call.recipientPhone }),
+                /* @__PURE__ */ jsxRuntimeExports.jsx(
+                  "span",
+                  {
+                    className: `shrink-0 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border ${inbound ? "border-blue-500/40 text-blue-400" : "border-border text-muted-foreground"}`,
+                    children: inbound ? "In" : "Out"
+                  }
+                )
+              ] }),
               presetName && /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground truncate hidden sm:block", children: presetName })
             ] })
           ] }),
@@ -61067,6 +61755,10 @@ function CallRow({
         /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "font-mono", children: formatDuration(call.startTime, call.endTime) })
       ] }),
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs mb-4", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground mb-1", children: "Direction" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-foreground", children: inbound ? "Inbound (answering)" : "Outbound" })
+        ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-muted-foreground mb-1", children: "Call SID" }),
           /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "font-mono text-foreground break-all", children: call.callSid ?? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-muted-foreground/60", children: "—" }) })
@@ -63004,12 +63696,17 @@ function createDefaultPreset() {
   };
 }
 function applyHiddenPresetDefaults(input) {
+  var _a3, _b3;
   return {
     ...input,
     audioFormat: DEFAULT_AUDIO_FORMAT,
     sampleRate: DEFAULT_SAMPLE_RATE,
     turnDetection: normalizeTurnDetection(input.turnDetection),
-    toolsEnabled: { ...DEFAULT_TOOLS_ENABLED }
+    toolsEnabled: {
+      webSearch: Boolean((_a3 = input.toolsEnabled) == null ? void 0 : _a3.webSearch),
+      xSearch: Boolean((_b3 = input.toolsEnabled) == null ? void 0 : _b3.xSearch),
+      functionCalling: false
+    }
   };
 }
 function parseNumberInputMs(value, fallback) {
@@ -63026,7 +63723,7 @@ const defaultTimingText = {
 };
 const TURN_DETECTION_HELP = "Choose how quickly the AI responds after the caller pauses. Use Patient listener if callers often pause mid-sentence.";
 function PresetForm({ initial, onSave, onCancel, isLoading }) {
-  var _a3, _b3, _c2, _d2;
+  var _a3, _b3, _c2, _d2, _e2, _f2, _g2, _h2;
   const {
     register,
     handleSubmit,
@@ -63042,15 +63739,19 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
       audioFormat: DEFAULT_AUDIO_FORMAT,
       sampleRate: DEFAULT_SAMPLE_RATE,
       turnDetection: normalizeTurnDetection(initial.turnDetection),
-      toolsEnabled: { ...DEFAULT_TOOLS_ENABLED }
+      toolsEnabled: {
+        webSearch: Boolean((_a3 = initial.toolsEnabled) == null ? void 0 : _a3.webSearch),
+        xSearch: Boolean((_b3 = initial.toolsEnabled) == null ? void 0 : _b3.xSearch),
+        functionCalling: false
+      }
     } : createDefaultPreset()
   });
   const values = watch();
   const submitPreset = handleSubmit(
     (input) => onSave(applyHiddenPresetDefaults(input))
   );
-  const silenceMs = ((_a3 = values.turnDetection) == null ? void 0 : _a3.silenceDurationMs) ?? 500n;
-  const prefixMs = ((_b3 = values.turnDetection) == null ? void 0 : _b3.prefixPaddingMs) ?? 200n;
+  const silenceMs = ((_c2 = values.turnDetection) == null ? void 0 : _c2.silenceDurationMs) ?? 500n;
+  const prefixMs = ((_d2 = values.turnDetection) == null ? void 0 : _d2.prefixPaddingMs) ?? 200n;
   const timingProfileId = getTurnTimingProfileId({
     ...values.turnDetection,
     serverVad: true
@@ -63151,6 +63852,44 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
         }
       )
     ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3 p-4 rounded-lg bg-muted/20 border border-border", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs font-semibold text-foreground uppercase tracking-wide", children: "Live research tools" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-xs text-muted-foreground leading-relaxed", children: "Allow the AI to look up current information during the call. Tools add a bit of latency and may surface web content." })
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-4 rounded-md border border-border bg-background/60 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-0.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-foreground", children: "Web search" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground leading-tight", children: "Answer questions that need up-to-date web facts." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Switch,
+          {
+            checked: Boolean((_e2 = values.toolsEnabled) == null ? void 0 : _e2.webSearch),
+            onCheckedChange: (checked) => setValue("toolsEnabled.webSearch", checked, {
+              shouldDirty: true
+            }),
+            "data-ocid": "settings.preset.tools.web_search.switch"
+          }
+        )
+      ] }),
+      /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center justify-between gap-4 rounded-md border border-border bg-background/60 p-3", children: [
+        /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-0.5", children: [
+          /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-foreground", children: "X (Twitter) search" }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("p", { className: "text-[10px] text-muted-foreground leading-tight", children: "Check recent public posts when relevant to the conversation." })
+        ] }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx(
+          Switch,
+          {
+            checked: Boolean((_f2 = values.toolsEnabled) == null ? void 0 : _f2.xSearch),
+            onCheckedChange: (checked) => setValue("toolsEnabled.xSearch", checked, {
+              shouldDirty: true
+            }),
+            "data-ocid": "settings.preset.tools.x_search.switch"
+          }
+        )
+      ] })
+    ] }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-4 p-4 rounded-lg bg-muted/20 border border-border", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-3", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-1", children: [
@@ -63193,7 +63932,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "space-y-2", children: [
         /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex justify-between items-center", children: [
           /* @__PURE__ */ jsxRuntimeExports.jsx(Label, { className: "text-xs text-muted-foreground", children: "Speech Sensitivity" }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono text-primary tabular-nums", children: (((_c2 = values.turnDetection) == null ? void 0 : _c2.threshold) ?? 0.5).toFixed(2) })
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs font-mono text-primary tabular-nums", children: (((_g2 = values.turnDetection) == null ? void 0 : _g2.threshold) ?? 0.5).toFixed(2) })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           Slider,
@@ -63201,7 +63940,7 @@ function PresetForm({ initial, onSave, onCancel, isLoading }) {
             min: 0,
             max: 1,
             step: 0.01,
-            value: [((_d2 = values.turnDetection) == null ? void 0 : _d2.threshold) ?? 0.5],
+            value: [((_h2 = values.turnDetection) == null ? void 0 : _h2.threshold) ?? 0.5],
             onValueChange: ([v2]) => setValue("turnDetection.threshold", v2),
             "data-ocid": "settings.preset.threshold.slider",
             className: "py-1"

@@ -47,12 +47,24 @@ import {
 } from "@/hooks/use-backend";
 import type { XaiCallStatus } from "@/hooks/use-xai-voice";
 import { useXaiVoice } from "@/hooks/use-xai-voice";
-import { createCheckoutSession } from "@/lib/voice-server";
+import {
+  formatPhoneDisplay,
+  isValidE164,
+  loadRecentPhones,
+  normalizeToE164,
+  phoneInputHint,
+} from "@/lib/phone";
+import {
+  createCheckoutSession,
+  getVoiceServerHealth,
+} from "@/lib/voice-server";
 import type { CallPreset } from "@/types";
 import { useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   CheckCircle2,
+  Circle,
   Clock,
   Copy,
   CreditCard,
@@ -69,10 +81,12 @@ import {
   Trash2,
   Volume2,
   VolumeX,
+  Wifi,
+  WifiOff,
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 function formatDuration(secs: number): string {
@@ -92,10 +106,6 @@ function formatCallDuration(start: bigint, end?: bigint): string {
   if (!end) return "—";
   const secs = Number((end - start) / 1_000_000_000n);
   return formatDuration(secs);
-}
-
-function validateE164(phone: string): boolean {
-  return /^\+[1-9]\d{1,14}$/.test(phone.replace(/\s/g, ""));
 }
 
 const STATUS_COLORS: Record<XaiCallStatus, string> = {
@@ -119,6 +129,7 @@ const STATUS_LABELS: Record<XaiCallStatus, string> = {
 };
 const MAX_AI_INSTRUCTIONS_CHARS = 8000;
 const MAX_STEERING_PROMPT_CHARS = 800;
+const LOW_BALANCE_SECONDS = 5 * 60;
 
 function StatCard({
   icon,
@@ -160,25 +171,32 @@ function StatCard({
 
 function ActiveCallPanel({
   voice,
+  onRequestEnd,
 }: {
   voice: ReturnType<typeof useXaiVoice>;
+  onRequestEnd: () => void;
 }) {
   const {
     status,
     recipient,
     presetName,
     durationSecs,
+    remainingSeconds,
+    queuePosition,
     errorMessage,
     liveAudioAvailable,
     isListeningLive,
     liveAudioError,
     isSendingSteeringPrompt,
     steeringError,
-    endCall,
+    liveTranscript,
+    isReattaching,
     steerConversation,
     toggleLiveAudio,
+    dismissStatus,
   } = voice;
   const [steeringPrompt, setSteeringPrompt] = useState("");
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
   const isActive =
     status === "in_call" ||
     status === "connecting" ||
@@ -188,6 +206,10 @@ function ActiveCallPanel({
     status === "in_call" &&
     !isSendingSteeringPrompt &&
     steeringPrompt.trim().length > 0;
+  const lowPaidTime =
+    remainingSeconds != null &&
+    remainingSeconds > 0 &&
+    remainingSeconds <= 60;
 
   const handleSteeringSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -197,9 +219,13 @@ function ActiveCallPanel({
       await steerConversation(prompt);
       setSteeringPrompt("");
     } catch {
-      // The hook surfaces the failure through toast and steeringError.
+      // Hook surfaces failure via toast and steeringError.
     }
   };
+
+  useEffect(() => {
+    transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [liveTranscript.length]);
 
   if (status === "idle") return null;
 
@@ -214,13 +240,11 @@ function ActiveCallPanel({
         className="border-primary/40 bg-card relative overflow-hidden"
         data-ocid="dashboard.active_call.card"
       >
-        {/* Animated top border */}
         {isActive && (
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent animate-pulse" />
         )}
         <CardContent className="pt-5 pb-4">
           <div className="flex items-center gap-4 flex-wrap">
-            {/* Status indicator */}
             <div className="flex items-center gap-2.5">
               <div
                 className={`relative flex items-center justify-center w-9 h-9 rounded-full ${
@@ -235,7 +259,8 @@ function ActiveCallPanel({
               >
                 {(status === "initiating" ||
                   status === "connecting" ||
-                  status === "queued") && (
+                  status === "queued" ||
+                  isReattaching) && (
                   <Loader2 className="w-4 h-4 animate-spin text-primary" />
                 )}
                 {status === "in_call" && (
@@ -256,7 +281,7 @@ function ActiveCallPanel({
                   <span
                     className={`text-sm font-semibold ${STATUS_COLORS[status]}`}
                   >
-                    {STATUS_LABELS[status]}
+                    {isReattaching ? "Reconnecting..." : STATUS_LABELS[status]}
                   </span>
                   {status === "in_call" && (
                     <Badge
@@ -266,14 +291,26 @@ function ActiveCallPanel({
                       {formatDuration(durationSecs)}
                     </Badge>
                   )}
+                  {status === "in_call" && remainingSeconds != null && (
+                    <Badge
+                      variant="outline"
+                      className={`text-xs h-4 px-1 font-mono ${
+                        lowPaidTime
+                          ? "border-amber-500/50 text-amber-400"
+                          : "border-border text-muted-foreground"
+                      }`}
+                      data-ocid="dashboard.active_call.remaining_time"
+                    >
+                      {formatDuration(remainingSeconds)} left
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground font-mono">
-                  {recipient}
+                  {recipient ? formatPhoneDisplay(recipient) : "—"}
                 </p>
               </div>
             </div>
 
-            {/* Preset name */}
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
               <Zap className="w-3 h-3" />
               <span className="truncate max-w-[140px]">{presetName}</span>
@@ -283,8 +320,11 @@ function ActiveCallPanel({
               <Badge
                 variant="outline"
                 className="text-xs border-yellow-500/40 text-yellow-400"
+                data-ocid="dashboard.active_call.queue_badge"
               >
-                Waiting for line
+                {queuePosition
+                  ? `Queue position ${queuePosition}`
+                  : "Waiting for free line"}
               </Badge>
             )}
             {status === "in_call" && (
@@ -304,16 +344,37 @@ function ActiveCallPanel({
               </Badge>
             )}
 
-            {/* Error message */}
             {status === "error" && errorMessage && (
               <p className="text-xs text-destructive flex-1">{errorMessage}</p>
+            )}
+            {status === "queued" && (
+              <p className="text-xs text-yellow-500/90 flex-1">
+                Your paid reservation is held while waiting. You can cancel
+                anytime.
+              </p>
             )}
             {liveAudioError && (
               <p className="text-xs text-yellow-500 flex-1">{liveAudioError}</p>
             )}
+            {lowPaidTime && status === "in_call" && (
+              <p className="text-xs text-amber-400 flex-1">
+                Paid time is almost out — the call will end when the balance
+                hits zero.
+              </p>
+            )}
 
-            {/* Controls */}
             <div className="flex items-center gap-2 ml-auto shrink-0">
+              {(status === "completed" || status === "error") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={dismissStatus}
+                  className="h-8 text-xs"
+                  data-ocid="dashboard.active_call.dismiss_button"
+                >
+                  Dismiss
+                </Button>
+              )}
               {isActive && liveAudioAvailable && (
                 <Button
                   variant={isListeningLive ? "secondary" : "outline"}
@@ -334,16 +395,47 @@ function ActiveCallPanel({
                 <Button
                   variant="destructive"
                   size="sm"
-                  onClick={endCall}
+                  onClick={onRequestEnd}
                   data-ocid="dashboard.active_call.end_button"
                   className="gap-1.5 h-8 text-xs"
                 >
                   <PhoneOff className="w-3.5 h-3.5" />
-                  End Call
+                  {status === "queued" ? "Cancel Queue" : "End Call"}
                 </Button>
               )}
             </div>
           </div>
+
+          {status === "in_call" && liveTranscript.length > 0 && (
+            <div
+              className="mt-4 border-t border-border pt-4"
+              data-ocid="dashboard.active_call.transcript"
+            >
+              <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-primary" />
+                Live transcript
+              </p>
+              <div className="max-h-40 overflow-y-auto rounded-lg bg-muted/30 border border-border p-3 space-y-2 font-mono text-xs">
+                {liveTranscript.map((line, idx) => (
+                  <div key={`${idx}-${line.speaker}`} className="leading-relaxed">
+                    <span
+                      className={
+                        line.speaker.toLowerCase().includes("assistant") ||
+                        line.speaker.toLowerCase().includes("ai")
+                          ? "text-primary font-semibold"
+                          : "text-muted-foreground font-semibold"
+                      }
+                    >
+                      {line.speaker}:{" "}
+                    </span>
+                    <span className="text-foreground/90">{line.text}</span>
+                  </div>
+                ))}
+                <div ref={transcriptEndRef} />
+              </div>
+            </div>
+          )}
+
           {status === "in_call" && (
             <form
               className="mt-4 border-t border-border pt-4"
@@ -410,10 +502,90 @@ function ActiveCallPanel({
   );
 }
 
+function OnboardingChecklist({
+  hasBalance,
+  hasPreset,
+  hasCall,
+  onBuy,
+  onCreatePreset,
+}: {
+  hasBalance: boolean;
+  hasPreset: boolean;
+  hasCall: boolean;
+  onBuy: () => void;
+  onCreatePreset: () => void;
+}) {
+  if (hasBalance && hasPreset && hasCall) return null;
+  const steps = [
+    {
+      done: hasBalance,
+      label: "Add prepaid phone time",
+      action: !hasBalance ? (
+        <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onBuy}>
+          Buy time
+        </Button>
+      ) : null,
+    },
+    {
+      done: hasPreset,
+      label: "Create an AI call preset",
+      action: !hasPreset ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-xs"
+          onClick={onCreatePreset}
+        >
+          Create preset
+        </Button>
+      ) : null,
+    },
+    {
+      done: hasCall,
+      label: "Place your first call",
+      action: null,
+    },
+  ];
+
+  return (
+    <Card
+      className="bg-card border-primary/30"
+      data-ocid="dashboard.onboarding.card"
+    >
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold">Get started</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {steps.map((step) => (
+          <div
+            key={step.label}
+            className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/20 px-3 py-2"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              {step.done ? (
+                <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
+              ) : (
+                <Circle className="w-4 h-4 text-muted-foreground shrink-0" />
+              )}
+              <span
+                className={`text-sm ${step.done ? "text-muted-foreground line-through" : "text-foreground"}`}
+              >
+                {step.label}
+              </span>
+            </div>
+            {step.action}
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [recipient, setRecipient] = useState("");
   const [recipientError, setRecipientError] = useState("");
+  const [recipientHint, setRecipientHint] = useState<string | null>(null);
   const [selectedPresetId, setSelectedPresetId] = useState<string>("");
   const [deletePresetId, setDeletePresetId] = useState<bigint | null>(null);
   const [instructionEditorPreset, setInstructionEditorPreset] =
@@ -423,6 +595,10 @@ export default function DashboardPage() {
   const [recordAudio, setRecordAudio] = useState(false);
   const [capturePermissionConfirmed, setCapturePermissionConfirmed] =
     useState(false);
+  const [confirmEndOpen, setConfirmEndOpen] = useState(false);
+  const [recentPhones, setRecentPhones] = useState<string[]>([]);
+  const billingPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const billingBaselineRef = useRef<number | null>(null);
 
   const { data: presets, isLoading: presetsLoading } = useListMyPresets();
   const {
@@ -442,6 +618,13 @@ export default function DashboardPage() {
   const voice = useXaiVoice();
   const [buyingPackageId, setBuyingPackageId] = useState<string | null>(null);
 
+  const healthQuery = useQuery({
+    queryKey: ["voiceServerHealth", "dashboard"],
+    queryFn: getVoiceServerHealth,
+    refetchInterval: 30_000,
+    retry: 1,
+  });
+
   const recentCalls = (calls ?? []).slice(0, 5);
   const totalCalls = (calls ?? []).length;
   const callsToday = (calls ?? []).filter((c) => {
@@ -457,6 +640,8 @@ export default function DashboardPage() {
   const totalBalanceSeconds = Number(billingStatus?.balanceSeconds ?? 0n);
   const availableSeconds = Number(billingStatus?.availableSeconds ?? 0n);
   const reservedSeconds = Number(billingStatus?.reservedSeconds ?? 0n);
+  const lowBalance =
+    availableSeconds > 0 && availableSeconds < LOW_BALANCE_SECONDS;
 
   const selectedPreset =
     (presets ?? []).find((p) => p.id.toString() === selectedPresetId) ?? null;
@@ -473,22 +658,103 @@ export default function DashboardPage() {
     trimmedInstructionDraft.length <= MAX_AI_INSTRUCTIONS_CHARS &&
     trimmedInstructionDraft !== instructionEditorPreset.systemPrompt.trim();
 
+  const bridgeOk = healthQuery.data?.ok === true;
+  const bridgeDown = healthQuery.isError || healthQuery.data?.ok === false;
+
+  useEffect(() => {
+    setRecentPhones(loadRecentPhones());
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPresetId && (presets ?? []).length > 0) {
+      setSelectedPresetId(presets![0].id.toString());
+    }
+  }, [presets, selectedPresetId]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const billing = params.get("billing");
-    if (billing === "success") {
-      toast.success("Phone time purchase received");
-      refetchBilling();
-    } else if (billing === "canceled") {
+    if (!billing) return;
+
+    const clearBillingParams = () => {
+      params.delete("billing");
+      params.delete("session_id");
+      const next = params.toString();
+      const url = `${window.location.pathname}${next ? `?${next}` : ""}${window.location.hash}`;
+      window.history.replaceState({}, "", url);
+    };
+
+    if (billing === "canceled") {
       toast.info("Checkout canceled");
+      clearBillingParams();
+      return;
     }
-  }, [refetchBilling]);
+
+    if (billing === "success") {
+      toast.info("Confirming payment…", {
+        description: "Waiting for Stripe to credit your phone time.",
+      });
+      billingBaselineRef.current = Number(
+        billingStatus?.balanceSeconds ?? 0n,
+      );
+      let attempts = 0;
+      if (billingPollRef.current) clearInterval(billingPollRef.current);
+      billingPollRef.current = setInterval(() => {
+        attempts += 1;
+        void refetchBilling().then((result) => {
+          const nextBalance = Number(result.data?.balanceSeconds ?? 0n);
+          const baseline = billingBaselineRef.current ?? 0;
+          if (nextBalance > baseline) {
+            toast.success("Phone time credited", {
+              description: `${formatMinutes(nextBalance)} total balance`,
+            });
+            if (billingPollRef.current) {
+              clearInterval(billingPollRef.current);
+              billingPollRef.current = null;
+            }
+            clearBillingParams();
+          } else if (attempts >= 15) {
+            toast.message("Payment received", {
+              description:
+                "Credit is still processing. Refresh balance in a moment if it does not update.",
+            });
+            if (billingPollRef.current) {
+              clearInterval(billingPollRef.current);
+              billingPollRef.current = null;
+            }
+            clearBillingParams();
+          }
+        });
+      }, 2000);
+    }
+
+    return () => {
+      if (billingPollRef.current) {
+        clearInterval(billingPollRef.current);
+        billingPollRef.current = null;
+      }
+    };
+    // Only run on mount for return URL handling
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleRecipientChange = (value: string) => {
+    setRecipient(value);
+    setRecipientHint(phoneInputHint(value));
+    if (recipientError) setRecipientError("");
+  };
 
   const handleRecipientBlur = () => {
-    if (recipient && !validateE164(recipient.replace(/\s/g, ""))) {
-      setRecipientError("Enter a valid E.164 number, e.g. +15551234567");
+    const normalized = normalizeToE164(recipient);
+    if (normalized && normalized !== recipient) {
+      setRecipient(normalized);
+    }
+    const check = normalized || recipient;
+    if (check && !isValidE164(check.replace(/\s/g, ""))) {
+      setRecipientError("Enter a valid number, e.g. +15551234567");
     } else {
       setRecipientError("");
+      setRecipientHint(null);
     }
   };
 
@@ -501,21 +767,29 @@ export default function DashboardPage() {
       toast.error("Enter a recipient number and select a preset");
       return;
     }
-    const cleaned = recipient.replace(/\s/g, "");
-    if (!validateE164(cleaned)) {
-      setRecipientError("Enter a valid E.164 number, e.g. +15551234567");
+    const cleaned = normalizeToE164(recipient.replace(/\s/g, ""));
+    if (!isValidE164(cleaned)) {
+      setRecipientError("Enter a valid number, e.g. +15551234567");
       return;
     }
     if (savesCallArtifacts && !capturePermissionConfirmed) {
       toast.error("Confirm permission before saving call artifacts");
       return;
     }
+    if (bridgeDown) {
+      toast.error("Voice bridge is unavailable", {
+        description: "Check the system status banner and try again shortly.",
+      });
+      return;
+    }
+    setRecipient(cleaned);
     setRecipientError("");
     await voice.startCall(selectedPreset, cleaned, {
       saveTranscript,
       recordAudio,
       permissionConfirmed: capturePermissionConfirmed,
     });
+    setRecentPhones(loadRecentPhones());
     refetchBilling();
   };
 
@@ -567,11 +841,16 @@ export default function DashboardPage() {
     }
   };
 
+  const lineSummary = useMemo(() => {
+    const lines = healthQuery.data?.twilioLines;
+    if (!lines) return null;
+    return `${lines.available ?? 0}/${lines.configured ?? 0} lines free`;
+  }, [healthQuery.data?.twilioLines]);
+
   return (
     <ProtectedRoute>
       <AppLayout>
         <div className="p-6 space-y-5" data-ocid="dashboard.page">
-          {/* Header */}
           <div className="flex items-center justify-between">
             <div>
               <h1 className="font-display text-2xl font-bold text-foreground">
@@ -593,7 +872,99 @@ export default function DashboardPage() {
             </Button>
           </div>
 
-          {/* Stat Cards */}
+          {/* Bridge health */}
+          <div
+            className={`flex flex-wrap items-center gap-3 rounded-xl border px-4 py-2.5 text-xs ${
+              bridgeDown
+                ? "border-destructive/40 bg-destructive/10 text-destructive"
+                : bridgeOk
+                  ? "border-border bg-muted/20 text-muted-foreground"
+                  : "border-border bg-muted/20 text-muted-foreground"
+            }`}
+            data-ocid="dashboard.bridge_status"
+          >
+            {healthQuery.isLoading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Checking voice bridge…
+              </>
+            ) : bridgeDown ? (
+              <>
+                <WifiOff className="w-3.5 h-3.5" />
+                Voice bridge is unreachable. Calls and checkout may fail until
+                it recovers.
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 ml-auto"
+                  onClick={() => void healthQuery.refetch()}
+                >
+                  Retry
+                </Button>
+              </>
+            ) : (
+              <>
+                <Wifi className="w-3.5 h-3.5 text-primary" />
+                <span className="text-foreground/80">Bridge online</span>
+                {healthQuery.data?.xaiConfigured ? (
+                  <Badge variant="outline" className="h-5 text-[10px]">
+                    xAI
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="h-5 text-[10px] text-amber-400 border-amber-500/40"
+                  >
+                    xAI not ready
+                  </Badge>
+                )}
+                {healthQuery.data?.twilioConfigured ? (
+                  <Badge variant="outline" className="h-5 text-[10px]">
+                    Twilio
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="h-5 text-[10px] text-amber-400 border-amber-500/40"
+                  >
+                    Twilio not ready
+                  </Badge>
+                )}
+                {lineSummary && (
+                  <span className="text-muted-foreground">{lineSummary}</span>
+                )}
+                {(healthQuery.data?.twilioLines?.queued ?? 0) > 0 && (
+                  <span className="text-yellow-400">
+                    {healthQuery.data?.twilioLines?.queued} queued
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+
+          {lowBalance && (
+            <div
+              className="flex items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-200"
+              data-ocid="dashboard.low_balance_banner"
+            >
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              Low phone time: {formatMinutes(availableSeconds)} available. Buy
+              more before longer calls.
+            </div>
+          )}
+
+          <OnboardingChecklist
+            hasBalance={availableSeconds > 0 || totalBalanceSeconds > 0}
+            hasPreset={activePresets > 0}
+            hasCall={totalCalls > 0}
+            onBuy={() => {
+              document
+                .querySelector('[data-ocid="dashboard.billing_card"]')
+                ?.scrollIntoView({ behavior: "smooth" });
+            }}
+            onCreatePreset={() => navigate({ to: "/user/settings" })}
+          />
+
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <StatCard
               icon={<Phone className="w-4 h-4 text-primary" />}
@@ -652,7 +1023,9 @@ export default function DashboardPage() {
                 <>
                   <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="rounded-lg border border-border bg-muted/20 p-3">
-                      <p className="text-xs text-muted-foreground">Total balance</p>
+                      <p className="text-xs text-muted-foreground">
+                        Total balance
+                      </p>
                       <p className="mt-1 text-sm font-semibold text-foreground">
                         {formatMinutes(billingStatus?.balanceSeconds)}
                       </p>
@@ -664,7 +1037,9 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     <div className="rounded-lg border border-border bg-muted/20 p-3">
-                      <p className="text-xs text-muted-foreground">Reserved in calls</p>
+                      <p className="text-xs text-muted-foreground">
+                        Reserved in calls
+                      </p>
                       <p
                         className={
                           reservedSeconds > 0
@@ -722,12 +1097,12 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Active Call Panel */}
-          <ActiveCallPanel voice={voice} />
+          <ActiveCallPanel
+            voice={voice}
+            onRequestEnd={() => setConfirmEndOpen(true)}
+          />
 
-          {/* Main grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {/* Initiate Call */}
             <Card
               className="lg:col-span-1 bg-card border-border"
               data-ocid="dashboard.call_card"
@@ -744,26 +1119,55 @@ export default function DashboardPage() {
                     htmlFor="recipient"
                     className="text-xs font-medium text-muted-foreground"
                   >
-                    Recipient Phone (E.164)
+                    Recipient Phone
                   </Label>
                   <Input
                     id="recipient"
                     type="tel"
-                    placeholder="+1 (555) 000-0000"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="+15551234567"
                     value={recipient}
-                    onChange={(e) => setRecipient(e.target.value)}
+                    onChange={(e) => handleRecipientChange(e.target.value)}
                     onBlur={handleRecipientBlur}
                     data-ocid="dashboard.recipient.input"
                     className="font-mono text-sm"
                     disabled={isCallActive}
                   />
-                  {recipientError && (
+                  {recipientError ? (
                     <p
                       className="text-xs text-destructive"
                       data-ocid="dashboard.recipient.field_error"
                     >
                       {recipientError}
                     </p>
+                  ) : recipientHint ? (
+                    <p className="text-xs text-muted-foreground">
+                      {recipientHint}
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      US 10-digit numbers auto-convert to +1…
+                    </p>
+                  )}
+                  {recentPhones.length > 0 && !isCallActive && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {recentPhones.map((phone) => (
+                        <button
+                          key={phone}
+                          type="button"
+                          onClick={() => {
+                            setRecipient(phone);
+                            setRecipientError("");
+                            setRecipientHint(null);
+                          }}
+                          className="text-[11px] font-mono px-2 py-1 rounded-md border border-border bg-muted/30 hover:border-primary/40 text-muted-foreground hover:text-foreground transition-colors"
+                          data-ocid="dashboard.recipient.recent"
+                        >
+                          {formatPhoneDisplay(phone)}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div className="space-y-1.5">
@@ -809,7 +1213,6 @@ export default function DashboardPage() {
                   )}
                 </div>
 
-                {/* Selected preset preview */}
                 {selectedPreset && (
                   <div className="rounded-lg bg-muted/30 border border-border p-3 space-y-1">
                     <div className="flex items-center justify-between gap-2">
@@ -917,6 +1320,7 @@ export default function DashboardPage() {
                     !recipient ||
                     !selectedPresetId ||
                     availableSeconds <= 0 ||
+                    bridgeDown ||
                     (savesCallArtifacts && !capturePermissionConfirmed)
                   }
                   data-ocid="dashboard.call.submit_button"
@@ -937,12 +1341,13 @@ export default function DashboardPage() {
                         ? "Connecting..."
                         : availableSeconds <= 0
                           ? "Add Phone Time"
-                          : "Start Call"}
+                          : bridgeDown
+                            ? "Bridge Offline"
+                            : "Start Call"}
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Presets */}
             <Card
               className="lg:col-span-2 bg-card border-border"
               data-ocid="dashboard.presets_card"
@@ -1088,7 +1493,6 @@ export default function DashboardPage() {
             </Card>
           </div>
 
-          {/* Recent calls */}
           <Card
             className="bg-card border-border"
             data-ocid="dashboard.calls_card"
@@ -1146,7 +1550,7 @@ export default function DashboardPage() {
                       <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate font-mono">
-                          {call.recipientPhone}
+                          {formatPhoneDisplay(call.recipientPhone)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(
@@ -1238,7 +1642,6 @@ export default function DashboardPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete preset dialog */}
       <AlertDialog
         open={deletePresetId !== null}
         onOpenChange={(open) => !open && setDeletePresetId(null)}
@@ -1264,6 +1667,34 @@ export default function DashboardPage() {
               }}
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmEndOpen} onOpenChange={setConfirmEndOpen}>
+        <AlertDialogContent data-ocid="end-call.dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {voice.status === "queued" ? "Leave the queue?" : "End this call?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {voice.status === "queued"
+                ? "Your reserved minutes will be released after the queue entry is canceled."
+                : "This hangs up the Twilio call and stops the AI session."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep going</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                setConfirmEndOpen(false);
+                voice.endCall();
+              }}
+              data-ocid="end-call.confirm_button"
+            >
+              {voice.status === "queued" ? "Cancel queue" : "End call"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

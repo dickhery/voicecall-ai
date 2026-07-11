@@ -4,6 +4,11 @@ interface RuntimeEnv {
   voice_server_url?: string;
 }
 
+export interface VoiceServerTranscriptEntry {
+  speaker: string;
+  text: string;
+}
+
 export interface VoiceServerCall {
   callSid: string;
   sessionId: string;
@@ -12,6 +17,13 @@ export interface VoiceServerCall {
   queued?: boolean;
   queuePosition?: number;
   allowedSeconds?: number;
+  remainingSeconds?: number;
+  billingStartedAt?: number | null;
+  recipientPhone?: string;
+  presetName?: string;
+  callId?: string;
+  direction?: string;
+  transcript?: VoiceServerTranscriptEntry[];
   liveAudio?: {
     codec: "audio/pcmu";
     sampleRate: 8000;

@@ -1049,6 +1049,9 @@ video {
 .h-svh {
   height: 100svh;
 }
+.max-h-40 {
+  max-height: 10rem;
+}
 .max-h-48 {
   max-height: 12rem;
 }
@@ -1566,6 +1569,9 @@ video {
 .break-all {
   word-break: break-all;
 }
+.rounded {
+  border-radius: 0.25rem;
+}
 .rounded-2xl {
   border-radius: 1rem;
 }
@@ -1632,6 +1638,15 @@ video {
 .border-dashed {
   border-style: dashed;
 }
+.border-amber-500\/40 {
+  border-color: rgb(245 158 11 / 0.4);
+}
+.border-amber-500\/50 {
+  border-color: rgb(245 158 11 / 0.5);
+}
+.border-blue-500\/40 {
+  border-color: rgb(59 130 246 / 0.4);
+}
 .border-border {
   border-color: oklch(var(--border));
 }
@@ -1641,6 +1656,9 @@ video {
 }
 .border-destructive\/30 {
   border-color: oklch(var(--destructive) / 0.3);
+}
+.border-destructive\/40 {
+  border-color: oklch(var(--destructive) / 0.4);
 }
 .border-green-500\/30 {
   border-color: rgb(34 197 94 / 0.3);
@@ -1688,6 +1706,9 @@ video {
 .bg-accent {
   --tw-bg-opacity: 1;
   background-color: oklch(var(--accent) / var(--tw-bg-opacity, 1));
+}
+.bg-amber-500\/10 {
+  background-color: rgb(245 158 11 / 0.1);
 }
 .bg-background {
   background-color: oklch(var(--background));
@@ -2090,6 +2111,10 @@ video {
 .text-accent-foreground {
   color: oklch(var(--accent-foreground));
 }
+.text-amber-200 {
+  --tw-text-opacity: 1;
+  color: rgb(253 230 138 / var(--tw-text-opacity, 1));
+}
 .text-amber-400 {
   --tw-text-opacity: 1;
   color: rgb(251 191 36 / var(--tw-text-opacity, 1));
@@ -2150,6 +2175,9 @@ video {
 .text-primary-foreground {
   color: oklch(var(--primary-foreground));
 }
+.text-primary\/80 {
+  color: oklch(var(--primary) / 0.8);
+}
 .text-purple-400 {
   --tw-text-opacity: 1;
   color: rgb(192 132 252 / var(--tw-text-opacity, 1));
@@ -2174,6 +2202,12 @@ video {
 .text-yellow-500 {
   --tw-text-opacity: 1;
   color: rgb(234 179 8 / var(--tw-text-opacity, 1));
+}
+.text-yellow-500\/90 {
+  color: rgb(234 179 8 / 0.9);
+}
+.line-through {
+  text-decoration-line: line-through;
 }
 .underline-offset-4 {
   text-underline-offset: 4px;
@@ -2532,6 +2566,9 @@ video {
 }
 .hover\:border-primary\/30:hover {
   border-color: oklch(var(--primary) / 0.3);
+}
+.hover\:border-primary\/40:hover {
+  border-color: oklch(var(--primary) / 0.4);
 }
 .hover\:bg-accent:hover {
   --tw-bg-opacity: 1;

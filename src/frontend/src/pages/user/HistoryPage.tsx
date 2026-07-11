@@ -221,19 +221,29 @@ export default function HistoryPage() {
   const filtered = useMemo(() => {
     const fromMs = dateFrom ? new Date(dateFrom).getTime() : null;
     const toMs = dateTo ? new Date(`${dateTo}T23:59:59`).getTime() : null;
+    const q = search.trim().toLowerCase();
     return (calls ?? []).filter((c) => {
-      if (
-        search &&
-        !c.recipientPhone.toLowerCase().includes(search.toLowerCase())
-      )
-        return false;
+      if (q) {
+        const presetName = (
+          presetMap.get(c.presetId.toString()) ?? ""
+        ).toLowerCase();
+        const transcript = (c.transcript ?? "").toLowerCase();
+        const phone = c.recipientPhone.toLowerCase();
+        if (
+          !phone.includes(q) &&
+          !presetName.includes(q) &&
+          !transcript.includes(q)
+        ) {
+          return false;
+        }
+      }
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
       const callMs = Number(c.startTime / 1_000_000n);
       if (fromMs && callMs < fromMs) return false;
       if (toMs && callMs > toMs) return false;
       return true;
     });
-  }, [calls, search, statusFilter, dateFrom, dateTo]);
+  }, [calls, search, statusFilter, dateFrom, dateTo, presetMap]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -263,7 +273,7 @@ export default function HistoryPage() {
                 Call History
               </h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                All your outbound AI calls
+                Outbound calls and AI answering sessions
               </p>
             </div>
             <Button
@@ -284,7 +294,7 @@ export default function HistoryPage() {
             <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="Search by phone number…"
+                placeholder="Search phone, preset, or transcript…"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -471,6 +481,10 @@ export default function HistoryPage() {
   );
 }
 
+function isAnsweringCall(presetId: bigint): boolean {
+  return presetId >= ANSWERING_PRESET_ID_OFFSET;
+}
+
 function CallRow({
   call,
   idx,
@@ -485,6 +499,7 @@ function CallRow({
   onToggle: () => void;
 }) {
   const artifacts = parseCallArtifacts(call.transcript);
+  const inbound = isAnsweringCall(call.presetId);
 
   return (
     <div data-ocid={`history.call.item.${idx}`}>
@@ -499,9 +514,20 @@ function CallRow({
             <Phone className="w-3.5 h-3.5 text-primary" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground font-mono truncate">
-              {call.recipientPhone}
-            </p>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <p className="text-sm font-medium text-foreground font-mono truncate">
+                {call.recipientPhone}
+              </p>
+              <span
+                className={`shrink-0 text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded border ${
+                  inbound
+                    ? "border-blue-500/40 text-blue-400"
+                    : "border-border text-muted-foreground"
+                }`}
+              >
+                {inbound ? "In" : "Out"}
+              </span>
+            </div>
             {presetName && (
               <p className="text-xs text-muted-foreground truncate hidden sm:block">
                 {presetName}
@@ -546,6 +572,12 @@ function CallRow({
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs mb-4">
+            <div>
+              <p className="text-muted-foreground mb-1">Direction</p>
+              <p className="text-foreground">
+                {inbound ? "Inbound (answering)" : "Outbound"}
+              </p>
+            </div>
             <div>
               <p className="text-muted-foreground mb-1">Call SID</p>
               <p className="font-mono text-foreground break-all">

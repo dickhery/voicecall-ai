@@ -75,6 +75,8 @@ const DEFAULT_TOOLS_ENABLED: CallPresetInput["toolsEnabled"] = {
   functionCalling: false,
 };
 
+// Keep functionCalling off — not exposed in the UI yet.
+
 function createDefaultPreset(): CallPresetInput {
   return {
     name: "",
@@ -94,7 +96,11 @@ function applyHiddenPresetDefaults(input: CallPresetInput): CallPresetInput {
     audioFormat: DEFAULT_AUDIO_FORMAT,
     sampleRate: DEFAULT_SAMPLE_RATE,
     turnDetection: normalizeTurnDetection(input.turnDetection),
-    toolsEnabled: { ...DEFAULT_TOOLS_ENABLED },
+    toolsEnabled: {
+      webSearch: Boolean(input.toolsEnabled?.webSearch),
+      xSearch: Boolean(input.toolsEnabled?.xSearch),
+      functionCalling: false,
+    },
   };
 }
 
@@ -140,7 +146,11 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
           audioFormat: DEFAULT_AUDIO_FORMAT,
           sampleRate: DEFAULT_SAMPLE_RATE,
           turnDetection: normalizeTurnDetection(initial.turnDetection),
-          toolsEnabled: { ...DEFAULT_TOOLS_ENABLED },
+          toolsEnabled: {
+            webSearch: Boolean(initial.toolsEnabled?.webSearch),
+            xSearch: Boolean(initial.toolsEnabled?.xSearch),
+            functionCalling: false,
+          },
         }
       : createDefaultPreset(),
   });
@@ -265,6 +275,53 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
           }}
           dataOcidPrefix="settings"
         />
+      </div>
+
+      {/* Live research tools */}
+      <div className="space-y-3 p-4 rounded-lg bg-muted/20 border border-border">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-foreground uppercase tracking-wide">
+            Live research tools
+          </p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Allow the AI to look up current information during the call. Tools
+            add a bit of latency and may surface web content.
+          </p>
+        </div>
+        <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-background/60 p-3">
+          <div className="space-y-0.5">
+            <Label className="text-xs text-foreground">Web search</Label>
+            <p className="text-[10px] text-muted-foreground leading-tight">
+              Answer questions that need up-to-date web facts.
+            </p>
+          </div>
+          <Switch
+            checked={Boolean(values.toolsEnabled?.webSearch)}
+            onCheckedChange={(checked) =>
+              setValue("toolsEnabled.webSearch", checked, {
+                shouldDirty: true,
+              })
+            }
+            data-ocid="settings.preset.tools.web_search.switch"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-4 rounded-md border border-border bg-background/60 p-3">
+          <div className="space-y-0.5">
+            <Label className="text-xs text-foreground">X (Twitter) search</Label>
+            <p className="text-[10px] text-muted-foreground leading-tight">
+              Check recent public posts when relevant to the conversation.
+            </p>
+          </div>
+          <Switch
+            checked={Boolean(values.toolsEnabled?.xSearch)}
+            onCheckedChange={(checked) =>
+              setValue("toolsEnabled.xSearch", checked, {
+                shouldDirty: true,
+              })
+            }
+            data-ocid="settings.preset.tools.x_search.switch"
+          />
+        </div>
       </div>
 
       {/* Turn Detection */}
