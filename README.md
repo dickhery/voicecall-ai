@@ -64,6 +64,28 @@ Saved presets are treated by the Node voice bridge as private source material, n
 
 Good presets describe the agent's role, goal, must-cover facts, and boundaries. Avoid long numbered scripts or "say exactly this" wording unless a fixed phrase, name, date, phone number, URL, price, or compliance statement must stay exact.
 
+## Ready-made Agent Catalog
+
+The frontend ships a cycle-friendly catalog of professional and fun agents (`src/frontend/src/lib/agent-presets.ts`). Templates live in the asset bundle only — they are not stored as global canister state — so the catalog can grow without heap growth or upgrade migrations. One-click “Add” creates a normal user-owned preset via the existing create APIs.
+
+- **Outbound call agents** appear on the Dashboard and Settings pages (appointment confirmation, lead qual, support callback, research briefing, pizza mix-up, alien tourism, and more).
+- **Inbound answering agents** appear on the AI Answering page (front desk, after-hours, tech intake, pirate reception, wizard tower, and more).
+- Templates may embed a hidden `[[vc:session]]` block with Grok Voice options (reasoning effort, speech speed, language hint, idle re-engage timeout, keyterms, force opening). The UI strips this block while editing; the voice bridge applies it on `session.update`.
+
+## Grok Voice Session Features
+
+The Node bridge now enables newer Grok Voice Agent session parameters when placing calls:
+
+- Default model `grok-voice-latest` (override with `XAI_MODEL`)
+- `reasoning.effort` (`high` / `none`)
+- `turn_detection.idle_timeout_ms` for re-engagement after silence
+- `audio.output.speed`
+- `audio.input.transcription.language_hint` and `keyterms`
+- Session resumption (`resumption.enabled`)
+- Optional inbound `force_message` openings for fixed greetings
+
+After pulling server changes on the Windows voice host, re-run `scripts/update-voicecall-service.ps1` so live calls pick up the bridge updates.
+
 ## Prepaid Phone Time
 
 The app now sells prepaid phone time and enforces it before and during calls.

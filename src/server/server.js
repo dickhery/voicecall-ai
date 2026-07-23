@@ -21,8 +21,22 @@ import {
 } from "./ic-backend.js";
 
 const PORT = Number(process.env.PORT || 3000);
-const XAI_MODEL = process.env.XAI_MODEL || "grok-voice-think-fast-1.0";
+const XAI_MODEL = process.env.XAI_MODEL || "grok-voice-latest";
 const XAI_TTS_VOICES_URL = "https://api.x.ai/v1/tts/voices";
+const XAI_DEFAULT_REASONING_EFFORT = String(
+  process.env.XAI_DEFAULT_REASONING_EFFORT || "high",
+)
+  .trim()
+  .toLowerCase();
+const XAI_DEFAULT_IDLE_TIMEOUT_MS = Number(
+  process.env.XAI_DEFAULT_IDLE_TIMEOUT_MS || 14_000,
+);
+const XAI_DEFAULT_SPEECH_SPEED = Number(process.env.XAI_DEFAULT_SPEECH_SPEED || 1);
+const XAI_SESSION_RESUMPTION = String(
+  process.env.XAI_SESSION_RESUMPTION || "true",
+)
+  .trim()
+  .toLowerCase() !== "false";
 const SESSION_TTL_MS = 2 * 60 * 60 * 1000;
 const STREAM_MARK_PREFIX = "xai-audio";
 const PHONE_SAMPLE_RATE = 8000;
@@ -72,7 +86,9 @@ const VOICE_PREVIEW_RATE_LIMIT_WINDOW_MS = Number(
 const VOICE_PREVIEW_RATE_LIMIT_MAX = Number(
   process.env.VOICE_PREVIEW_RATE_LIMIT_MAX || 12,
 );
-const SERVER_VERSION = "2026-07-11-session-ux-enrichment";
+const SERVER_VERSION = "2026-07-23-agent-presets-voice-session";
+const VOICE_SESSION_START = "[[vc:session]]";
+const VOICE_SESSION_END = "[[/vc:session]]";
 const SERVER_STARTED_AT = new Date().toISOString();
 const CALL_DIRECTIONS = {
   INBOUND: "inbound",
@@ -1051,10 +1067,79 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+function extractVoiceSessionOptions(systemPrompt = "") {
+  const source = String(systemPrompt || "");
+  const start = source.lastIndexOf(VOICE_SESSION_START);
+  if (start === -1) {
+    return { cleanPrompt: source.trim(), options: {} };
+  }
+  const end = source.indexOf(VOICE_SESSION_END, start);
+  if (end === -1) {
+    return { cleanPrompt: source.trim(), options: {} };
+  }
+  const jsonText = source.slice(start + VOICE_SESSION_START.length, end).trim();
+  const cleanPrompt = `${source.slice(0, start)}${source.slice(end + VOICE_SESSION_END.length)}`
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  try {
+    const parsed = JSON.parse(jsonText);
+    return {
+      cleanPrompt,
+      options: parsed && typeof parsed === "object" ? parsed : {},
+    };
+  } catch {
+    return { cleanPrompt, options: {} };
+  }
+}
+
+function normalizeReasoningEffort(value) {
+  const effort = String(value || "")
+    .trim()
+    .toLowerCase();
+  if (effort === "none" || effort === "high") return effort;
+  if (XAI_DEFAULT_REASONING_EFFORT === "none") return "none";
+  return "high";
+}
+
+function normalizeSpeechSpeed(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return clamp(
+      Number.isFinite(XAI_DEFAULT_SPEECH_SPEED) ? XAI_DEFAULT_SPEECH_SPEED : 1,
+      0.7,
+      1.5,
+    );
+  }
+  return clamp(numeric, 0.7, 1.5);
+}
+
+function normalizeIdleTimeoutMs(value) {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) {
+    return Math.min(60_000, Math.max(3_000, Math.trunc(numeric)));
+  }
+  if (Number.isFinite(XAI_DEFAULT_IDLE_TIMEOUT_MS) && XAI_DEFAULT_IDLE_TIMEOUT_MS > 0) {
+    return Math.min(60_000, Math.max(3_000, Math.trunc(XAI_DEFAULT_IDLE_TIMEOUT_MS)));
+  }
+  return null;
+}
+
+function normalizeKeyterms(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((term) => String(term || "").trim())
+    .filter(Boolean)
+    .slice(0, 40)
+    .map((term) => term.slice(0, 50));
+}
+
 function buildXaiSessionUpdate(
   preset,
   { direction = CALL_DIRECTIONS.OUTBOUND, openingOnly = false } = {},
 ) {
+  const { cleanPrompt, options: voiceSession } = extractVoiceSessionOptions(
+    preset?.systemPrompt,
+  );
   const tools = [];
   if (preset.toolsEnabled.fileSearch && preset.vectorStoreIds.length > 0) {
     tools.push({
@@ -1070,49 +1155,108 @@ function buildXaiSessionUpdate(
     callDirection === CALL_DIRECTIONS.INBOUND
       ? normalizeInboundGreeting(preset.inboundGreeting) ||
         normalizeInboundGreeting(preset.openingLine) ||
+        normalizeInboundGreeting(voiceSession.openingLine) ||
         normalizeInboundGreeting(process.env.INBOUND_CALL_GREETING) ||
         normalizeInboundGreeting(process.env.CALL_GREETING)
       : normalizeOptionalInstructionText(
-          preset.outboundIntroAfterHello || preset.openingLine,
+          preset.outboundIntroAfterHello ||
+            preset.openingLine ||
+            voiceSession.openingLine,
         );
   const instructions = openingOnly
     ? buildSafeInstructions(
         buildOpeningOnlySessionInstructions(
           callDirection,
           openingLine,
-          preset.systemPrompt,
+          cleanPrompt,
         ),
         buildVoiceStyleInstructions(),
       )
     : buildSafeInstructions(
-        buildNaturalVoiceInstructions(preset.systemPrompt, {
+        buildNaturalVoiceInstructions(cleanPrompt, {
           direction: callDirection,
           presetName: preset.name,
           openingLine,
           toolsEnabled: preset.toolsEnabled,
         }),
         buildVoiceStyleInstructions(),
-        buildCallDirectionInstructions(callDirection, preset),
+        buildCallDirectionInstructions(callDirection, {
+          ...preset,
+          systemPrompt: cleanPrompt,
+        }),
       );
+
+  const idleTimeoutMs = normalizeIdleTimeoutMs(voiceSession.idleTimeoutMs);
+  const languageHint = String(voiceSession.languageHint || "").trim();
+  const keyterms = normalizeKeyterms(voiceSession.keyterms);
+  const speechSpeed = normalizeSpeechSpeed(voiceSession.speechSpeed);
+  const reasoningEffort = normalizeReasoningEffort(voiceSession.reasoningEffort);
+
+  const audioInput = {
+    format: { type: "audio/pcmu" },
+  };
+  const transcription = {};
+  if (languageHint) transcription.language_hint = languageHint;
+  if (keyterms.length > 0) transcription.keyterms = keyterms;
+  if (Object.keys(transcription).length > 0) {
+    audioInput.transcription = transcription;
+  }
+
+  const session = {
+    voice: preset.voice,
+    instructions,
+    reasoning: { effort: reasoningEffort },
+    turn_detection: {
+      type: "server_vad",
+      threshold: clamp(preset.turnDetection.threshold, 0.1, 0.9),
+      silence_duration_ms: clamp(preset.turnDetection.silenceDurationMs, 0, 10000),
+      prefix_padding_ms: clamp(preset.turnDetection.prefixPaddingMs, 0, 10000),
+      ...(idleTimeoutMs ? { idle_timeout_ms: idleTimeoutMs } : {}),
+    },
+    audio: {
+      input: audioInput,
+      output: {
+        format: { type: "audio/pcmu" },
+        speed: speechSpeed,
+      },
+    },
+    tools: openingOnly ? [] : tools,
+  };
+
+  if (XAI_SESSION_RESUMPTION) {
+    session.resumption = { enabled: true };
+  }
 
   return {
     type: "session.update",
-    session: {
-      voice: preset.voice,
-      instructions,
-      turn_detection: {
-        type: "server_vad",
-        threshold: clamp(preset.turnDetection.threshold, 0.1, 0.9),
-        silence_duration_ms: clamp(preset.turnDetection.silenceDurationMs, 0, 10000),
-        prefix_padding_ms: clamp(preset.turnDetection.prefixPaddingMs, 0, 10000),
-      },
-      audio: {
-        input: { format: { type: "audio/pcmu" } },
-        output: { format: { type: "audio/pcmu" } },
-      },
-      tools: openingOnly ? [] : tools,
-    },
+    session,
   };
+}
+
+function wantsForceOpening(preset) {
+  const { options } = extractVoiceSessionOptions(preset?.systemPrompt);
+  return options.forceOpening === true;
+}
+
+function sendForceOpeningMessage(session, text, { interruptible = false } = {}) {
+  if (!isWebSocketOpen(session?.xaiWs)) {
+    throw new Error("The xAI realtime session is not ready yet.");
+  }
+  const clean = String(text || "").trim();
+  if (!clean) {
+    throw new Error("Force opening text is required.");
+  }
+  session.xaiWs.send(
+    JSON.stringify({
+      type: "conversation.item.create",
+      item: {
+        type: "force_message",
+        role: "assistant",
+        interruptible: Boolean(interruptible),
+        content: [{ type: "output_text", text: clean }],
+      },
+    }),
+  );
 }
 
 function sendTwilioClear(session) {
@@ -3878,18 +4022,27 @@ mediaWss.on("connection", (twilioWs, request) => {
     }
   }
 
+  function getVoiceSessionFromPreset() {
+    return extractVoiceSessionOptions(session?.preset?.systemPrompt).options;
+  }
+
   function getInboundOpeningGreeting() {
+    const voiceSession = getVoiceSessionFromPreset();
     return (
       normalizeInboundGreeting(session?.preset?.inboundGreeting) ||
       normalizeInboundGreeting(session?.preset?.openingLine) ||
+      normalizeInboundGreeting(voiceSession.openingLine) ||
       normalizeInboundGreeting(process.env.INBOUND_CALL_GREETING) ||
       normalizeInboundGreeting(process.env.CALL_GREETING)
     );
   }
 
   function getOutboundOpeningLine() {
+    const voiceSession = getVoiceSessionFromPreset();
     return normalizeOptionalInstructionText(
-      session?.preset?.outboundIntroAfterHello || session?.preset?.openingLine,
+      session?.preset?.outboundIntroAfterHello ||
+        session?.preset?.openingLine ||
+        voiceSession.openingLine,
     );
   }
 
@@ -3936,14 +4089,21 @@ mediaWss.on("connection", (twilioWs, request) => {
           : "Outbound opening line",
       );
     }
-    sendXaiUserText(
-      session,
-      buildOpeningOnlyTurnInstruction(
-        direction,
-        openingLine,
+    const useForceOpening =
+      direction === CALL_DIRECTIONS.INBOUND &&
+      Boolean(openingLine) &&
+      wantsForceOpening(session.preset);
+    if (useForceOpening) {
+      sendForceOpeningMessage(session, openingLine, { interruptible: true });
+    } else {
+      const { cleanPrompt } = extractVoiceSessionOptions(
         session.preset?.systemPrompt,
-      ),
-    );
+      );
+      sendXaiUserText(
+        session,
+        buildOpeningOnlyTurnInstruction(direction, openingLine, cleanPrompt),
+      );
+    }
     session.openingTurnSent = true;
     session.openingTurnRequested = true;
     session.openingTurnActive = false;
@@ -3955,6 +4115,7 @@ mediaWss.on("connection", (twilioWs, request) => {
       trigger,
       direction,
       presetOpening: Boolean(openingLine),
+      forceOpening: useForceOpening,
     });
   }
 

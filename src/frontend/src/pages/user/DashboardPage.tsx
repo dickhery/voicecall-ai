@@ -1,3 +1,4 @@
+import { AgentPresetGallery } from "@/components/AgentPresetGallery";
 import { AppLayout } from "@/components/AppLayout";
 import { CallStatusBadge } from "@/components/CallStatusBadge";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -37,6 +38,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  useCreatePreset,
   useCreatePurchaseIntent,
   useDeletePreset,
   useDuplicatePreset,
@@ -45,6 +47,12 @@ import {
   useListMyPresets,
   useUpdatePresetInstructions,
 } from "@/hooks/use-backend";
+import {
+  type AgentPresetTemplate,
+  agentPresetToCallInput,
+  appendVoiceSessionBlock,
+  stripVoiceSessionBlock,
+} from "@/lib/agent-presets";
 import type { XaiCallStatus } from "@/hooks/use-xai-voice";
 import { useXaiVoice } from "@/hooks/use-xai-voice";
 import {
@@ -611,12 +619,14 @@ export default function DashboardPage() {
     isLoading: billingLoading,
     refetch: refetchBilling,
   } = useGetMyBillingStatus();
+  const createPreset = useCreatePreset();
   const deletePreset = useDeletePreset();
   const duplicatePreset = useDuplicatePreset();
   const updatePresetInstructions = useUpdatePresetInstructions();
   const createPurchaseIntent = useCreatePurchaseIntent();
   const voice = useXaiVoice();
   const [buyingPackageId, setBuyingPackageId] = useState<string | null>(null);
+  const [addingAgentId, setAddingAgentId] = useState<string | null>(null);
 
   const healthQuery = useQuery({
     queryKey: ["voiceServerHealth", "dashboard"],
@@ -795,7 +805,7 @@ export default function DashboardPage() {
 
   const openInstructionEditor = (preset: CallPreset) => {
     setInstructionEditorPreset(preset);
-    setInstructionDraft(preset.systemPrompt);
+    setInstructionDraft(stripVoiceSessionBlock(preset.systemPrompt).cleanPrompt);
   };
 
   const savePresetInstructions = async () => {
@@ -808,9 +818,15 @@ export default function DashboardPage() {
       toast.error("AI instructions must be 8000 characters or fewer");
       return;
     }
+    const existingVoiceSession = stripVoiceSessionBlock(
+      instructionEditorPreset.systemPrompt,
+    ).voiceSession;
+    const systemPrompt = existingVoiceSession
+      ? appendVoiceSessionBlock(trimmedInstructionDraft, existingVoiceSession)
+      : trimmedInstructionDraft;
     const result = await updatePresetInstructions.mutateAsync({
       id: instructionEditorPreset.id,
-      systemPrompt: trimmedInstructionDraft,
+      systemPrompt,
     });
     if (result.__kind__ === "err") {
       toast.error(result.err);
@@ -819,6 +835,24 @@ export default function DashboardPage() {
     toast.success("Preset instructions updated");
     setInstructionEditorPreset(null);
     setInstructionDraft("");
+  };
+
+  const handleUseAgentTemplate = async (template: AgentPresetTemplate) => {
+    setAddingAgentId(template.id);
+    try {
+      const created = await createPreset.mutateAsync(
+        agentPresetToCallInput(template),
+      );
+      setSelectedPresetId(created.id.toString());
+      toast.success(`Added “${template.name}”`, {
+        description: "Preset selected — edit instructions anytime.",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Unable to add agent: ${message}`);
+    } finally {
+      setAddingAgentId(null);
+    }
   };
 
   const handleBuyPackage = async (packageId: string) => {
@@ -962,7 +996,21 @@ export default function DashboardPage() {
                 .querySelector('[data-ocid="dashboard.billing_card"]')
                 ?.scrollIntoView({ behavior: "smooth" });
             }}
-            onCreatePreset={() => navigate({ to: "/user/settings" })}
+            onCreatePreset={() => {
+              document
+                .querySelector('[data-ocid="dashboard.agent_gallery.card"]')
+                ?.scrollIntoView({ behavior: "smooth" });
+            }}
+          />
+
+          <AgentPresetGallery
+            kind="outbound"
+            title="Call agent presets"
+            description="One-click professional agents and silly prank personas. Added agents become editable call presets."
+            actionLabel="Add & select"
+            busyTemplateId={addingAgentId}
+            onUseTemplate={handleUseAgentTemplate}
+            dataOcidPrefix="dashboard.agent_gallery"
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -1233,7 +1281,10 @@ export default function DashboardPage() {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">
-                      {selectedPreset.systemPrompt}
+                      {
+                        stripVoiceSessionBlock(selectedPreset.systemPrompt)
+                          .cleanPrompt
+                      }
                     </p>
                     <div className="flex items-center gap-1.5 pt-0.5">
                       <Badge variant="outline" className="text-xs h-4 px-1">
@@ -1435,8 +1486,14 @@ export default function DashboardPage() {
                               </div>
                               <p className="text-xs text-muted-foreground truncate">
                                 {getVoiceLabel(preset.voice, preset.voiceId)} ·{" "}
-                                {preset.systemPrompt.substring(0, 60)}
-                                {preset.systemPrompt.length > 60 ? "..." : ""}
+                                {(() => {
+                                  const prompt = stripVoiceSessionBlock(
+                                    preset.systemPrompt,
+                                  ).cleanPrompt;
+                                  return `${prompt.substring(0, 60)}${
+                                    prompt.length > 60 ? "..." : ""
+                                  }`;
+                                })()}
                               </p>
                             </div>
                           </button>

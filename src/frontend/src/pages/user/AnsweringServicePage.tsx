@@ -4,6 +4,7 @@ import {
   SampleRate,
   Voice,
 } from "@/backend";
+import { AgentPresetGallery } from "@/components/AgentPresetGallery";
 import { AppLayout } from "@/components/AppLayout";
 import { NaturalPromptBuilder } from "@/components/NaturalPromptBuilder";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -47,6 +48,12 @@ import {
   useSetAnsweringPresetEnabled,
   useUpdateAnsweringPreset,
 } from "@/hooks/use-backend";
+import {
+  type AgentPresetTemplate,
+  agentPresetToAnsweringDraft,
+  appendVoiceSessionBlock,
+  stripVoiceSessionBlock,
+} from "@/lib/agent-presets";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import {
   TURN_TIMING_PROFILES,
@@ -127,7 +134,7 @@ function answeringPresetToInput(preset: AnsweringPreset): AnsweringPresetInput {
   return {
     name: preset.name,
     phoneNumber: preset.phoneNumber,
-    systemPrompt: preset.systemPrompt,
+    systemPrompt: stripVoiceSessionBlock(preset.systemPrompt).cleanPrompt,
     voice: preset.voice,
     voiceId: preset.voiceId ?? "",
     turnDetection: cloneTurnDetection(preset.turnDetection),
@@ -138,6 +145,15 @@ function answeringPresetToInput(preset: AnsweringPreset): AnsweringPresetInput {
     enabled: preset.enabled,
     webhookSecret: preset.webhookSecret,
   };
+}
+
+function restoreAnsweringSystemPrompt(
+  draftPrompt: string,
+  originalPrompt: string,
+): string {
+  const existing = stripVoiceSessionBlock(originalPrompt).voiceSession;
+  if (!existing) return draftPrompt.trim();
+  return appendVoiceSessionBlock(draftPrompt, existing);
 }
 
 function normalizeAnsweringPresetInput(
@@ -587,7 +603,13 @@ function AnsweringPresetCard({
     }
     const result = await updatePreset.mutateAsync({
       id: preset.id,
-      input: cleanInput,
+      input: {
+        ...cleanInput,
+        systemPrompt: restoreAnsweringSystemPrompt(
+          cleanInput.systemPrompt,
+          preset.systemPrompt,
+        ),
+      },
     });
     if (result.__kind__ === "err") {
       toast.error(result.err);
@@ -706,7 +728,7 @@ function AnsweringPresetCard({
               </Button>
             </div>
             <p className="line-clamp-3 whitespace-pre-line text-sm text-muted-foreground">
-              {preset.systemPrompt}
+              {stripVoiceSessionBlock(preset.systemPrompt).cleanPrompt}
             </p>
           </div>
           <div className="space-y-2">
@@ -1050,6 +1072,27 @@ export default function AnsweringServicePage() {
     setInput(buildDefaultPreset());
   };
 
+  const handleUseAgentTemplate = (template: AgentPresetTemplate) => {
+    const draft = agentPresetToAnsweringDraft(template);
+    setInput((current) => ({
+      ...current,
+      name: draft.name,
+      systemPrompt: draft.systemPrompt,
+      voice: draft.voice,
+      voiceId: draft.voiceId,
+      turnDetection: draft.turnDetection,
+      toolsEnabled: draft.toolsEnabled,
+      audioFormat: draft.audioFormat,
+      sampleRate: draft.sampleRate,
+    }));
+    toast.success(`Loaded “${template.name}”`, {
+      description: "Add your Twilio number, then create the answering preset.",
+    });
+    document
+      .querySelector('[data-ocid="answering.create_form"]')
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <ProtectedRoute>
       <AppLayout>
@@ -1076,6 +1119,15 @@ export default function AnsweringServicePage() {
             </a>
           </div>
 
+          <AgentPresetGallery
+            kind="inbound"
+            title="Answering agent presets"
+            description="Professional receptionists and playful themed greeters. Loads the create form — you still attach your Twilio number."
+            actionLabel="Use this agent"
+            onUseTemplate={handleUseAgentTemplate}
+            dataOcidPrefix="answering.agent_gallery"
+          />
+
           <div className="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
             <Card>
               <CardHeader>
@@ -1094,7 +1146,12 @@ export default function AnsweringServicePage() {
                     answering preset.
                   </div>
                 ) : (
-                  <form className="space-y-4" onSubmit={submit} noValidate>
+                  <form
+                    className="space-y-4"
+                    onSubmit={submit}
+                    noValidate
+                    data-ocid="answering.create_form"
+                  >
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Preset Name</Label>
@@ -1127,12 +1184,17 @@ export default function AnsweringServicePage() {
                     </div>
                     <NaturalPromptBuilder
                       direction="inbound"
-                      onPromptChange={(systemPrompt) =>
+                      onPromptChange={(systemPrompt) => {
+                        const existing = stripVoiceSessionBlock(
+                          input.systemPrompt,
+                        ).voiceSession;
                         setInput({
                           ...input,
-                          systemPrompt,
-                        })
-                      }
+                          systemPrompt: existing
+                            ? appendVoiceSessionBlock(systemPrompt, existing)
+                            : systemPrompt,
+                        });
+                      }}
                       dataOcidPrefix="answering.natural_prompt"
                     />
                     <div className="space-y-2">
@@ -1144,13 +1206,23 @@ export default function AnsweringServicePage() {
                         facts, boundaries, and expected questions.
                       </p>
                       <Textarea
-                        value={input.systemPrompt}
-                        onChange={(event) =>
+                        value={
+                          stripVoiceSessionBlock(input.systemPrompt).cleanPrompt
+                        }
+                        onChange={(event) => {
+                          const existing = stripVoiceSessionBlock(
+                            input.systemPrompt,
+                          ).voiceSession;
                           setInput({
                             ...input,
-                            systemPrompt: event.target.value,
-                          })
-                        }
+                            systemPrompt: existing
+                              ? appendVoiceSessionBlock(
+                                  event.target.value,
+                                  existing,
+                                )
+                              : event.target.value,
+                          });
+                        }}
                         rows={5}
                         maxLength={MAX_AI_INSTRUCTIONS_CHARS}
                         className="resize-none font-mono text-xs"

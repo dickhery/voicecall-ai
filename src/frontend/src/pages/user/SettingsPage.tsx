@@ -1,4 +1,5 @@
 import { AudioFormat, SampleRate, Voice } from "@/backend";
+import { AgentPresetGallery } from "@/components/AgentPresetGallery";
 import { AppLayout } from "@/components/AppLayout";
 import { NaturalPromptBuilder } from "@/components/NaturalPromptBuilder";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -36,6 +37,12 @@ import {
   useListMyPresets,
   useUpdatePreset,
 } from "@/hooks/use-backend";
+import {
+  type AgentPresetTemplate,
+  agentPresetToCallInput,
+  appendVoiceSessionBlock,
+  stripVoiceSessionBlock,
+} from "@/lib/agent-presets";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import {
   TURN_TIMING_PROFILES,
@@ -142,7 +149,8 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
           name: initial.name,
           voice: initial.voice,
           voiceId: initial.voiceId ?? "",
-          systemPrompt: initial.systemPrompt,
+          // Hide machine voice-session metadata from the editor; it is re-merged on save.
+          systemPrompt: stripVoiceSessionBlock(initial.systemPrompt).cleanPrompt,
           audioFormat: DEFAULT_AUDIO_FORMAT,
           sampleRate: DEFAULT_SAMPLE_RATE,
           turnDetection: normalizeTurnDetection(initial.turnDetection),
@@ -156,9 +164,19 @@ function PresetForm({ initial, onSave, onCancel, isLoading }: PresetFormProps) {
   });
 
   const values = watch();
-  const submitPreset = handleSubmit((input) =>
-    onSave(applyHiddenPresetDefaults(input)),
-  );
+  const submitPreset = handleSubmit((input) => {
+    const existingVoiceSession = initial
+      ? stripVoiceSessionBlock(initial.systemPrompt).voiceSession
+      : null;
+    const nextInput = applyHiddenPresetDefaults(input);
+    if (existingVoiceSession) {
+      nextInput.systemPrompt = appendVoiceSessionBlock(
+        nextInput.systemPrompt,
+        existingVoiceSession,
+      );
+    }
+    return onSave(nextInput);
+  });
 
   const silenceMs = values.turnDetection?.silenceDurationMs ?? 500n;
   const prefixMs = values.turnDetection?.prefixPaddingMs ?? 200n;
@@ -501,11 +519,26 @@ export default function SettingsPage() {
 
   const [expandedPreset, setExpandedPreset] = useState<string | null>(null);
   const [showNewForm, setShowNewForm] = useState(false);
+  const [addingAgentId, setAddingAgentId] = useState<string | null>(null);
 
   const handleCreate = async (input: CallPresetInput) => {
     await createPreset.mutateAsync(input);
     toast.success("Preset created");
     setShowNewForm(false);
+  };
+
+  const handleUseAgentTemplate = async (template: AgentPresetTemplate) => {
+    setAddingAgentId(template.id);
+    try {
+      await createPreset.mutateAsync(agentPresetToCallInput(template));
+      toast.success(`Added “${template.name}”`);
+      setShowNewForm(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      toast.error(`Unable to add agent: ${message}`);
+    } finally {
+      setAddingAgentId(null);
+    }
   };
 
   const handleUpdate = async (id: bigint, input: CallPresetInput) => {
@@ -555,6 +588,16 @@ export default function SettingsPage() {
               Manage your call presets and account
             </p>
           </div>
+
+          <AgentPresetGallery
+            kind="outbound"
+            title="Start from a ready-made agent"
+            description="Professional call agents and playful prank personas. One click creates an editable preset you own."
+            actionLabel="Add to my presets"
+            busyTemplateId={addingAgentId}
+            onUseTemplate={handleUseAgentTemplate}
+            dataOcidPrefix="settings.agent_gallery"
+          />
 
           {/* User Profile Section */}
           <Card
@@ -738,8 +781,14 @@ export default function SettingsPage() {
                             </p>
                             <p className="text-[11px] text-muted-foreground mt-0.5">
                               {getVoiceLabel(preset.voice, preset.voiceId)} ·{" "}
-                              {preset.systemPrompt.substring(0, 70)}
-                              {preset.systemPrompt.length > 70 ? "..." : ""}
+                              {(() => {
+                                const prompt = stripVoiceSessionBlock(
+                                  preset.systemPrompt,
+                                ).cleanPrompt;
+                                return `${prompt.substring(0, 70)}${
+                                  prompt.length > 70 ? "..." : ""
+                                }`;
+                              })()}
                             </p>
                           </div>
                         </button>
